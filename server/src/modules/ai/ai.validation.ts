@@ -1,29 +1,14 @@
 import { z } from 'zod';
 
-const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Work order id is not valid');
-
-export const workOrderSummaryBodySchema = z.object({
-  workOrderId: objectId,
-});
-
-/** The generated summary must be non-empty and under 300 characters. */
-export const summaryTextSchema = z
-  .string()
-  .trim()
-  .min(1, 'AI summary cannot be empty')
-  .max(299, 'AI summary must be under 300 characters');
-
-export type WorkOrderSummaryBody = z.infer<typeof workOrderSummaryBodySchema>;
-
 export const INSIGHT_PERIODS = ['7d', '30d'] as const;
 export type InsightPeriod = (typeof INSIGHT_PERIODS)[number];
 
-export const maintenanceInsightsBodySchema = z.object({
+export const insightsBodySchema = z.object({
   period: z.enum(INSIGHT_PERIODS).default('7d'),
   regenerate: z.boolean().optional(),
 });
 
-export type MaintenanceInsightsBody = z.infer<typeof maintenanceInsightsBodySchema>;
+export type InsightsBody = z.infer<typeof insightsBodySchema>;
 
 const insightLine = z
   .string()

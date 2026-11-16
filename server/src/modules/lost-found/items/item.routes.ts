@@ -23,7 +23,7 @@ lostFoundItemRouter.use(authenticate);
 
 lostFoundItemRouter.post(
   '/',
-  authorizeRoles('STUDENT_EMPLOYEE', 'LOST_FOUND_OFFICER'),
+  authorizeRoles('STUDENT', 'EMPLOYEE', 'LOST_FOUND_MANAGER', 'SUPER_ADMIN'),
   uploadRequestImages,
   validate(createItemSchema),
   createItem,
@@ -39,14 +39,14 @@ lostFoundItemRouter.get('/:id', validate(itemIdSchema, 'params'), getItem);
 
 lostFoundItemRouter.post(
   '/:id/recalculate',
-  authorizeRoles('LOST_FOUND_OFFICER'),
+  authorizeRoles('LOST_FOUND_MANAGER', 'SUPER_ADMIN'),
   validate(itemIdSchema, 'params'),
   recalculateMatches,
 );
 
 lostFoundItemRouter.patch(
   '/:id',
-  authorizeRoles('STUDENT_EMPLOYEE', 'LOST_FOUND_OFFICER'),
+  authorizeRoles('STUDENT', 'EMPLOYEE', 'LOST_FOUND_MANAGER', 'SUPER_ADMIN'),
   validate(itemIdSchema, 'params'),
   validate(updateItemSchema),
   updateItem,

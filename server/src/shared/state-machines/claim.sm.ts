@@ -3,9 +3,9 @@ import { ApiError } from '../utils/ApiError';
 
 /**
  * `SYSTEM` marks an automatic rejection triggered when another claim on the
- * same item is approved. Officers perform every other transition.
+ * same item is approved. Managers perform every other transition.
  */
-export type ClaimTransitionActor = 'LOST_FOUND_OFFICER' | 'SYSTEM';
+export type ClaimTransitionActor = 'LOST_FOUND_MANAGER' | 'SYSTEM';
 
 export interface ClaimTransitionRule {
   from: ClaimStatus;
@@ -21,27 +21,27 @@ export const CLAIM_TRANSITIONS: readonly ClaimTransitionRule[] = [
   {
     from: 'PENDING_REVIEW',
     to: 'UNDER_VERIFICATION',
-    actors: ['LOST_FOUND_OFFICER'],
+    actors: ['LOST_FOUND_MANAGER'],
   },
   {
     from: 'UNDER_VERIFICATION',
     to: 'APPROVED',
-    actors: ['LOST_FOUND_OFFICER'],
+    actors: ['LOST_FOUND_MANAGER'],
   },
   {
     from: 'PENDING_REVIEW',
     to: 'REJECTED',
-    actors: ['LOST_FOUND_OFFICER', 'SYSTEM'],
+    actors: ['LOST_FOUND_MANAGER', 'SYSTEM'],
   },
   {
     from: 'UNDER_VERIFICATION',
     to: 'REJECTED',
-    actors: ['LOST_FOUND_OFFICER', 'SYSTEM'],
+    actors: ['LOST_FOUND_MANAGER', 'SYSTEM'],
   },
   {
     from: 'APPROVED',
     to: 'COMPLETED',
-    actors: ['LOST_FOUND_OFFICER'],
+    actors: ['LOST_FOUND_MANAGER'],
   },
 ];
 

@@ -1,9 +1,5 @@
 import { z } from 'zod';
-import {
-  MAINTENANCE_CATEGORIES,
-  ROLES,
-  TECHNICIAN_AVAILABILITIES,
-} from '../../config/constants';
+import { ROLES } from '../../config/constants';
 
 const email = z
   .string()
@@ -27,13 +23,6 @@ const optionalText = (max: number) =>
     .optional()
     .transform((value) => (value === '' ? undefined : value));
 
-const technicianFields = {
-  specializations: z.array(z.enum(MAINTENANCE_CATEGORIES)).max(9).optional(),
-  skills: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
-  skillsAr: z.array(z.string().trim().min(1).max(80)).max(20).optional(),
-  availability: z.enum(TECHNICIAN_AVAILABILITIES).optional(),
-};
-
 export const createUserSchema = z.object({
   name,
   nameAr: optionalText(120),
@@ -43,7 +32,6 @@ export const createUserSchema = z.object({
   department: optionalText(120),
   departmentAr: optionalText(120),
   contactPhone: optionalText(40),
-  ...technicianFields,
 });
 
 export const updateUserSchema = z
@@ -55,8 +43,7 @@ export const updateUserSchema = z
     department: optionalText(120),
     departmentAr: optionalText(120),
     contactPhone: optionalText(40),
-    ...technicianFields,
-  })
+    })
   .partial()
   .refine((value) => Object.keys(value).length > 0, {
     message: 'Provide at least one field to update',

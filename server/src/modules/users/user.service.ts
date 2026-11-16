@@ -1,4 +1,3 @@
-import type { Role } from '../../config/constants';
 import { logActivity } from '../../shared/services/activityLog.service';
 import { ApiError } from '../../shared/utils/ApiError';
 import { paginate, parsePagination } from '../../shared/utils/paginate';
@@ -26,19 +25,6 @@ async function assertEmailAvailable(email: string, excludeId?: string): Promise<
       'emailAlreadyExists',
     );
   }
-}
-
-function technicianValues(role: Role, input: CreateUserInput | UpdateUserInput) {
-  if (role !== 'TECHNICIAN') {
-    return { specializations: [], skills: [], skillsAr: [], availability: undefined };
-  }
-
-  return {
-    specializations: input.specializations ?? [],
-    skills: input.skills ?? [],
-    skillsAr: input.skillsAr ?? [],
-    availability: input.availability ?? 'AVAILABLE',
-  };
 }
 
 export async function listUsers(query: ListUsersQuery): Promise<{
@@ -134,7 +120,6 @@ export async function createUser(
     departmentAr: input.departmentAr,
     contactPhone: input.contactPhone,
     isActive: true,
-    ...technicianValues(input.role, input),
   });
 
   await logUserChange(actorId, 'USER_CREATED', user, {
@@ -170,22 +155,6 @@ export async function updateUser(
 
   if (input.role !== undefined) {
     user.role = input.role;
-  }
-
-  const effectiveRole = input.role ?? user.role;
-  const isTechnician = effectiveRole === 'TECHNICIAN';
-
-  if (isTechnician) {
-    if (input.specializations !== undefined) user.specializations = input.specializations;
-    if (input.skills !== undefined) user.skills = input.skills;
-    if (input.skillsAr !== undefined) user.skillsAr = input.skillsAr;
-    if (input.availability !== undefined) user.availability = input.availability;
-    else if (!user.availability) user.availability = 'AVAILABLE';
-  } else {
-    user.specializations = [];
-    user.skills = [];
-    user.skillsAr = [];
-    user.availability = undefined;
   }
 
   await user.save();

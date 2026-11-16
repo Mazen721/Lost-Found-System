@@ -1,24 +1,8 @@
-import { addDays, addHours, subDays, subHours } from 'date-fns';
+import { subDays, subHours } from 'date-fns';
 import { Types } from 'mongoose';
-import {
-  DEMO_ACCOUNTS,
-  type MaintenanceCategory,
-  type Priority,
-  type RequestStatus,
-  type WorkOrderStatus,
-} from '../config/constants';
+import { DEMO_ACCOUNTS } from '../config/constants';
 import { User } from '../modules/auth/user.model';
 import { Location } from '../modules/locations/location.model';
-import { MaintenanceRequest } from '../modules/maintenance/requests/maintenanceRequest.model';
-import {
-  WorkOrder,
-  type IWorkOrder,
-} from '../modules/maintenance/work-orders/workOrder.model';
-import { ServiceFeedback } from '../modules/maintenance/feedback/serviceFeedback.model';
-import {
-  PreventivePlan,
-  type IPreventivePlan,
-} from '../modules/preventive/preventivePlan.model';
 import { LostFoundItem } from '../modules/lost-found/items/lostFoundItem.model';
 import { ItemMatch } from '../modules/lost-found/matches/itemMatch.model';
 import { ClaimRequest } from '../modules/lost-found/claims/claimRequest.model';
@@ -30,10 +14,6 @@ import { Notification } from '../shared/models/Notification.model';
 import { ActivityLog } from '../shared/models/ActivityLog.model';
 
 export interface DemoDataCounts {
-  requests: number;
-  workOrders: number;
-  feedback: number;
-  preventivePlans: number;
   lostItems: number;
   foundItems: number;
   matches: number;
@@ -178,62 +158,6 @@ const EXTRA_DEMO_LOCATIONS = [
   },
 ];
 
-const TECHNICIAN_EMAILS = [
-  DEMO_ACCOUNTS.TECHNICIAN.email,
-  'm.elgohary@mansnu.edu.eg',
-  'k.eltantawy@mansnu.edu.eg',
-  'i.abdelfattah@mansnu.edu.eg',
-  's.radwan@mansnu.edu.eg',
-];
-
-const DEMO_STUDENT_EMAIL = DEMO_ACCOUNTS.STUDENT_EMPLOYEE.email;
-const EXTRA_STUDENT_EMAILS = EXTRA_STUDENTS.map((student) => student.email);
-
-interface RequestSpec {
-  key: string;
-  title: string;
-  titleAr?: string;
-  description: string;
-  descriptionAr?: string;
-  category: MaintenanceCategory;
-  priority: Priority;
-  status: RequestStatus;
-  requesterEmail: string;
-  building: 'Engineering' | 'Administration' | 'Medical' | 'Humanities' | 'Workshops' | 'Sports';
-  locationIndex: number;
-  daysAgo: number;
-  equipmentDescription?: string;
-  equipmentDescriptionAr?: string;
-  reviewNotes?: string;
-  reviewNotesAr?: string;
-  reopenCount?: number;
-}
-
-interface WorkOrderNoteSpec {
-  note: string;
-  noteAr: string;
-  hoursAfterStart?: number;
-}
-
-interface WorkOrderSpec {
-  requestKey: string;
-  status: WorkOrderStatus;
-  technicianEmail?: string;
-  scheduledStart: Date;
-  expectedCompletion: Date;
-  actualStart?: Date;
-  completedAt?: Date;
-  createdAt?: Date;
-  resolutionDetails?: string;
-  resolutionDetailsAr?: string;
-  cancelReason?: string;
-  cancelReasonAr?: string;
-  notes?: WorkOrderNoteSpec[];
-  aiSummaryEn?: string;
-  aiSummaryAr?: string;
-  current?: boolean;
-}
-
 interface ItemSpec {
   key: string;
   reportType: 'LOST' | 'FOUND';
@@ -296,22 +220,23 @@ function pick<T>(values: T[], index: number): T {
   return value;
 }
 
+
+const DEMO_STUDENT_EMAIL = DEMO_ACCOUNTS.STUDENT.email;
+const DEMO_EMPLOYEE_EMAIL = DEMO_ACCOUNTS.EMPLOYEE.email;
+const EXTRA_STUDENT_EMAILS = EXTRA_STUDENTS.map((student) => student.email);
+
 /**
- * Creates the Day 6 demo dataset: maintenance workflow history, preventive
- * plans, lost & found records, claims, notifications, activity logs and one
- * cached AI insight. Users and locations must already exist.
+ * Creates the demo dataset: extra student/employee users, extra locations,
+ * lost & found records, matches, claims, notifications, activity logs and
+ * cached Arabic AI insights. Demo accounts and core locations must already
+ * exist (see seed.ts).
  */
 export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts> {
-  const now = new Date();
-
   await User.insertMany(
     EXTRA_STUDENTS.map((student) => ({
       ...student,
-      role: 'STUDENT_EMPLOYEE',
+      role: student.email.includes('@std.') ? ('STUDENT' as const) : ('EMPLOYEE' as const),
       passwordHash,
-      specializations: [],
-      skills: [],
-      skillsAr: [],
     })),
   );
 
@@ -329,7 +254,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
   };
 
   const locationId = (
-    building: RequestSpec['building'],
+    building: ItemSpec['building'],
     index: number,
   ): Types.ObjectId => {
     const matching = locations.filter((location) =>
@@ -338,1652 +263,11 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     return pick(matching, index)._id;
   };
 
-  const managerId = userId(DEMO_ACCOUNTS.MAINTENANCE_MANAGER.email);
+  const managerId = userId(DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email);
   const adminId = userId(DEMO_ACCOUNTS.SUPER_ADMIN.email);
-  const officerId = userId(DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email);
   const demoStudentId = userId(DEMO_STUDENT_EMAIL);
-  const technicianIds = TECHNICIAN_EMAILS.map(userId);
+  const demoEmployeeId = userId(DEMO_EMPLOYEE_EMAIL);
 
-  // ---------------------------------------------------------------------------
-  // Maintenance requests
-  // ---------------------------------------------------------------------------
-  const requestSpecs: RequestSpec[] = [
-    {
-      key: 'submitted-1',
-      titleAr: 'جهاز العرض لا يعمل في مدرج 101',
-      descriptionAr:
-        'جهاز العرض المثبت في سقف مدرج 101 بمجمع الكليات الهندسية لا يعمل. يظل مؤشر جهاز التحكم أحمر وتُلقى المحاضرات حالياً باستخدام شاشة متنقلة.',
-      title: 'Projector will not power on in Lecture Hall 101',
-      description:
-        'The ceiling projector in Lecture Hall 101 at the Engineering Complex does not power on. The remote indicator stays red and lectures are currently using a portable screen.',
-      category: 'Hardware',
-      priority: 'HIGH',
-      status: 'SUBMITTED',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Engineering',
-      locationIndex: 0,
-      daysAgo: 1,
-      equipmentDescription: 'Epson EB-L200F Ceiling Laser Projector (Asset #MNU-AV-104)',
-      equipmentDescriptionAr: 'جهاز عرض ليزر سقفي Epson EB-L200F (أصل رقم #MNU-AV-104)',
-    },
-    {
-      key: 'submitted-2',
-      titleAr: 'صنبور يسرب المياه في عيادة الأسنان 302',
-      descriptionAr:
-        'صنبور وحدة التعقيم في عيادة الأسنان 302 بالمجمع الطبي يستمر في التنقيط والحوض يمتلئ ببطء. تتجمع المياه حول الحوض.',
-      title: 'Leaking faucet in Dental Clinic 302',
-      description:
-        'A faucet at the sterilization basin in Dental Clinic 302 keeps dripping and the sink is filling slowly. Water is pooling around the basin.',
-      category: 'Plumbing',
-      priority: 'MEDIUM',
-      status: 'SUBMITTED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[3]!,
-      building: 'Medical',
-      locationIndex: 4,
-      daysAgo: 3,
-      equipmentDescription: 'Grohe Eurosmart Medical Basin Mixer Tap',
-      equipmentDescriptionAr: 'خلاط حوض طبي Grohe Eurosmart بوحدة التعقيم',
-    },
-    {
-      key: 'submitted-3',
-      titleAr: 'شبكة الواي فاي تنقطع باستمرار في قاعة المطالعة بالمكتبة المركزية',
-      descriptionAr:
-        'تنقطع الشبكة اللاسلكية كل بضع دقائق في قاعة المطالعة بالمكتبة المركزية. لا يستطيع الطلاب البقاء على اتصال أثناء الاختبارات الإلكترونية.',
-      title: 'Wi-Fi drops repeatedly in the Central Library reading room',
-      description:
-        'The wireless network disconnects every few minutes in the central library reading room. Students cannot stay connected during online exams.',
-      category: 'Network',
-      priority: 'HIGH',
-      status: 'SUBMITTED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[1]!,
-      building: 'Administration',
-      locationIndex: 8,
-      daysAgo: 5,
-      equipmentDescription: 'Cisco Catalyst 9120AXI Ceiling Access Point (AP-LIB-202)',
-      equipmentDescriptionAr: 'نقطة وصول لاسلكية سقفية Cisco Catalyst 9120AXI (AP-LIB-202)',
-    },
-    {
-      key: 'submitted-4',
-      titleAr: 'مقعد مكسور في قاعة سيمينار 103 بمبنى الاقتصاد وإدارة الأعمال',
-      descriptionAr:
-        'أحد مقاعد قاعة السيمينار 103 به كسر في المسند ويهتز عند الجلوس عليه. ينبغي إزالته أو إصلاحه قبل المحاضرة القادمة.',
-      title: 'Broken chair in Seminar Room 103 (Humanities & Business)',
-      description:
-        'One of the seminar chairs in Seminar Room 103 has a cracked seat and rocks when used. It should be removed or repaired before the next class.',
-      category: 'Furniture',
-      priority: 'LOW',
-      status: 'SUBMITTED',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Humanities',
-      locationIndex: 2,
-      daysAgo: 8,
-      equipmentDescription: 'Fixed Lecture Seating Unit Row 2 Seat 08',
-      equipmentDescriptionAr: 'وحدة مقاعد دراسية ثابتة — الصف الثاني مقعد 08',
-    },
-    {
-      key: 'under-review-1',
-      titleAr: 'مكيف الهواء يصدر صوت احتكاك مرتفعاً في معمل ميكاترونكس 204',
-      descriptionAr:
-        'وحدة التكييف في معمل ميكاترونكس وذكاء اصطناعي 204 تصدر صوتاً مرتفعاً وتهتز بشدة عند بدء التشغيل.',
-      title: 'Air conditioner making a loud grinding noise in Mechatronics Lab 204',
-      description:
-        'The air conditioning unit in Mechatronics & AI Lab 204 makes a loud grinding noise and vibrates strongly when it starts.',
-      category: 'Air Conditioning',
-      priority: 'MEDIUM',
-      status: 'UNDER_REVIEW',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Engineering',
-      locationIndex: 6,
-      daysAgo: 2,
-      equipmentDescription: 'Carrier 36,000 BTU Ceiling Cassette HVAC Unit',
-      equipmentDescriptionAr: 'وحدة تكييف كاسيت سقفية Carrier قدرة 36,000 وحدة حرارية',
-      reviewNotes: 'Facilities team asked to inspect the compressor mount.',
-      reviewNotesAr: 'تم تكليف فريق صيانة المرافق بفحص قاعدة تثبيت الضاغط.',
-    },
-    {
-      key: 'under-review-2',
-      titleAr: 'أضواء الممر تومض بالقرب من العيادات الطبية 202',
-      descriptionAr:
-        'أضواء السقف في ممر مجمع الكليات الطبية تومض باستمرار في المساء. المشكلة تؤثر على الممر المؤدي لعيادات الأسنان.',
-      title: 'Corridor lights flicker near Dental Clinics 202',
-      description:
-        'The ceiling lights in the medical complex corridor flicker constantly in the evening. The issue affects the walkway outside the dental clinics.',
-      category: 'Electrical',
-      priority: 'HIGH',
-      status: 'UNDER_REVIEW',
-      requesterEmail: EXTRA_STUDENT_EMAILS[0]!,
-      building: 'Medical',
-      locationIndex: 3,
-      daysAgo: 4,
-      equipmentDescription: 'Philips CoreLine 60x60 LED Panel Array (Circuit MED-F2-L4)',
-      equipmentDescriptionAr: 'كشافات سقف ليد Philips CoreLine 60x60 (دائرة MED-F2-L4)',
-      reviewNotes: 'Electrical safety inspection scheduled.',
-      reviewNotesAr: 'تمت جدولة فحص السلامة الكهربائية للدائرة.',
-    },
-    {
-      key: 'under-review-3',
-      titleAr: 'محطة عمل المحاضر في معمل الذكاء الاصطناعي 304 لا تقلع',
-      descriptionAr:
-        'يتوقف جهاز المحاضر في معمل 304 عند شعار الشركة المصنعة. تعذر إجراء الجلسة العملية للشبكات العصبية المقررة.',
-      title: 'Instructor workstation in AI Lab 304 fails to boot',
-      description:
-        'The instructor workstation in Mechatronics & AI Lab 304 stops at the manufacturer logo. The lab cannot run the scheduled practical session.',
-      category: 'Hardware',
-      priority: 'CRITICAL',
-      status: 'UNDER_REVIEW',
-      requesterEmail: EXTRA_STUDENT_EMAILS[2]!,
-      building: 'Engineering',
-      locationIndex: 9,
-      daysAgo: 6,
-      equipmentDescription: 'Dell Precision 3660 Tower Workstation (Tag #MNU-ENG-PC01)',
-      equipmentDescriptionAr: 'محطة عمل Dell Precision 3660 Tower (رقم الأصل #MNU-ENG-PC01)',
-      reviewNotes: 'Check the storage controller before replacing hardware.',
-      reviewNotesAr: 'يرجى فحص وحدة التحكم في التخزين (NVMe RAID) قبل استبدال العتاد.',
-    },
-    {
-      key: 'approved-pending',
-      titleAr: 'مبرد المياه يسرب في بهو المكتبة المركزية',
-      descriptionAr:
-        'مبرد المياه بالقرب من بهو المكتبة المركزية يسرب من الأسفل وتم إيقاف تشغيله. الأرضية لا تزال مبللة.',
-      title: 'Water dispenser leaking in the Central Library lobby',
-      description:
-        'The water dispenser near the central library lobby leaks from the bottom and has been switched off. The floor remains wet.',
-      category: 'Plumbing',
-      priority: 'MEDIUM',
-      status: 'APPROVED',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Administration',
-      locationIndex: 2,
-      daysAgo: 9,
-      equipmentDescription: 'Oasis Stainless Steel Mains-Fed Water Cooler',
-      equipmentDescriptionAr: 'مبرد مياه ستانلس ستيل متصل بالشبكة ماركة Oasis',
-      reviewNotes: 'Approved for plumbing repair.',
-      reviewNotesAr: 'تمت الموافقة على الطلب لإصلاح السباكة.',
-    },
-    {
-      key: 'approved-assigned',
-      titleAr: 'كابل جهاز العرض يحتاج إلى استبدال في مدرج 201',
-      descriptionAr:
-        'كابل HDMI الخاص بجهاز عرض قاعة المحاضرات 201 تالف عند طرف التوصيل وتتقطع الصورة عند تحريك الكابل.',
-      title: 'Projector cable needs replacement in Lecture Hall 201',
-      description:
-        'The HDMI cable to the lecture hall projector in Lecture Hall 201 is damaged at the connector and the image cuts out when the cable moves.',
-      category: 'Hardware',
-      priority: 'LOW',
-      status: 'APPROVED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[0]!,
-      building: 'Humanities',
-      locationIndex: 5,
-      daysAgo: 10,
-      equipmentDescription: ' Kramer 15m Active Optical HDMI 2.0 Podium Cable',
-      equipmentDescriptionAr: 'كابل عرض ضوئي Kramer HDMI 2.0 بطول 15 متراً بمنصة المحاضر',
-      reviewNotes: 'Approved; replacement cable in stock.',
-      reviewNotesAr: 'تمت الموافقة؛ الكابل البديل متوفر في المخزن.',
-    },
-    {
-      key: 'approved-assigned-2',
-      titleAr: 'قفل الباب عالق في معمل المهارات الإكلينيكية 204',
-      descriptionAr:
-        'قفل باب معمل المهارات الإكلينيكية يعلق مع وجود المفتاح بداخله ولا يمكن قفل القاعة بإحكام بعد المحاضرات العملية.',
-      title: 'Door lock jammed in Clinical Skills Lab 204',
-      description:
-        'The door lock in Clinical Skills Lab 204 jams with the key inside and the room cannot be locked securely after practical sessions.',
-      category: 'Furniture',
-      priority: 'HIGH',
-      status: 'APPROVED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[1]!,
-      building: 'Medical',
-      locationIndex: 7,
-      daysAgo: 12,
-      equipmentDescription: 'Yale Heavy-Duty Mortise Cylinder Lockset',
-      equipmentDescriptionAr: 'كالون باب سلندر خدمة شاقة ماركة Yale',
-      reviewNotes: 'Approved; locksmith requested.',
-      reviewNotesAr: 'تمت الموافقة؛ تم استدعاء فني الأقفال والنجارة.',
-    },
-    {
-      key: 'rejected-1',
-      titleAr: 'استبدال شاشة كمبيوتر محمول شخصي',
-      descriptionAr:
-        'تصدعت شاشة حاسوبي المحمول الشخصي وأرغب في استبدالها من قبل وحدة تكنولوجيا المعلومات قبل عرض مشروعي النهائي.',
-      title: 'Personal laptop screen replacement',
-      description:
-        'My personal laptop screen cracked and I would like the IT unit to replace it before my final project presentation.',
-      category: 'Hardware',
-      priority: 'LOW',
-      status: 'REJECTED',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Engineering',
-      locationIndex: 2,
-      daysAgo: 14,
-      equipmentDescription: 'Personal Student Laptop (Non-University Asset)',
-      equipmentDescriptionAr: 'حاسوب محمول شخصي للطالب (غير تابع لأصول الجامعة)',
-      reviewNotes:
-        'Personal devices are outside the maintenance scope. Contact the IT service desk for paid repairs.',
-      reviewNotesAr:
-        'الأجهزة الشخصية خارج نطاق الصيانة الجامعية. يرجى التواصل مع مكتب الدعم الفني للإصلاحات المدفوعة.',
-    },
-    {
-      key: 'rejected-2',
-      titleAr: 'إعادة طلاء جدار قاعة شئون الطلاب G01',
-      descriptionAr:
-        'الجدار خلف شباك شئون الطلاب به خدش بسيط وسيبدو أفضل بطلاء جديد.',
-      title: 'Repaint the Student Affairs Hall G01 wall',
-      description:
-        'The wall behind the student affairs counter has a small scuff and would look better with a fresh coat of paint.',
-      category: 'General Maintenance',
-      priority: 'LOW',
-      status: 'REJECTED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[0]!,
-      building: 'Administration',
-      locationIndex: 3,
-      daysAgo: 18,
-      reviewNotes: 'Duplicate of the scheduled summer repainting programme.',
-      reviewNotesAr: 'مكرر ومُدرج بالفعل ضمن خطة الدهانات الصيفية المجدولة.',
-    },
-    {
-      key: 'in-progress',
-      titleAr: 'عطل في تبريد غرفة الخوادم بمعمل الذكاء الاصطناعي 104',
-      descriptionAr:
-        'حرارة غرفة الخوادم الرئيسية ترتفع بشدة ووحدة التبريد الاحتياطية لا تعمل تلقائياً. درجة حرارة الغرفة تجاوزت الحد الآمن.',
-      title: 'Server room cooling failure in AI Lab 104',
-      description:
-        'The primary server room is overheating and the backup cooling unit is not starting automatically. Room temperature is above the safe threshold.',
-      category: 'Air Conditioning',
-      priority: 'CRITICAL',
-      status: 'IN_PROGRESS',
-      requesterEmail: EXTRA_STUDENT_EMAILS[2]!,
-      building: 'Engineering',
-      locationIndex: 4,
-      daysAgo: 5,
-      equipmentDescription: 'Schneider Electric InRow Precision Cooling Unit (CRAC-02)',
-      equipmentDescriptionAr: 'وحدة تبريد دقيق لغرف الخوادم Schneider Electric InRow (CRAC-02)',
-      reviewNotes: 'Emergency repair approved.',
-      reviewNotesAr: 'تمت الموافقة الفورية كإصلاح طوارئ حرج.',
-    },
-    {
-      key: 'in-progress-overdue',
-      titleAr: 'استبدال محول الشبكة (Switch) في الطابق الثاني بمجمع الهندسة',
-      descriptionAr:
-        'محول شبكة الطابق الثاني يفصل جميع الاتصالات في أوقات الذروة. تم تسليم الوحدة البديلة وتحتاج إلى التركيب.',
-      title: 'Network switch replacement on the second floor (Engineering Complex)',
-      description:
-        'The second-floor network switch drops all connections during peak hours. A replacement unit has been delivered and needs installation.',
-      category: 'Network',
-      priority: 'HIGH',
-      status: 'IN_PROGRESS',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Engineering',
-      locationIndex: 8,
-      daysAgo: 20,
-      equipmentDescription: 'Cisco Catalyst 2960X-48TS-L Core Distribution Switch',
-      equipmentDescriptionAr: 'محول شبكة مركزي 48 منفذاً Cisco Catalyst 2960X-48TS-L',
-      reviewNotes: 'Replacement approved; installation in progress.',
-      reviewNotesAr: 'تمت الموافقة على الاستبدال؛ وجارٍ التركيب والبرمجة.',
-    },
-    {
-      key: 'in-progress-2',
-      titleAr: 'حوض المعمل المكسور يسرب تحت المنضدة في معمل اختبار المواد 102',
-      descriptionAr:
-        'الحوض في معمل اختبار المواد بمبنى الورش المركزية يسرب تحت المنضدة وتتعرض الخزانة للتلف بسبب المياه. تم عزل إمدادات المياه.',
-      title: 'Broken lab sink leaking under the bench in Materials Testing Lab 102',
-      description:
-        'The sink in Materials Testing Lab 102 leaks under the bench and the cabinet is becoming water damaged. The water supply has been isolated.',
-      category: 'Plumbing',
-      priority: 'MEDIUM',
-      status: 'IN_PROGRESS',
-      requesterEmail: EXTRA_STUDENT_EMAILS[2]!,
-      building: 'Workshops',
-      locationIndex: 2,
-      daysAgo: 11,
-      equipmentDescription: 'Chemical-Resistant Polypropylene Laboratory Sink Trap',
-      equipmentDescriptionAr: 'سيفون حوض معملي بولي بروبيلين مقاوم للكيماويات',
-      reviewNotes: 'Approved for plumbing repair.',
-      reviewNotesAr: 'تمت الموافقة على الطلب لإصلاح السباكة.',
-    },
-    {
-      key: 'completed-1',
-      titleAr: 'صيانة تكييف الهواء في القاعة الكبرى G02',
-      descriptionAr:
-        'تكييف القاعة الكبرى بمبنى إدارة الجامعة لم يكن يبرد بفاعلية أثناء محاضرات بعد الظهر. طُلبت صيانة كاملة.',
-      title: 'Air conditioning servicing in Main Auditorium G02',
-      description:
-        'The auditorium air conditioning was not cooling effectively during afternoon lectures. A full service was requested.',
-      category: 'Air Conditioning',
-      priority: 'MEDIUM',
-      status: 'COMPLETED',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Administration',
-      locationIndex: 1,
-      daysAgo: 26,
-      equipmentDescription: 'Daikin Central Rooftop Package Unit (RTU-AUD-01)',
-      equipmentDescriptionAr: 'وحدة تكييف مركزي مدمجة Daikin للقاعة الكبرى (RTU-AUD-01)',
-      reviewNotes: 'Approved for scheduled servicing.',
-      reviewNotesAr: 'تمت الموافقة لإجراء الصيانة المجدولة.',
-    },
-    {
-      key: 'completed-2',
-      titleAr: 'استبدال مقبس كهرباء تالف في ورشة الماكينات الثقيلة G01',
-      descriptionAr:
-        'مقبس الكهرباء ثلاثي الطور بجانب طاولة الاختبار يصدر شرراً عند إدخال القابس. تم فصل الدائرة فوراً.',
-      title: 'Replace faulty power outlet in Heavy Machinery Workshop G01',
-      description:
-        'The power outlet beside the testing bench sparks when a plug is inserted. The circuit was isolated immediately.',
-      category: 'Electrical',
-      priority: 'HIGH',
-      status: 'COMPLETED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[2]!,
-      building: 'Workshops',
-      locationIndex: 0,
-      daysAgo: 30,
-      equipmentDescription: 'Schneider PK PratiKa Industrial 32A Socket Outlet',
-      equipmentDescriptionAr: 'مقبس قوى صناعي 32 أمبير Schneider PK PratiKa',
-      reviewNotes: 'Approved as an urgent electrical repair.',
-      reviewNotesAr: 'تمت الموافقة كإصلاح كهربائي عاجل.',
-    },
-    {
-      key: 'completed-3',
-      titleAr: 'إصلاح طاولات الرسم الهندسي في صالة رسم 405',
-      descriptionAr:
-        'ثلاث طاولات رسم هندسي بها أسطح مفكوكة وبراغي بارزة. طُلب من الطلاب تجنب القاعة لحين إصلاحها.',
-      title: 'Repair damaged drafting tables in Drawing Studio 405',
-      description:
-        'Three drafting tables in Drawing Studio 405 have loose tops and protruding screws. Students have been asked to avoid the studio until repaired.',
-      category: 'Furniture',
-      priority: 'LOW',
-      status: 'COMPLETED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[1]!,
-      building: 'Engineering',
-      locationIndex: 14,
-      daysAgo: 34,
-      equipmentDescription: 'Adjustable Tilt Architectural Drafting Tables (Set of 3)',
-      equipmentDescriptionAr: 'طاولات رسم هندسي ومعماري قابلة للإمالة (عدد 3)',
-      reviewNotes: 'Approved for carpentry repair.',
-      reviewNotesAr: 'تمت الموافقة لإجراء إصلاحات النجارة والتثبيت.',
-    },
-    {
-      key: 'closed-1',
-      titleAr: 'استبدال لمبة جهاز عرض معمل محاكاة الأعمال 106',
-      descriptionAr:
-        'جهاز العرض في معمل محاكاة الأعمال 106 يُظهر صورة باهتة ويحتاج المصباح للاستبدال قبل الامتحانات العملية.',
-      title: 'Lab projector bulb replacement in Business Simulation Lab 106',
-      description:
-        'The projector in Business Simulation Lab 106 produced a dim image and the bulb needed replacement before the practical exams.',
-      category: 'Hardware',
-      priority: 'MEDIUM',
-      status: 'CLOSED',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Humanities',
-      locationIndex: 5,
-      daysAgo: 40,
-      equipmentDescription: 'BenQ MH760 Conference Projector Lamp Module',
-      equipmentDescriptionAr: 'وحدة مصباح جهاز عرض BenQ MH760',
-      reviewNotes: 'Approved; replacement bulb ordered.',
-      reviewNotesAr: 'تمت الموافقة؛ وتم طلب وحدة الإضاءة البديلة.',
-    },
-    {
-      key: 'closed-2',
-      titleAr: 'تسريب أنبوب مياه في عيادة الأسنان 102 بالمجمع الطبي',
-      descriptionAr:
-        'وصلة أنبوب تحت حوض عيادة الأسنان 102 تسرب باستمرار وتسببت في غمر بلاط الأرضية.',
-      title: 'Water pipe leak in Dental Clinic 102 (Medical Complex)',
-      description:
-        'A pipe joint under the sink in Dental Clinic 102 leaked continuously and soaked the floor tiles.',
-      category: 'Plumbing',
-      priority: 'HIGH',
-      status: 'CLOSED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[3]!,
-      building: 'Medical',
-      locationIndex: 4,
-      daysAgo: 45,
-      equipmentDescription: 'Ritter Ultimate Dental Unit Water Supply Manifold',
-      equipmentDescriptionAr: 'وصلة تغذية المياه لوحدة كرسي الأسنان Ritter Ultimate',
-      reviewNotes: 'Approved as an urgent plumbing repair.',
-      reviewNotesAr: 'تمت الموافقة كإصلاح سباكة عاجل.',
-    },
-    {
-      key: 'closed-3',
-      titleAr: 'استبدال فلاتر التكييف المركزي في الكافتيريا الطلابية المركزية G01',
-      descriptionAr:
-        'وحدة معالجة الهواء في الكافتيريا الطلابية المركزية بمنطقة الأنشطة كانت تنشر الغبار وكانت الفلاتر مستحقة للاستبدال.',
-      title: 'HVAC filter replacement in Central Student Cafeteria G01',
-      description:
-        'The air handling unit in Central Student Cafeteria G01 was circulating dust and the filters were due for replacement.',
-      category: 'Air Conditioning',
-      priority: 'MEDIUM',
-      status: 'CLOSED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[1]!,
-      building: 'Sports',
-      locationIndex: 0,
-      daysAgo: 55,
-      equipmentDescription: 'MERV-13 Pleated Air Handling Unit Filters (ahu-caf-01)',
-      equipmentDescriptionAr: 'فلاتر هواء مطوية MERV-13 لوحدة مناولة الهواء (AHU-CAF-01)',
-      reviewNotes: 'Included in the preventive HVAC schedule.',
-      reviewNotesAr: 'مُدرج ضمن جدول الصيانة الوقائية للتكييف المركزي.',
-    },
-    {
-      key: 'closed-4',
-      titleAr: 'معايرة السبورة الذكية في قاعة سيمينار 203',
-      descriptionAr:
-        'موضع اللمس في السبورة الذكية كان مزاحاً عن الصورة المعروضة، مما جعل الكتابة غير قابلة للاستخدام.',
-      title: 'Smart board calibration in Seminar Room 203',
-      description:
-        'The smart board touch position was offset from the projected image, making annotations unusable.',
-      category: 'Software',
-      priority: 'LOW',
-      status: 'CLOSED',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Humanities',
-      locationIndex: 7,
-      daysAgo: 65,
-      equipmentDescription: 'Promethean ActivPanel 75" Interactive Display',
-      equipmentDescriptionAr: 'شاشة تفاعلية ذكية Promethean ActivPanel مقاس 75 بوصة',
-      reviewNotes: 'Approved; calibration by the AV team.',
-      reviewNotesAr: 'تمت الموافقة؛ ستتم المعايرة بواسطة فريق الدعم الفني والوسائط.',
-    },
-    {
-      key: 'reopened-1',
-      titleAr: 'ضوء السقف لا يزال يومض بعد الإصلاح خارج معمل 204',
-      descriptionAr:
-        'ضوء السقف خارج معمل ميكاترونكس 204 تم إصلاحه الأسبوع الماضي لكنه لا يزال يومض وينطفئ تماماً في بعض الأحيان.',
-      title: 'Ceiling light still flickering after repair outside Lab 204',
-      description:
-        'The ceiling light outside Mechatronics Lab 204 was repaired last week but still flickers and occasionally turns off completely.',
-      category: 'Electrical',
-      priority: 'HIGH',
-      status: 'REOPENED',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Engineering',
-      locationIndex: 5,
-      daysAgo: 22,
-      equipmentDescription: 'LED Corridor Batten Fixture & Ballast Driver',
-      equipmentDescriptionAr: 'كشاف ممر LED مع محول التيار (Driver)',
-      reviewNotes: 'Reopened after the requester reported the fault returned.',
-      reviewNotesAr: 'أُعيد فتح الطلب بعد إفادة مقدم البلاغ بعودة العطل مرة أخرى.',
-      reopenCount: 1,
-    },
-    {
-      key: 'reopened-2',
-      titleAr: 'الحوض لا يزال مسدوداً بعد زيارة الصيانة في معمل المهارات 304',
-      descriptionAr:
-        'حوض معمل المهارات الإكلينيكية 304 يصرف ببطء شديد مجدداً بعد الزيارة السابقة. تتجمع المياه عند فتح الصنبور لأكثر من دقيقة.',
-      title: 'Sink still blocked after maintenance visit in Clinical Lab 304',
-      description:
-        'The sink in Clinical Skills Lab 304 drains very slowly again after the previous visit. Water backs up when the tap runs for more than a minute.',
-      category: 'Plumbing',
-      priority: 'MEDIUM',
-      status: 'REOPENED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[0]!,
-      building: 'Medical',
-      locationIndex: 8,
-      daysAgo: 28,
-      equipmentDescription: 'Stainless Steel Scrub Sink Drain Line (MED-304)',
-      equipmentDescriptionAr: 'خط صرف حوض التعقيم الجراحي الاستانلس ستيل (MED-304)',
-      reviewNotes: 'Reopened after the requester reported the blockage returned.',
-      reviewNotesAr: 'أُعيد فتح الطلب بعد إفادة مقدم البلاغ بعودة الانسداد.',
-      reopenCount: 1,
-    },
-    {
-      key: 'recent-approved-1',
-      titleAr: 'انقطاع إنارة لوحة الاختبار في معمل الميكاترونكس G03',
-      descriptionAr:
-        'مفتاح الإضاءة الرئيسي ولوحة التوزيع الفرعية فوق طاولة اللحام في معمل التصنيع واللحام G03 يفصل عند تشغيل الإضاءة الكاملة.',
-      title: 'Sub-panel lighting trip in Fabrication & Welding Lab G03',
-      description:
-        'The lighting sub-panel above the welding bay in Fabrication & Welding Lab G03 trips the breaker whenever all overhead bays are switched on.',
-      category: 'Electrical',
-      priority: 'HIGH',
-      status: 'APPROVED',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Workshops',
-      locationIndex: 1,
-      daysAgo: 3,
-      equipmentDescription: 'Schneider Acti9 16A Miniature Circuit Breaker Panel',
-      equipmentDescriptionAr: 'لوحة قواطع فرعية Schneider Acti9 قدرة 16 أمبير',
-      reviewNotes: 'Approved; assigned for evening maintenance slot.',
-      reviewNotesAr: 'تمت الموافقة؛ وأُسندت المهمة لفترة الصيانة المسائية.',
-    },
-    {
-      key: 'recent-approved-2',
-      titleAr: 'ضعف ضغط المياه في غرف تبديل الملابس بالملعب الرياضي G05',
-      descriptionAr:
-        'ضغط المياه في مغاسل ومرافق الملعب الرياضي متعدد الأغراض G05 منخفض جداً خلال فترة ما بعد الظهر.',
-      title: 'Low water pressure at Multi-Purpose Sports Court G05 facilities',
-      description:
-        'Water pressure across the washbasins and changing room taps at Multi-Purpose Sports Court G05 drops sharply during afternoon hours.',
-      category: 'Plumbing',
-      priority: 'MEDIUM',
-      status: 'APPROVED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[1]!,
-      building: 'Sports',
-      locationIndex: 1,
-      daysAgo: 2,
-      equipmentDescription: 'Grundfos Booster Pump Pressure Switch Assembly',
-      equipmentDescriptionAr: 'مجموعة مفتاح الضغط لمضخة رفع المياه Grundfos',
-      reviewNotes: 'Approved for booster pump pressure check.',
-      reviewNotesAr: 'تمت الموافقة لفحص ضغط مضخة الرفع والخطوط الفرعية.',
-    },
-    {
-      key: 'recent-in-progress-3',
-      titleAr: 'توقف شاشة العرض التفاعلية في مدرج 301 بمجمع الهندسة',
-      descriptionAr:
-        'شاشة العرض المركزية في مدرج 301 لا تستجيب لإشارة المنفذ وتظهر رسالة عدم وجود إشارة أثناء عرض المحاضرات.',
-      title: 'Interactive podium display not receiving signal in Lecture Hall 301',
-      description:
-        'The main podium display in Lecture Hall 301 shows a no-signal prompt when instructors connect via the lectern dock.',
-      category: 'Hardware',
-      priority: 'HIGH',
-      status: 'IN_PROGRESS',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Engineering',
-      locationIndex: 6,
-      daysAgo: 4,
-      equipmentDescription: 'Extron Lectern AV Switcher & HDMI Matrix',
-      equipmentDescriptionAr: 'موزع إشارات العرض Extron بمنصة المحاضر',
-      reviewNotes: 'Approved; AV diagnostics underway.',
-      reviewNotesAr: 'تمت الموافقة؛ وجارٍ فحص موزع العرض وتوصيلات المنصة.',
-    },
-    {
-      key: 'recent-completed-1',
-      titleAr: 'عطل قاطع الطاقة في معمل التحكم الرقمي 104',
-      descriptionAr:
-        'مخرج الطاقة المساعد بجانب محطة الاختبار الثانية في معمل الميكاترونكس 104 توقف عن العمل قبل حصة المعمل.',
-      title: 'Auxiliary bench power circuit outage in CNC & Mechatronics Lab 104',
-      description:
-        'The auxiliary bench power circuit next to workstation 2 in CNC & Mechatronics Lab 104 lost power prior to the afternoon lab session.',
-      category: 'Electrical',
-      priority: 'MEDIUM',
-      status: 'COMPLETED',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Workshops',
-      locationIndex: 3,
-      daysAgo: 4,
-      equipmentDescription: 'Legrand Lab Bench Power Trunking & RCD Breaker',
-      equipmentDescriptionAr: 'مسار طاقة طاولة المعمل مع قاطع حماية Legrand',
-      reviewNotes: 'Approved for urgent bench circuit restoration.',
-      reviewNotesAr: 'تمت الموافقة لإعادة تغذية دائرة طاولة المعمل.',
-    },
-    {
-      key: 'recent-completed-2',
-      titleAr: 'انخفاض كفاءة التبريد في معمل اختبار المواد 102',
-      descriptionAr:
-        'وحدة التكييف في معمل اختبار المواد 102 لا تصل إلى درجة الحرارة المضبوطة أثناء تشغيل أجهزة الاختبار.',
-      title: 'Insufficient cooling in Materials Testing Lab 102',
-      description:
-        'The split cooling unit in Materials Testing Lab 102 fails to reach the setpoint temperature while testing equipment is running.',
-      category: 'Air Conditioning',
-      priority: 'HIGH',
-      status: 'COMPLETED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[2]!,
-      building: 'Workshops',
-      locationIndex: 2,
-      daysAgo: 5,
-      equipmentDescription: 'LG Inverter 24,000 BTU Wall-Mounted AC Unit',
-      equipmentDescriptionAr: 'وحدة تكييف سبليت LG إنفرتر قدرة 24,000 وحدة حرارية',
-      reviewNotes: 'Approved; HVAC technician dispatched.',
-      reviewNotesAr: 'تمت الموافقة؛ وتم توجيه فني التكييف للمعاينة والإصلاح.',
-    },
-    {
-      key: 'recent-closed-1',
-      titleAr: 'استبدال مفاتيح الإضاءة التالفة في مدرج طبي 201',
-      descriptionAr:
-        'لوحة مفاتيح الإضاءة الأمامية بمدرج طبي 201 تصدر طنيناً وتسخن عند تشغيل إضاءة المنصة.',
-      title: 'Faulty lighting dimmer switches in Medical Lecture Hall 201',
-      description:
-        'The front stage lighting switches in Medical Lecture Hall 201 buzz and heat up when lecture lighting is enabled.',
-      category: 'Electrical',
-      priority: 'HIGH',
-      status: 'CLOSED',
-      requesterEmail: DEMO_STUDENT_EMAIL,
-      building: 'Medical',
-      locationIndex: 3,
-      daysAgo: 6,
-      equipmentDescription: 'ABB Modular Auditorium Lighting Switch Bank',
-      equipmentDescriptionAr: 'لوحة مفاتيح إنارة مدرج معيارية ماركة ABB',
-      reviewNotes: 'Approved; replace switch bank immediately.',
-      reviewNotesAr: 'تمت الموافقة؛ استبدال مجموعة المفاتيح فوراً.',
-    },
-    {
-      key: 'recent-closed-2',
-      titleAr: 'تلف منفذ الشبكة السلكي في مكتب شئون الطلاب 105',
-      descriptionAr:
-        'منفذ الشبكة الأرضي بمكتب شئون الطلاب 105 يفقد الاتصال بشكل متكرر عند استخدام نظام التسجيل.',
-      title: 'Damaged Ethernet wall jack in Administrative Office 105',
-      description:
-        'The wired Ethernet wall jack in Administrative Office 105 intermittently disconnects student registration terminals.',
-      category: 'Network',
-      priority: 'MEDIUM',
-      status: 'CLOSED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[0]!,
-      building: 'Administration',
-      locationIndex: 5,
-      daysAgo: 5,
-      equipmentDescription: 'Panduit Cat6A Dual Keystone Wall Outlet',
-      equipmentDescriptionAr: 'مخرج شبكة حائطي مزدوج Cat6A ماركة Panduit',
-      reviewNotes: 'Approved for network port re-termination.',
-      reviewNotesAr: 'تمت الموافقة لإعادة تأريض وتأريج منفذ الشبكة.',
-    },
-    {
-      key: 'recent-closed-3',
-      titleAr: 'إصلاح مفصلات أبواب خزانة الوسائط بقاعة سيمينار 303',
-      descriptionAr:
-        'باب خزانة أجهزة العرض في قاعة سيمينار 303 مفكوك المفصلات ولا يغلق بإحكام.',
-      title: 'Loose cabinet hinges in Seminar Room 303',
-      description:
-        'The AV equipment cabinet door in Seminar Room 303 has loose hinges and will not latch securely.',
-      category: 'Furniture',
-      priority: 'LOW',
-      status: 'CLOSED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[3]!,
-      building: 'Humanities',
-      locationIndex: 10,
-      daysAgo: 6,
-      equipmentDescription: 'Lectern AV Equipment Steel-Framed Cabinet',
-      equipmentDescriptionAr: 'خزانة حفظ أجهزة العرض المعدنية بقاعة السيمينار',
-      reviewNotes: 'Approved for carpentry hardware replacement.',
-      reviewNotesAr: 'تمت الموافقة لاستبدال المفصلات وتثبيت القفل.',
-    },
-    {
-      key: 'recent-closed-4',
-      titleAr: 'تسريب محبس تغذية المياه في الكافتيريا الطلابية المركزية G01',
-      descriptionAr:
-        'محبس التغذية خلف منطقة المشروبات الساخنة بالكافتيريا الطلابية ينقط باستمرار ويحتاج لاستبدال الجلدة.',
-      title: 'Leaking supply valve in Central Student Cafeteria G01',
-      description:
-        'The water supply shutoff valve behind the beverage station in Central Student Cafeteria G01 drips continuously.',
-      category: 'Plumbing',
-      priority: 'MEDIUM',
-      status: 'CLOSED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[1]!,
-      building: 'Sports',
-      locationIndex: 0,
-      daysAgo: 5,
-      equipmentDescription: 'Brass 3/4-Inch Quarter-Turn Isolation Valve',
-      equipmentDescriptionAr: 'محبس عزل نحاسي ربع لفة مقاس 3/4 بوصة',
-      reviewNotes: 'Approved for valve replacement.',
-      reviewNotesAr: 'تمت الموافقة لاستبدال المحبس.',
-    },
-    {
-      key: 'recent-reopened-3',
-      titleAr: 'تذبذب تبريد عيادة الأسنان 202 بعد الصيانة الأولية',
-      descriptionAr:
-        'وحدة التكييف في عيادة الأسنان 202 عادت لإيقاف الضاغط تلقائياً بعد مرور ساعة من التشغيل المتواصل.',
-      title: 'AC compressor still cycling off in Dental Clinic 202',
-      description:
-        'The cooling unit in Dental Clinic 202 resumed shutting off its compressor after one hour of continuous clinic operation.',
-      category: 'Air Conditioning',
-      priority: 'HIGH',
-      status: 'REOPENED',
-      requesterEmail: EXTRA_STUDENT_EMAILS[0]!,
-      building: 'Medical',
-      locationIndex: 4,
-      daysAgo: 5,
-      equipmentDescription: 'Carrier Ducted Split Unit (MED-CLINIC-AC02)',
-      equipmentDescriptionAr: 'وحدة تكييف كونسيلد Carrier بعيادة الأسنان (MED-CLINIC-AC02)',
-      reviewNotes: 'Reopened for refrigerant pressure and thermal overload inspection.',
-      reviewNotesAr: 'أُعيد فتح الطلب لفحص ضغط الفريون وقاطع الحماية الحرارية.',
-      reopenCount: 1,
-    },
-  ];
-
-  const requestDocs = requestSpecs.map((spec, index) => {
-    const createdAt = daysAgo(spec.daysAgo);
-    const reviewed = spec.status !== 'SUBMITTED';
-    const reviewedAt = reviewed ? addHours(createdAt, 6) : undefined;
-
-    return {
-      _id: new Types.ObjectId(),
-      requestNumber: `MR-${2001 + index}`,
-      requesterId: userId(spec.requesterEmail),
-      title: spec.title,
-      titleAr: spec.titleAr,
-      description: spec.description,
-      descriptionAr: spec.descriptionAr,
-      category: spec.category,
-      priority: spec.priority,
-      locationId: locationId(spec.building, spec.locationIndex),
-      equipmentDescription: spec.equipmentDescription,
-      equipmentDescriptionAr: spec.equipmentDescriptionAr,
-      attachments: [],
-      status: spec.status,
-      reviewedBy: reviewed ? managerId : undefined,
-      reviewedAt,
-      reviewNotes: spec.reviewNotes,
-      reviewNotesAr: spec.reviewNotesAr,
-      currentWorkOrderId: undefined as Types.ObjectId | undefined,
-      reopenCount: spec.reopenCount ?? 0,
-      createdAt,
-      updatedAt: reviewedAt ?? createdAt,
-    };
-  });
-
-  const requestByKey = new Map(
-    requestSpecs.map((spec, index) => [spec.key, requestDocs[index]!]),
-  );
-
-  const workOrderSpecs: WorkOrderSpec[] = [
-    {
-      requestKey: 'approved-pending',
-      status: 'PENDING_ASSIGNMENT',
-      scheduledStart: addDays(now, 1),
-      expectedCompletion: addHours(addDays(now, 1), 4),
-      aiSummaryEn:
-        'Mains-fed water cooler in the Central Library lobby is leaking from the lower basin assembly and has been isolated pending plumbing seal replacement.',
-      aiSummaryAr:
-        'مبرد المياه المتصل بالشبكة في بهو المكتبة المركزية يسرب من الحوض السفلي وتم عزله بانتظار استبدال وصلة مانع التسرب.',
-      current: true,
-    },
-    {
-      requestKey: 'approved-assigned',
-      status: 'ASSIGNED',
-      technicianEmail: TECHNICIAN_EMAILS[0]!,
-      scheduledStart: addDays(now, 2),
-      expectedCompletion: addHours(addDays(now, 2), 4),
-      notes: [
-        {
-          note: 'Collected replacement 15m optical HDMI cable from central stores; scheduled installation between afternoon lectures.',
-          noteAr: 'تم استلام كابل HDMI ضوئي بطول 15 متراً من المخازن المركزية؛ وجدولة التركيب بين محاضرات الفترة المسائية.',
-        },
-      ],
-      aiSummaryEn:
-        'Assigned to Hassan El-Sayed to replace the damaged 15m podium HDMI cable in Lecture Hall 201 using stock already drawn from central stores.',
-      aiSummaryAr:
-        'تم إسناد المهمة إلى حسن السيد لاستبدال كابل العرض التالف بمنصة المحاضر في مدرج 201 باستخدام الكابل البديل المستلم من المخزن.',
-      current: true,
-    },
-    {
-      requestKey: 'approved-assigned-2',
-      status: 'ASSIGNED',
-      technicianEmail: TECHNICIAN_EMAILS[4]!,
-      scheduledStart: addDays(now, 3),
-      expectedCompletion: addHours(addDays(now, 3), 4),
-      notes: [
-        {
-          note: 'Inspected door cylinder; a new Yale mortise cylinder is ready for installation once the lab schedule clears.',
-          noteAr: 'تمت معاينة قلب القفل؛ وتم تجهيز سلندر Yale جديد للتركيب فور انتهاء الجدول العملي بالمعمل.',
-        },
-      ],
-      aiSummaryEn:
-        'Assigned to Sameh Radwan to extract the jammed key and install a replacement mortise lock cylinder on Clinical Skills Lab 204.',
-      aiSummaryAr:
-        'تم إسناد المهمة إلى سامح رضوان لإخراج المفتاح العالق وتركيب سلندر قفل جديد لباب معمل المهارات الإكلينيكية 204.',
-      current: true,
-    },
-    {
-      requestKey: 'in-progress',
-      status: 'IN_PROGRESS',
-      technicianEmail: TECHNICIAN_EMAILS[3]!,
-      scheduledStart: hoursAgo(24),
-      expectedCompletion: addDays(now, 1),
-      actualStart: hoursAgo(20),
-      notes: [
-        {
-          note: 'Activated portable spot cooler to stabilize server rack intake temperature at 21°C.',
-          noteAr: 'تم تشغيل وحدة تبريد متنقلة لتثبيت درجة حرارة سحب الهواء لكبائن الخوادم عند 21 درجة مئوية.',
-          hoursAfterStart: 1,
-        },
-        {
-          note: 'Diagnosed faulty transfer relay on backup CRAC-02 controller; replacing relay board and testing automatic failover.',
-          noteAr: 'تم تشخيص عطل في مرحّل التحويل التلقائي لوحدة التبريد الاحتياطية CRAC-02؛ وجارٍ استبدال اللوحة واختبار التبديل التلقائي.',
-          hoursAfterStart: 6,
-        },
-      ],
-      aiSummaryEn:
-        'Critical server room cooling repair in progress by Ibrahim Abdel-Fattah. Temporary cooling is active while the CRAC-02 automatic failover relay board is replaced.',
-      aiSummaryAr:
-        'إصلاح طارئ لتبريد غرفة الخوادم قيد التنفيذ بواسطة إبراهيم عبد الفتاح. تم تأمين التبريد المؤقت وجارٍ استبدال لوحة التبديل التلقائي لوحدة CRAC-02.',
-      current: true,
-    },
-    {
-      requestKey: 'in-progress-overdue',
-      status: 'IN_PROGRESS',
-      technicianEmail: TECHNICIAN_EMAILS[2]!,
-      scheduledStart: daysAgo(10),
-      expectedCompletion: daysAgo(3),
-      actualStart: daysAgo(9),
-      notes: [
-        {
-          note: 'Mounted replacement Cisco 2960X switch in rack 2B and migrated VLAN trunk configuration.',
-          noteAr: 'تم تركيب محول الشبكة البديل Cisco 2960X في الكابينة 2B ونقل إعدادات شبكات VLAN.',
-          hoursAfterStart: 4,
-        },
-        {
-          note: 'Awaiting maintenance window approval from faculty examination committee to cut over the remaining 16 lab ports.',
-          noteAr: 'بانتظار نافذة الصيانة المعتمدة من لجنة الامتحانات بالكلية لتحويل منافذ المعمل الـ 16 المتبقية.',
-          hoursAfterStart: 48,
-        },
-      ],
-      aiSummaryEn:
-        'Overdue network switch replacement handled by Karim El-Tantawy. Hardware is racked and configured; final port cutover awaits an approved exam-free window.',
-      aiSummaryAr:
-        'أمر عمل متأخر لاستبدال محول الشبكة بمتابعة كريم الطنطاوي. تم تركيب وبرمجة الوحدة البديلة، ويتبقى التحويل النهائي للمنافذ فور انتهاء فترة الاختبارات.',
-      current: true,
-    },
-    {
-      requestKey: 'in-progress-2',
-      status: 'IN_PROGRESS',
-      technicianEmail: TECHNICIAN_EMAILS[0]!,
-      scheduledStart: daysAgo(2),
-      expectedCompletion: hoursAgo(2),
-      actualStart: hoursAgo(30),
-      notes: [
-        {
-          note: 'Isolated bench water valve, removed cracked polypropylene trap, and dried the cabinet base.',
-          noteAr: 'تم غلق محبس المياه الفرعي، وفك السيفون المتصدع، وتجفيف قاعدة الخزانة المعملية.',
-          hoursAfterStart: 2,
-        },
-      ],
-      aiSummaryEn:
-        'Lab sink leak isolated in Materials Testing Lab 102; replacement chemical-resistant trap is being fitted and pressure-tested.',
-      aiSummaryAr:
-        'تم عزل تسريب حوض معمل اختبار المواد 102؛ وجارٍ تركيب سيفون جديد مقاوم للكيماويات واختبار عدم وجود تسريب.',
-      current: true,
-    },
-    {
-      requestKey: 'completed-1',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[3]!,
-      scheduledStart: daysAgo(24),
-      expectedCompletion: daysAgo(23),
-      actualStart: addHours(daysAgo(24), 4),
-      completedAt: daysAgo(23),
-      notes: [
-        {
-          note: 'Measured refrigerant pressures and found pitted contacts on the main compressor contactor.',
-          noteAr: 'تم قياس ضغوط الفريون وتبين تآكل نقاط التلامس في كونتاكتور الضاغط الرئيسي.',
-          hoursAfterStart: 2,
-        },
-      ],
-      resolutionDetails: 'Replaced the compressor contactor and cleaned the coils.',
-      resolutionDetailsAr: 'تم استبدال ملامس الضاغط وتنظيف الملفات.',
-      aiSummaryEn:
-        'Completed full HVAC service for Main Auditorium G02 by replacing the worn compressor contactor and cleaning condenser coils.',
-      aiSummaryAr:
-        'تم إنجاز الصيانة الشاملة لتكييف القاعة الكبرى G02 عبر استبدال كونتاكتور الضاغط وتنظيف ملفات المكثف.',
-      current: true,
-    },
-    {
-      requestKey: 'completed-2',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[0]!,
-      scheduledStart: daysAgo(28),
-      expectedCompletion: daysAgo(27),
-      actualStart: addHours(daysAgo(28), 4),
-      completedAt: daysAgo(27),
-      notes: [
-        {
-          note: 'Locked out breaker W-12 and inspected scorched neutral terminal on bench socket.',
-          noteAr: 'تم فصل وتأمين القاطع W-12 وفحص طرف التعادل المحترق في مقبس طاولة الورشة.',
-          hoursAfterStart: 1,
-        },
-      ],
-      resolutionDetails: 'Replaced the outlet and verified the circuit under load.',
-      resolutionDetailsAr: 'تم استبدال المقبس واختبار الدائرة تحت الحمل.',
-      aiSummaryEn:
-        'Replaced the sparking industrial socket in Heavy Machinery Workshop G01 and verified thermal stability under full load.',
-      aiSummaryAr:
-        'تم استبدال المقبس الصناعي التالف في ورشة الماكينات الثقيلة G01 والتحقق من ثبات الجهد والحرارة تحت الحمل الكامل.',
-      current: true,
-    },
-    {
-      requestKey: 'completed-3',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[4]!,
-      scheduledStart: daysAgo(32),
-      expectedCompletion: daysAgo(31),
-      actualStart: addHours(daysAgo(32), 4),
-      completedAt: daysAgo(31),
-      notes: [
-        {
-          note: 'Re-aligned tilt mechanisms on all three drafting tables and installed lock-nuts.',
-          noteAr: 'تمت إعادة ضبط آلية الإمالة في طاولات الرسم الثلاث وتركيب صواميل تثبيت مانعة للارتخاء.',
-          hoursAfterStart: 3,
-        },
-      ],
-      resolutionDetails: 'Tightened the desk frames and replaced the damaged screws.',
-      resolutionDetailsAr: 'تم إحكام تثبيت هياكل المكاتب واستبدال البراغي التالفة.',
-      aiSummaryEn:
-        'Restored three architectural drafting tables in Drawing Studio 405 with new fasteners and frame reinforcement.',
-      aiSummaryAr:
-        'تم إصلاح وتدعيم ثلاث طاولات رسم هندسي في صالة رسم 405 واستبدال كافة البراغي التالفة.',
-      current: true,
-    },
-    {
-      requestKey: 'closed-1',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[2]!,
-      scheduledStart: daysAgo(38),
-      expectedCompletion: daysAgo(37),
-      actualStart: addHours(daysAgo(38), 4),
-      completedAt: daysAgo(37),
-      notes: [
-        {
-          note: 'Installed OEM BenQ lamp module and cleaned optical dust filter.',
-          noteAr: 'تم تركيب وحدة مصباح BenQ أصلية وتنظيف فلتر الغبار الضوئي.',
-          hoursAfterStart: 2,
-        },
-      ],
-      resolutionDetails: 'Replaced the projector bulb and reset the lamp timer.',
-      resolutionDetailsAr: 'تم استبدال لمبة جهاز العرض وإعادة ضبط مؤقت المصباح.',
-      aiSummaryEn:
-        'Projector brightness restored in Business Simulation Lab 106 via OEM lamp replacement and optical filter cleaning.',
-      aiSummaryAr:
-        'تمت استعادة سطوع جهاز العرض في معمل محاكاة الأعمال 106 بعد استبدال المصباح الأصلي وتنظيف الفلتر الضوئي.',
-      current: true,
-    },
-    {
-      requestKey: 'closed-2',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[1]!,
-      scheduledStart: daysAgo(43),
-      expectedCompletion: daysAgo(42),
-      actualStart: addHours(daysAgo(43), 4),
-      completedAt: daysAgo(42),
-      notes: [
-        {
-          note: 'Replaced cracked compression union and pressure-tested dental unit water supply.',
-          noteAr: 'تم استبدال وصلة الضغط المتصدعة واختبار ضغط خط المياه لوحدة الأسنان.',
-          hoursAfterStart: 2,
-        },
-      ],
-      resolutionDetails: 'Replaced the pipe joint and sealed the fitting.',
-      resolutionDetailsAr: 'تم استبدال وصلة الأنبوب وإحكام إغلاق التركيب.',
-      aiSummaryEn:
-        'Eliminated water leak in Dental Clinic 102 by replacing the faulty pipe joint and sealing the manifold connection.',
-      aiSummaryAr:
-        'تم إنهاء تسريب المياه في عيادة الأسنان 102 عبر استبدال وصلة الأنبوب التالفة وإحكام عزل التوصيلات.',
-      current: true,
-    },
-    {
-      requestKey: 'closed-3',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[3]!,
-      scheduledStart: daysAgo(52),
-      expectedCompletion: daysAgo(51),
-      actualStart: addHours(daysAgo(52), 4),
-      completedAt: daysAgo(51),
-      notes: [
-        {
-          note: 'Installed new MERV-13 pleated filters and sanitized air handling chamber.',
-          noteAr: 'تم تركيب فلاتر هواء مطوية جديدة MERV-13 وتطهير غرفة مناولة الهواء.',
-          hoursAfterStart: 3,
-        },
-      ],
-      resolutionDetails: 'Replaced both air filters and cleaned the housing.',
-      resolutionDetailsAr: 'تم استبدال كلا فلترَي الهواء وتنظيف المبيت.',
-      aiSummaryEn:
-        'Completed AHU filter replacement and housing sanitization in Central Student Cafeteria G01.',
-      aiSummaryAr:
-        'تم استبدال فلاتر وحدة مناولة الهواء وتنظيف المبيت بالكامل في الكافتيريا الطلابية المركزية G01.',
-      current: true,
-    },
-    {
-      requestKey: 'closed-4',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[2]!,
-      scheduledStart: daysAgo(61),
-      expectedCompletion: daysAgo(60),
-      actualStart: addHours(daysAgo(61), 4),
-      completedAt: daysAgo(60),
-      notes: [
-        {
-          note: 'Updated Promethean touch firmware to v4.2 and ran 25-point touch calibration.',
-          noteAr: 'تم تحديث البرنامج الثابت للشاشة التفاعلية Promethean إلى الإصدار v4.2 وإجراء معايرة اللمس ذات الـ 25 نقطة.',
-          hoursAfterStart: 1,
-        },
-      ],
-      resolutionDetails: 'Recalibrated the touch overlay and updated the driver.',
-      resolutionDetailsAr: 'تمت إعادة معايرة طبقة اللمس وتحديث برنامج التشغيل.',
-      aiSummaryEn:
-        'Resolved touch offset on the Seminar Room 203 smart board through firmware update and multi-point calibration.',
-      aiSummaryAr:
-        'تم حل مشكلة إزاحة اللمس في السبورة الذكية بقاعة سيمينار 203 عبر تحديث التعريف وإعادة المعايرة الدقيقة.',
-      current: true,
-    },
-    {
-      requestKey: 'reopened-1',
-      status: 'CANCELLED',
-      technicianEmail: TECHNICIAN_EMAILS[0]!,
-      scheduledStart: daysAgo(18),
-      expectedCompletion: daysAgo(17),
-      cancelReason: 'Reopened by the requester after the fault returned.',
-      cancelReasonAr: 'أُعيد فتحه بواسطة مقدم الطلب بعد تكرار العطل.',
-    },
-    {
-      requestKey: 'reopened-1',
-      status: 'PENDING_ASSIGNMENT',
-      scheduledStart: addDays(now, 2),
-      expectedCompletion: addHours(addDays(now, 2), 4),
-      aiSummaryEn:
-        'Reopened electrical fault outside Mechatronics Lab 204 requires full LED ballast driver replacement rather than starter reset.',
-      aiSummaryAr:
-        'عطل كهربائي معاد فتحه خارج معمل ميكاترونكس 204 يتطلب استبدال محول التيار (Driver) بالكامل لضمان عدم تكرار الوميض.',
-      current: true,
-    },
-    {
-      requestKey: 'reopened-2',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[1]!,
-      scheduledStart: daysAgo(25),
-      expectedCompletion: daysAgo(24),
-      actualStart: addHours(daysAgo(25), 4),
-      completedAt: daysAgo(24),
-      resolutionDetails: 'Cleared the trap and tested the drain.',
-      resolutionDetailsAr: 'تم تنظيف مجرى الصرف واختبار التصريف.',
-    },
-    {
-      requestKey: 'reopened-2',
-      status: 'PENDING_ASSIGNMENT',
-      scheduledStart: addDays(now, 4),
-      expectedCompletion: addHours(addDays(now, 4), 4),
-      aiSummaryEn:
-        'Reopened drainage issue in Clinical Skills Lab 304 requires mechanical auger clearing of the main vertical stack.',
-      aiSummaryAr:
-        'بلاغ صرف معاد فتحه في معمل المهارات الإكلينيكية 304 يتطلب تسليكاً ميكانيكياً لخط الصرف الرئيسي.',
-      current: true,
-    },
-    {
-      requestKey: 'recent-approved-1',
-      status: 'ASSIGNED',
-      technicianEmail: TECHNICIAN_EMAILS[0]!,
-      scheduledStart: addDays(now, 1),
-      expectedCompletion: addHours(addDays(now, 1), 4),
-      createdAt: daysAgo(2, 14),
-      notes: [
-        {
-          note: 'Prepared replacement 16A Schneider MCB and thermal imager for evening bay load check.',
-          noteAr: 'تم تجهيز قاطع Schneider 16A البديل وجهاز التصوير الحراري لفحص الأحمال بالفترة المسائية.',
-        },
-      ],
-      aiSummaryEn:
-        'Assigned to Hassan El-Sayed to replace the tripping 16A lighting MCB and inspect wiring load balance in Fabrication & Welding Lab G03.',
-      aiSummaryAr:
-        'تم إسناد المهمة إلى حسن السيد لاستبدال القاطع الفرعي 16 أمبير وفحص توزيع أحمال الإنارة في معمل التصنيع واللحام G03.',
-      current: true,
-    },
-    {
-      requestKey: 'recent-approved-2',
-      status: 'ASSIGNED',
-      technicianEmail: TECHNICIAN_EMAILS[1]!,
-      scheduledStart: addDays(now, 1),
-      expectedCompletion: addHours(addDays(now, 1), 3),
-      createdAt: daysAgo(1, 15),
-      notes: [
-        {
-          note: 'Scheduled booster pump pressure gauge calibration and strainer cleaning with sports complex supervisor.',
-          noteAr: 'تمت جدولة معايرة عداد ضغط مضخة الرفع وتنظيف المصفاة بالتنسيق مع مشرف الملاعب.',
-        },
-      ],
-      aiSummaryEn:
-        'Assigned to Mohamed El-Gohary to inspect the Grundfos booster pump pressure switch and restore water pressure at Sports Court G05.',
-      aiSummaryAr:
-        'تم إسناد المهمة إلى محمد الجوهري لفحص مفتاح الضغط لمضخة الرفع واستعادة ضغط المياه بالملعب الرياضي G05.',
-      current: true,
-    },
-    {
-      requestKey: 'recent-in-progress-3',
-      status: 'IN_PROGRESS',
-      technicianEmail: TECHNICIAN_EMAILS[0]!,
-      scheduledStart: hoursAgo(10),
-      expectedCompletion: addDays(now, 1),
-      actualStart: hoursAgo(6),
-      notes: [
-        {
-          note: 'Tested lectern HDMI matrix output; power rail on Extron switcher reads unstable 4.1V. Fitting replacement power module.',
-          noteAr: 'تم اختبار مخرج موزع العرض؛ جهد التغذية غير مستقر عند 4.1 فولت وجارٍ تركيب وحدة تغذية بديلة.',
-          hoursAfterStart: 2,
-        },
-      ],
-      aiSummaryEn:
-        'In progress by Hassan El-Sayed: diagnosed unstable power module on the Lecture Hall 301 lectern AV switcher and fitting a replacement.',
-      aiSummaryAr:
-        'قيد التنفيذ بواسطة حسن السيد: تم تشخيص عدم استقرار وحدة التغذية لموزع العرض في مدرج 301 وجارٍ تركيب البديل.',
-      current: true,
-    },
-    {
-      requestKey: 'recent-completed-1',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[0]!,
-      scheduledStart: daysAgo(3, 9),
-      expectedCompletion: daysAgo(3, 15),
-      actualStart: daysAgo(3, 10),
-      completedAt: daysAgo(3, 14),
-      notes: [
-        {
-          note: 'Replaced tripped RCD breaker and tightened neutral busbar terminations inside bench trunking.',
-          noteAr: 'تم استبدال قاطع الحماية الأرضي RCD وإحكام ربط أطراف التعادل داخل مسار الطاقة.',
-          hoursAfterStart: 2,
-        },
-      ],
-      resolutionDetails: 'Replaced the RCD breaker and tested all four bench outlets under load.',
-      resolutionDetailsAr: 'تم استبدال قاطع الحماية RCD واختبار جميع مخارج الطاولة الأربعة تحت الحمل.',
-      aiSummaryEn:
-        'Restored auxiliary bench power in CNC & Mechatronics Lab 104 by replacing the faulty RCD breaker in 4 hours.',
-      aiSummaryAr:
-        'تمت استعادة طاقة طاولة المعمل في التحكم الرقمي والميكاترونكس 104 عبر استبدال قاطع الحماية RCD خلال 4 ساعات.',
-      current: true,
-    },
-    {
-      requestKey: 'recent-completed-2',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[3]!,
-      scheduledStart: daysAgo(4, 9),
-      expectedCompletion: daysAgo(4, 16),
-      actualStart: daysAgo(4, 10),
-      completedAt: daysAgo(4, 15),
-      notes: [
-        {
-          note: 'Topped up R410A refrigerant after repairing flare nut micro-leak and flushed indoor evaporator coil.',
-          noteAr: 'تم تزويد شحنة الفريون R410A بعد معالجة تسريب بسيط في الصامولة وغسل ملف المبخر الداخلي.',
-          hoursAfterStart: 3,
-        },
-      ],
-      resolutionDetails: 'Sealed the flare fitting, recharged refrigerant, and verified 18°C supply air.',
-      resolutionDetailsAr: 'تم إحكام وصلة الفلير وإعادة شحن الفريون والتأكد من وصول هواء التبريد إلى 18 درجة.',
-      aiSummaryEn:
-        'Completed HVAC repair in Materials Testing Lab 102; sealed micro-leak and restored full cooling capacity.',
-      aiSummaryAr:
-        'تم إصلاح التكييف في معمل اختبار المواد 102؛ معالجة التسريب وإعادة كفاءة التبريد الكاملة.',
-      current: true,
-    },
-    {
-      requestKey: 'recent-closed-1',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[0]!,
-      scheduledStart: daysAgo(5, 9),
-      expectedCompletion: daysAgo(5, 15),
-      actualStart: daysAgo(5, 10),
-      completedAt: addHours(daysAgo(5, 10), 3),
-      notes: [
-        {
-          note: 'Replaced arced ABB dimmer bank and verified cool-running contacts across all stage channels.',
-          noteAr: 'تم استبدال لوحة مفاتيح الإضاءة ABB المتآكلة والتأكد من ثبات الحرارة على كافة القنوات.',
-          hoursAfterStart: 2,
-        },
-      ],
-      resolutionDetails: 'Installed new ABB switch bank and tested stage lighting circuits.',
-      resolutionDetailsAr: 'تم تركيب لوحة مفاتيح ABB جديدة واختبار دوائر إنارة المنصة.',
-      aiSummaryEn:
-        'Eliminated switch buzzing and overheating in Medical Lecture Hall 201 by installing a new ABB switch bank.',
-      aiSummaryAr:
-        'تم إنهاء مشكلة طنين وسخونة المفاتيح في مدرج طبي 201 بتركيب لوحة مفاتيح ABB جديدة.',
-      current: true,
-    },
-    {
-      requestKey: 'recent-closed-2',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[2]!,
-      scheduledStart: daysAgo(4, 10),
-      expectedCompletion: daysAgo(4, 16),
-      actualStart: daysAgo(4, 11),
-      completedAt: daysAgo(4, 15),
-      notes: [
-        {
-          note: 'Re-punched Panduit Cat6A keystone module and certified link at 1 Gbps with Fluke tester.',
-          noteAr: 'تمت إعادة تأريج مخرج الشبكة Cat6A واختبار سرعة الربط 1 جيجابت بجهاز Fluke.',
-          hoursAfterStart: 2,
-        },
-      ],
-      resolutionDetails: 'Re-terminated Cat6A wall outlet and verified continuous link stability.',
-      resolutionDetailsAr: 'تمت إعادة توصيل مخرج Cat6A الحائطي والتحقق من استقرار الاتصال المستمر.',
-      aiSummaryEn:
-        'Resolved intermittent Ethernet dropouts in Administrative Office 105 via Cat6A keystone re-termination.',
-      aiSummaryAr:
-        'تم حل انقطاع الشبكة المتكرر بمكتب شئون الطلاب 105 عبر إعادة تأريج واختبار منفذ Cat6A.',
-      current: true,
-    },
-    {
-      requestKey: 'recent-closed-3',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[4]!,
-      scheduledStart: daysAgo(5, 10),
-      expectedCompletion: daysAgo(5, 15),
-      actualStart: daysAgo(5, 11),
-      completedAt: daysAgo(5, 14),
-      notes: [
-        {
-          note: 'Installed heavy-duty concealed hinges and aligned latch strike plate on AV cabinet.',
-          noteAr: 'تم تركيب مفصلات معدنية قوية وضبط لسان القفل لخزانة أجهزة العرض.',
-          hoursAfterStart: 2,
-        },
-      ],
-      resolutionDetails: 'Replaced cabinet hinges and adjusted the magnetic door latch.',
-      resolutionDetailsAr: 'تم استبدال مفصلات الخزانة وضبط القفل المغناطيسي للباب.',
-      aiSummaryEn:
-        'Secured AV equipment cabinet in Seminar Room 303 with replacement heavy-duty hinges and latch alignment.',
-      aiSummaryAr:
-        'تم تأمين باب خزانة أجهزة العرض في قاعة سيمينار 303 بتركيب مفصلات جديدة وضبط القفل.',
-      current: true,
-    },
-    {
-      requestKey: 'recent-closed-4',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[1]!,
-      scheduledStart: daysAgo(3, 10),
-      expectedCompletion: daysAgo(3, 16),
-      actualStart: daysAgo(3, 11),
-      completedAt: daysAgo(3, 15),
-      notes: [
-        {
-          note: 'Shut off riser line, replaced leaking 3/4-inch brass valve, and checked under mains pressure.',
-          noteAr: 'تم غلق الصاعد الرئيسي، واستبدال المحبس النحاسي التالف، والاختبار تحت ضغط الشبكة.',
-          hoursAfterStart: 2,
-        },
-      ],
-      resolutionDetails: 'Replaced the quarter-turn isolation valve and verified zero drips.',
-      resolutionDetailsAr: 'تم استبدال محبس العزل ربع لفة والتأكد من عدم وجود أي تسريب.',
-      aiSummaryEn:
-        'Stopped beverage station leak in Central Student Cafeteria G01 by installing a new 3/4-inch brass isolation valve.',
-      aiSummaryAr:
-        'تم إيقاف تسريب المياه بالكافتيريا الطلابية المركزية G01 بتركيب محبس عزل نحاسي جديد.',
-      current: true,
-    },
-    {
-      requestKey: 'recent-reopened-3',
-      status: 'COMPLETED',
-      technicianEmail: TECHNICIAN_EMAILS[3]!,
-      scheduledStart: daysAgo(4, 13),
-      expectedCompletion: daysAgo(4, 17),
-      actualStart: daysAgo(4, 14),
-      completedAt: daysAgo(4, 17),
-      resolutionDetails: 'Reset thermal overload and cleaned condenser grille.',
-      resolutionDetailsAr: 'تمت إعادة ضبط الحماية الحرارية وتنظيف شبكة المكثف.',
-    },
-    {
-      requestKey: 'recent-reopened-3',
-      status: 'PENDING_ASSIGNMENT',
-      scheduledStart: addDays(now, 1),
-      expectedCompletion: addHours(addDays(now, 1), 4),
-      createdAt: daysAgo(2, 11),
-      aiSummaryEn:
-        'Reopened HVAC compressor cutoff in Dental Clinic 202 requires full high-pressure switch and refrigerant flow test.',
-      aiSummaryAr:
-        'عطل تكييف معاد فتحه في عيادة الأسنان 202 يتطلب اختبار مفتاح الضغط العالي ودورة الفريون بالكامل.',
-      current: true,
-    },
-  ];
-
-  const workOrderDocs = workOrderSpecs.map((spec, index) => {
-    const request = requestByKey.get(spec.requestKey);
-    if (!request) {
-      throw new Error(`Seed work order references unknown request ${spec.requestKey}`);
-    }
-
-    const assignedTechId = spec.technicianEmail
-      ? userId(spec.technicianEmail)
-      : undefined;
-    const baseNoteTime = spec.actualStart ?? spec.scheduledStart;
-    const summaryTime = spec.completedAt ?? spec.actualStart ?? spec.scheduledStart;
-    const createdAt =
-      spec.createdAt ??
-      (spec.scheduledStart > now ? hoursAgo(12) : spec.scheduledStart);
-    const updatedAt = spec.completedAt ?? spec.actualStart ?? createdAt;
-
-    return {
-      _id: new Types.ObjectId(),
-      workOrderNumber: `WO-${2001 + index}`,
-      sourceType: 'REACTIVE' as const,
-      maintenanceRequestId: request._id,
-      assignedTechnicianId: assignedTechId,
-      title: request.title,
-      titleAr: request.titleAr,
-      description: request.description,
-      descriptionAr: request.descriptionAr,
-      category: request.category,
-      priority: request.priority,
-      locationId: request.locationId,
-      status: spec.status,
-      scheduledStart: spec.scheduledStart,
-      expectedCompletion: spec.expectedCompletion,
-      actualStart: spec.actualStart,
-      completedAt: spec.completedAt,
-      technicianNotes: (spec.notes ?? []).map((n, noteIdx) => ({
-        note: n.note,
-        noteAr: n.noteAr,
-        authorId: assignedTechId ?? managerId,
-        createdAt: addHours(baseNoteTime, n.hoursAfterStart ?? noteIdx + 1),
-        isSystem: false,
-      })),
-      ...(spec.aiSummaryEn && spec.aiSummaryAr
-        ? {
-            aiSummary: {
-              text: spec.aiSummaryEn,
-              generatedAt: summaryTime,
-            },
-            aiSummaries: {
-              en: {
-                text: spec.aiSummaryEn,
-                generatedAt: summaryTime,
-              },
-              ar: {
-                text: spec.aiSummaryAr,
-                generatedAt: summaryTime,
-              },
-            },
-          }
-        : {}),
-      resolutionDetails: spec.resolutionDetails,
-      resolutionDetailsAr: spec.resolutionDetailsAr,
-      cancelReason: spec.cancelReason,
-      cancelReasonAr: spec.cancelReasonAr,
-      createdAt,
-      updatedAt,
-    };
-  });
-
-  const currentWorkOrderByRequest = new Map<string, Types.ObjectId>();
-  workOrderSpecs.forEach((spec, index) => {
-    if (spec.current) {
-      currentWorkOrderByRequest.set(spec.requestKey, workOrderDocs[index]!._id);
-    }
-  });
-
-  requestSpecs.forEach((spec, index) => {
-    const currentWorkOrderId = currentWorkOrderByRequest.get(spec.key);
-    if (currentWorkOrderId) {
-      requestDocs[index]!.currentWorkOrderId = currentWorkOrderId;
-    }
-  });
-
-  await MaintenanceRequest.insertMany(requestDocs);
-  await WorkOrder.insertMany(workOrderDocs);
-
-  const feedbackSpecs = [
-    {
-      requestKey: 'closed-1',
-      rating: 5,
-      comment: 'The projector was fixed the same day and the lab was ready for exams.',
-      commentAr: 'تم إصلاح جهاز العرض في نفس اليوم وكان المعمل جاهزاً للامتحانات.',
-    },
-    {
-      requestKey: 'closed-2',
-      rating: 4,
-      comment: 'The leak stopped, although the floor took a while to dry.',
-      commentAr: 'توقف التسريب، على الرغم من أن الأرضية استغرقت بعض الوقت لتجف.',
-    },
-    {
-      requestKey: 'closed-3',
-      rating: 5,
-      comment: 'The library air feels much cleaner after the filter replacement.',
-      commentAr: 'الهواء في المكتبة أنقى بكثير بعد استبدال الفلاتر.',
-    },
-    {
-      requestKey: 'closed-4',
-      rating: 3,
-      comment: 'Calibration helped, but the touch screen is still slightly offset at the edges.',
-      commentAr: 'ساعدت المعايرة، لكن شاشة اللمس ما زالت مزاحة قليلاً عند الحواف.',
-    },
-    {
-      requestKey: 'recent-closed-1',
-      rating: 5,
-      comment: 'Quick electrical replacement; lecture lighting is quiet and cool now.',
-      commentAr: 'استبدال كهربائي سريع؛ إضاءة المدرج أصبحت هادئة وبدون أي سخونة الآن.',
-    },
-    {
-      requestKey: 'recent-closed-2',
-      rating: 4,
-      comment: 'Registration terminal stayed connected all day after the port was re-terminated.',
-      commentAr: 'ظل جهاز التسجيل متصلاً طوال اليوم بعد إعادة تأريج منفذ الشبكة.',
-    },
-    {
-      requestKey: 'recent-closed-3',
-      rating: 5,
-      comment: 'Cabinet door closes smoothly and locks properly before seminar sessions.',
-      commentAr: 'باب الخزانة يغلق بسلاسة ويقفل بإحكام قبل جلسات السيمينار.',
-    },
-    {
-      requestKey: 'recent-closed-4',
-      rating: 5,
-      comment: 'Zero dripping behind the cafeteria counter; very tidy repair.',
-      commentAr: 'لا يوجد أي تنقيط خلف الكاونتر بالكافتيريا؛ إصلاح متقن وسريع.',
-    },
-  ];
-
-  const feedbackDocs = feedbackSpecs.map((spec) => {
-    const request = requestByKey.get(spec.requestKey)!;
-    const workOrder = workOrderDocs.find(
-      (entry) =>
-        entry.maintenanceRequestId.equals(request._id) &&
-        entry.status === 'COMPLETED',
-    )!;
-    const completedAt = workOrder.completedAt ?? now;
-    const feedbackCreatedAt = new Date(
-      Math.min(now.getTime(), addHours(completedAt, 6).getTime()),
-    );
-
-    return {
-      maintenanceRequestId: request._id,
-      workOrderId: workOrder._id,
-      technicianId: workOrder.assignedTechnicianId!,
-      requesterId: request.requesterId,
-      rating: spec.rating,
-      comment: spec.comment,
-      commentAr: spec.commentAr,
-      createdAt: feedbackCreatedAt,
-    };
-  });
-
-  await ServiceFeedback.insertMany(feedbackDocs);
-
-  // ---------------------------------------------------------------------------
-  // Preventive maintenance
-  // ---------------------------------------------------------------------------
-  const duePlanId = new Types.ObjectId();
-  const futurePlanId = new Types.ObjectId();
-  const inactivePlanId = new Types.ObjectId();
-  const workshopPlanId = new Types.ObjectId();
-  const networkPlanId = new Types.ObjectId();
-
-  const planDocs: Array<IPreventivePlan & { _id: Types.ObjectId }> = [
-    {
-      _id: duePlanId,
-      title: 'Weekly HVAC filter inspection',
-      titleAr: 'فحص فلاتر التكييف الأسبوعي',
-      description:
-        'Inspect and clean the air handling unit filters in the central library and record the pressure drop.',
-      descriptionAr:
-        'فحص وتنظيف فلاتر وحدة معالجة الهواء في المكتبة المركزية وتسجيل فرق الضغط.',
-      category: 'Air Conditioning',
-      priority: 'MEDIUM',
-      locationId: locationId('Administration', 0),
-      assignedTechnicianId: technicianIds[3]!,
-      recurrenceType: 'WEEKLY',
-      startDate: daysAgo(16),
-      nextScheduledDate: subDays(now, 2),
-      expectedDurationHours: 2,
-      isActive: true,
-      createdBy: managerId,
-      createdAt: daysAgo(16),
-      updatedAt: daysAgo(16),
-    },
-    {
-      _id: futurePlanId,
-      title: 'Monthly emergency lighting test',
-      titleAr: 'اختبار إضاءة الطوارئ الشهري',
-      description:
-        'Test all emergency lights and exit signs in the engineering complex and replace failed batteries.',
-      descriptionAr:
-        'اختبار جميع كشافات الطوارئ ولوحات الخروج في مجمع الهندسة واستبدال البطاريات التالفة.',
-      category: 'Electrical',
-      priority: 'HIGH',
-      locationId: locationId('Engineering', 1),
-      assignedTechnicianId: technicianIds[0]!,
-      recurrenceType: 'MONTHLY',
-      startDate: daysAgo(20),
-      nextScheduledDate: addDays(now, 10),
-      expectedDurationHours: 3,
-      isActive: true,
-      createdBy: managerId,
-      createdAt: daysAgo(20),
-      updatedAt: daysAgo(20),
-    },
-    {
-      _id: inactivePlanId,
-      title: 'Quarterly water tank cleaning',
-      titleAr: 'تنظيف خزانات المياه ربع السنوي',
-      description:
-        'Drain, clean and disinfect the reserve water tanks in the medical complex.',
-      descriptionAr:
-        'تصريف وتنظيف وتطهير خزانات المياه الاحتياطية في المجمع الطبي.',
-      category: 'Plumbing',
-      priority: 'CRITICAL',
-      locationId: locationId('Medical', 0),
-      assignedTechnicianId: technicianIds[1]!,
-      recurrenceType: 'CUSTOM_DAYS',
-      recurrenceIntervalDays: 90,
-      startDate: daysAgo(98),
-      nextScheduledDate: addDays(now, 82),
-      lastGeneratedDate: daysAgo(8),
-      expectedDurationHours: 6,
-      isActive: false,
-      createdBy: managerId,
-      createdAt: daysAgo(98),
-      updatedAt: daysAgo(8),
-    },
-    {
-      _id: workshopPlanId,
-      title: 'Bi-weekly workshop electrical panel inspection',
-      titleAr: 'فحص لوحات الكهرباء بالورش كل أسبوعين',
-      description:
-        'Thermal scan main distribution breakers, tighten busbar terminals and test earth-leakage relays in the Engineering Workshops.',
-      descriptionAr:
-        'فحص حراري لقواطع التوزيع الرئيسية وربط أطراف القضبان النحاسية واختبار قواطع التسريب الأرضي بالورش الهندسية.',
-      category: 'Electrical',
-      priority: 'HIGH',
-      locationId: locationId('Workshops', 0),
-      assignedTechnicianId: technicianIds[0]!,
-      recurrenceType: 'CUSTOM_DAYS',
-      recurrenceIntervalDays: 14,
-      startDate: daysAgo(16),
-      nextScheduledDate: addDays(now, 4),
-      lastGeneratedDate: daysAgo(2),
-      expectedDurationHours: 2,
-      isActive: true,
-      createdBy: managerId,
-      createdAt: daysAgo(16),
-      updatedAt: daysAgo(2),
-    },
-    {
-      _id: networkPlanId,
-      title: 'Monthly network rack & UPS battery check',
-      titleAr: 'فحص راك الشبكة وبطاريات الـ UPS الشهري',
-      description:
-        'Verify UPS battery runtime telemetry, clean cabinet intake fans and check patch panel port labels in the Engineering Server Room.',
-      descriptionAr:
-        'التحقق من زمن تشغيل بطاريات الـ UPS وتنظيف مراوح سحب الهواء ومراجعة ترقيم لوحات التوصيل بغرفة خوادم الهندسة.',
-      category: 'Network',
-      priority: 'MEDIUM',
-      locationId: locationId('Engineering', 2),
-      assignedTechnicianId: technicianIds[2]!,
-      recurrenceType: 'MONTHLY',
-      startDate: daysAgo(18),
-      nextScheduledDate: addDays(now, 14),
-      expectedDurationHours: 2,
-      isActive: true,
-      createdBy: managerId,
-      createdAt: daysAgo(18),
-      updatedAt: daysAgo(18),
-    },
-  ];
-
-  await PreventivePlan.insertMany(planDocs);
-
-  const preventiveWorkOrder = {
-    _id: new Types.ObjectId(),
-    workOrderNumber: `WO-${2001 + workOrderDocs.length}`,
-    sourceType: 'PREVENTIVE' as const,
-    preventivePlanId: inactivePlanId,
-    assignedTechnicianId: technicianIds[1]!,
-    title: 'Quarterly water tank cleaning',
-    titleAr: 'تنظيف خزانات المياه ربع السنوي',
-    description: planDocs[2]!.description,
-    descriptionAr: planDocs[2]!.descriptionAr,
-    category: planDocs[2]!.category,
-    priority: planDocs[2]!.priority,
-    locationId: planDocs[2]!.locationId,
-    status: 'COMPLETED' as const,
-    scheduledStart: daysAgo(8),
-    expectedCompletion: addHours(daysAgo(8), 6),
-    actualStart: addHours(daysAgo(8), 1),
-    completedAt: addHours(daysAgo(8), 7),
-    technicianNotes: [
-      {
-        note: 'Completed chlorination and verified residual chlorine at 0.5 ppm across Medical Complex reserve tanks.',
-        noteAr: 'تم إتمام التطهير بالكلور والتحقق من تركيز الكلور المتبقي عند 0.5 جزء في المليون بخزانات المجمع الطبي.',
-        authorId: technicianIds[1]!,
-        createdAt: addHours(daysAgo(8), 5),
-        isSystem: false,
-      },
-    ],
-    aiSummary: {
-      text: 'Preventive quarterly cleaning and disinfection of the Medical Sector Complex reserve water tanks completed on schedule by Mohamed El-Gohary.',
-      generatedAt: addHours(daysAgo(8), 7),
-    },
-    aiSummaries: {
-      en: {
-        text: 'Preventive quarterly cleaning and disinfection of the Medical Sector Complex reserve water tanks completed on schedule by Mohamed El-Gohary.',
-        generatedAt: addHours(daysAgo(8), 7),
-      },
-      ar: {
-        text: 'تم إنجاز الصيانة الوقائية ربع السنوية لتنظيف وتطهير خزانات المياه الاحتياطية بمجمع الكليات الطبية في موعدها بواسطة محمد الجوهري.',
-        generatedAt: addHours(daysAgo(8), 7),
-      },
-    },
-    resolutionDetails: 'Tanks drained, scrubbed and disinfected; water quality checked.',
-    resolutionDetailsAr: 'تم تصريف الخزانات وفركها وتطهيرها؛ وفحص جودة المياه.',
-    createdAt: daysAgo(8),
-    updatedAt: addHours(daysAgo(8), 7),
-  };
-
-  const recentPreventiveWorkOrder = {
-    _id: new Types.ObjectId(),
-    workOrderNumber: `WO-${2002 + workOrderDocs.length}`,
-    sourceType: 'PREVENTIVE' as const,
-    preventivePlanId: workshopPlanId,
-    assignedTechnicianId: technicianIds[0]!,
-    title: 'Bi-weekly workshop electrical panel inspection',
-    titleAr: 'فحص لوحات الكهرباء بالورش كل أسبوعين',
-    description: planDocs[3]!.description,
-    descriptionAr: planDocs[3]!.descriptionAr,
-    category: planDocs[3]!.category,
-    priority: planDocs[3]!.priority,
-    locationId: planDocs[3]!.locationId,
-    status: 'COMPLETED' as const,
-    scheduledStart: daysAgo(2, 10),
-    expectedCompletion: daysAgo(2, 13),
-    actualStart: daysAgo(2, 11),
-    completedAt: daysAgo(2, 13),
-    technicianNotes: [
-      {
-        note: 'Infrared scan showed normal operating temperatures under 42C across all workshop feeder breakers; tightened two terminal lugs.',
-        noteAr: 'أظهر الفحص الحراري درجات حرارة تشغيل طبيعية أقل من 42 درجة مئوية لجميع قواطع التغذية بالورش؛ تم ربط طرفي توصيل.',
-        authorId: technicianIds[0]!,
-        createdAt: daysAgo(2, 12),
-        isSystem: false,
-      },
-    ],
-    aiSummary: {
-      text: 'Preventive bi-weekly electrical panel inspection in Engineering Workshops completed within 2 hours by Hassan El-Sayed with no thermal anomalies.',
-      generatedAt: daysAgo(2, 13),
-    },
-    aiSummaries: {
-      en: {
-        text: 'Preventive bi-weekly electrical panel inspection in Engineering Workshops completed within 2 hours by Hassan El-Sayed with no thermal anomalies.',
-        generatedAt: daysAgo(2, 13),
-      },
-      ar: {
-        text: 'تم إنجاز الفحص الوقائي للوحات الكهرباء بالورش الهندسية خلال ساعتين بواسطة حسن السيد دون رصد أي ارتفاعات حرارية.',
-        generatedAt: daysAgo(2, 13),
-      },
-    },
-    resolutionDetails: 'Thermal scan passed and feeder lug torque verified across main panel.',
-    resolutionDetailsAr: 'اجتاز الفحص الحراري وتم التحقق من عزم ربط أطراف التغذية باللوحة الرئيسية.',
-    createdAt: daysAgo(2, 9),
-    updatedAt: daysAgo(2, 13),
-  };
-
-  await WorkOrder.collection.insertMany([preventiveWorkOrder, recentPreventiveWorkOrder]);
-
-  // ---------------------------------------------------------------------------
   // Lost & found
   // ---------------------------------------------------------------------------
   const itemSpecs: ItemSpec[] = [
@@ -2028,7 +312,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       category: 'Bags',
       color: 'Black',
       brand: 'North Face',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Engineering',
       locationIndex: 2,
       locationDetails: 'Lab 204 reception desk',
@@ -2074,7 +358,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       category: 'Other',
       color: 'Blue',
       brand: 'Thermos',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Administration',
       locationIndex: 9,
       locationDetails: 'Library second-floor study table',
@@ -2122,7 +406,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       category: 'Phones',
       color: 'Silver',
       brand: 'Apple',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Medical',
       locationIndex: 5,
       locationDetails: 'Security desk at the main entrance',
@@ -2166,7 +450,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
         'Red tag marked M.A. and a small brass key for a bicycle lock.',
       category: 'Keys',
       color: 'Silver',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Humanities',
       locationIndex: 4,
       locationDetails: 'Security office',
@@ -2208,7 +492,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       privateIdentificationDetails: 'Wooden handle with a small white scratch and a black strap.',
       category: 'Other',
       color: 'Navy blue',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Administration',
       locationIndex: 4,
       locationDetails: 'Library entrance',
@@ -2248,7 +532,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       privateIdentificationDetails:
         'Student ID 2023-1187 issued to Sara Mahmoud and a small passport photo inside the holder.',
       category: 'Documents',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Humanities',
       locationIndex: 8,
       locationDetails: 'Humanities reception',
@@ -2290,7 +574,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       privateIdentificationDetails: 'Drawstring missing on the left side and an ink stain on the cuff.',
       category: 'Clothing',
       color: 'Grey',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Engineering',
       locationIndex: 6,
       locationDetails: 'Study room 2',
@@ -2328,7 +612,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
         'Found a data structures textbook left on a library desk after closing time.',
       privateIdentificationDetails: 'Name Omar Khaled inside the cover and highlighted chapter 4.',
       category: 'Books',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Administration',
       locationIndex: 7,
       locationDetails: 'Library reading room',
@@ -2370,7 +654,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       privateIdentificationDetails: 'Serial ending 7461 and a red plastic cap.',
       category: 'Electronics',
       color: 'Black',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Engineering',
       locationIndex: 7,
       locationDetails: 'Computer lab printer area',
@@ -2418,7 +702,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       category: 'Headphones',
       color: 'Black',
       brand: 'Sony',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Workshops',
       locationIndex: 1,
       locationDetails: 'Engineering workshops security desk',
@@ -2462,7 +746,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
         'Library barcode ending 319 and a folded train ticket in the side slot.',
       category: 'Wallets',
       color: 'Brown',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Sports',
       locationIndex: 1,
       locationDetails: 'Sports hall supervisor desk',
@@ -2510,7 +794,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       category: 'Electronics',
       color: 'Black',
       brand: 'Casio',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Engineering',
       locationIndex: 3,
       locationDetails: 'Engineering Lecture Hall 3 podium',
@@ -2534,7 +818,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       category: 'Laptops',
       color: 'Black',
       brand: 'Lenovo',
-      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_OFFICER.email,
+      reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Administration',
       locationIndex: 2,
       locationDetails: 'Administration quiet study zone',
@@ -2622,7 +906,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       keywords: spec.level === 'STRONG' ? 0.9 : 0.5,
     },
     status: spec.status,
-    reviewedBy: spec.status === 'SUGGESTED' ? undefined : officerId,
+    reviewedBy: spec.status === 'SUGGESTED' ? undefined : managerId,
     reviewedAt: spec.status === 'SUGGESTED' ? undefined : daysAgo(spec.updatedDaysAgo),
     createdAt: daysAgo(spec.createdDaysAgo),
     updatedAt: daysAgo(spec.updatedDaysAgo),
@@ -2797,13 +1081,13 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     verificationNotesAr: spec.verificationNotesAr,
     rejectionReason: spec.rejectionReason,
     rejectionReasonAr: spec.rejectionReasonAr,
-    reviewedBy: spec.reviewed ? officerId : undefined,
+    reviewedBy: spec.reviewed ? managerId : undefined,
     reviewedAt: spec.reviewed ? daysAgo(spec.createdDaysAgo ? Math.max(1, spec.createdDaysAgo - 1) : 3) : undefined,
     handover: spec.handover
       ? {
           receivedByName: spec.handover.receivedByName,
           receivedByNameAr: spec.handover.receivedByNameAr,
-          handedOverBy: officerId,
+          handedOverBy: managerId,
           notes: spec.handover.notes,
           notesAr: spec.handover.notesAr,
           handedOverAt: spec.handover.handedOverAt,
@@ -2815,63 +1099,15 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
 
   await ClaimRequest.insertMany(claimDocs);
 
+
   // ---------------------------------------------------------------------------
-  // Notifications and activity logs
+  // Notifications and activity logs (Lost & Found only)
   // ---------------------------------------------------------------------------
-  const recentCompletedWo = workOrderDocs.find((wo) =>
-    wo.maintenanceRequestId.equals(requestByKey.get('recent-completed-1')!._id),
-  )!;
-  const recentApprovedWo1 = workOrderDocs.find((wo) =>
-    wo.maintenanceRequestId.equals(requestByKey.get('recent-approved-1')!._id),
-  )!;
-  const recentClosedReq1 = requestByKey.get('recent-closed-1')!;
   const workshopsMainLoc = locations.find((loc) =>
     loc._id.equals(locationId('Workshops', 0)),
   )!;
 
   const notificationDocs = [
-    {
-      userId: demoStudentId,
-      type: 'REQUEST_APPROVED',
-      title: 'Maintenance request approved',
-      message: 'MR-2008 was approved. Work order WO-2001 has been created.',
-      titleKey: 'requestApproved',
-      messageKey: 'requestApprovedMsg',
-      params: { code: 'MR-2008', workOrderCode: 'WO-2001' },
-      relatedEntityType: 'MaintenanceRequest',
-      relatedEntityId: requestByKey.get('approved-pending')!._id,
-      linkUrl: '/maintenance/requests',
-      isRead: false,
-      createdAt: hoursAgo(20),
-    },
-    {
-      userId: demoStudentId,
-      type: 'WORK_ORDER_COMPLETED',
-      title: 'Work order completed',
-      message: `Work order ${recentCompletedWo.workOrderNumber} was completed. Please review and confirm resolution.`,
-      titleKey: 'requestCompleted',
-      messageKey: 'requestCompletedMsg',
-      params: { workOrderCode: recentCompletedWo.workOrderNumber },
-      relatedEntityType: 'WorkOrder',
-      relatedEntityId: recentCompletedWo._id,
-      linkUrl: '/maintenance/requests',
-      isRead: false,
-      createdAt: hoursAgo(14),
-    },
-    {
-      userId: demoStudentId,
-      type: 'WORK_ORDER_COMPLETED',
-      title: 'Work order completed',
-      message: 'Work order WO-2007 was completed. Please review and confirm resolution.',
-      titleKey: 'requestCompleted',
-      messageKey: 'requestCompletedMsg',
-      params: { workOrderCode: 'WO-2007' },
-      relatedEntityType: 'WorkOrder',
-      relatedEntityId: workOrderDocs[6]!._id,
-      linkUrl: '/maintenance/requests',
-      isRead: true,
-      createdAt: hoursAgo(90),
-    },
     {
       userId: demoStudentId,
       type: 'CLAIM_APPROVED',
@@ -2887,67 +1123,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       createdAt: hoursAgo(18),
     },
     {
-      userId: demoStudentId,
-      type: 'REQUEST_REOPENED',
-      title: 'Work order reopened',
-      message: 'Request MR-2023 was reopened: Fault returned. Work order WO-2015 is back in your assigned queue.',
-      titleKey: 'workOrderReopened',
-      messageKey: 'workOrderReopenedMsg',
-      params: { code: 'MR-2023', workOrderCode: 'WO-2015', reason: { en: 'Fault returned', ar: 'تكرار العطل' } },
-      relatedEntityType: 'MaintenanceRequest',
-      relatedEntityId: requestByKey.get('reopened-1')!._id,
-      linkUrl: '/maintenance/requests',
-      isRead: true,
-      createdAt: hoursAgo(70),
-    },
-    {
       userId: managerId,
-      type: 'REQUEST_SUBMITTED',
-      title: 'New maintenance request',
-      message: 'MR-2001 · Projector will not power on in Lecture Hall 101 · Engineering & Technological Complex A & B, Ground Floor, Lecture Hall G01',
-      titleKey: 'newRequestSubmitted',
-      messageKey: 'newRequestSubmittedMsg',
-      params: {
-        code: 'MR-2001',
-        title: {
-          en: 'Projector will not power on in Lecture Hall 101',
-          ar: 'جهاز العرض لا يعمل في مدرج 101',
-        },
-        building: {
-          en: 'Engineering & Technological Complex A & B',
-          ar: 'مجمع الكليات الهندسية والتكنولوجية',
-        },
-        floor: {
-          en: 'Ground Floor',
-          ar: 'الطابق الأرضي',
-        },
-        room: {
-          en: 'Lecture Hall G01',
-          ar: 'مدرج G01',
-        },
-      },
-      relatedEntityType: 'MaintenanceRequest',
-      relatedEntityId: requestByKey.get('submitted-1')!._id,
-      linkUrl: '/maintenance/requests/queue',
-      isRead: false,
-      createdAt: hoursAgo(5),
-    },
-    {
-      userId: managerId,
-      type: 'WORK_ORDER_OVERDUE',
-      title: 'Work order overdue',
-      message: 'WO-2005 has passed its expected completion date.',
-      titleKey: 'workOrderOverdue',
-      messageKey: 'workOrderOverdueMsg',
-      params: { code: 'WO-2005' },
-      relatedEntityType: 'WorkOrder',
-      relatedEntityId: workOrderDocs[4]!._id,
-      linkUrl: '/maintenance/work-orders',
-      isRead: false,
-      createdAt: hoursAgo(12),
-    },
-    {
-      userId: officerId,
       type: 'CLAIM_PENDING',
       title: 'New claim submitted',
       message: 'Claim CLM-2002 was submitted for found item LF-2006.',
@@ -2961,7 +1137,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       createdAt: hoursAgo(9),
     },
     {
-      userId: officerId,
+      userId: managerId,
       type: 'CLAIM_PENDING',
       title: 'New claim submitted',
       message: `Claim CLM-2009 was submitted for found item ${itemByKey.get('found-hoodie')!.reportNumber}.`,
@@ -2975,7 +1151,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       createdAt: hoursAgo(6),
     },
     {
-      userId: officerId,
+      userId: managerId,
       type: 'MATCH_SUGGESTED',
       title: 'Possible match confirmed',
       message: 'A found item matching your lost report LF-2005 was confirmed. Submit a claim to verify ownership.',
@@ -2987,48 +1163,6 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       linkUrl: '/lost-found/matches',
       isRead: true,
       createdAt: hoursAgo(32),
-    },
-    {
-      userId: technicianIds[0]!,
-      type: 'WORK_ORDER_ASSIGNED',
-      title: 'Work order assigned',
-      message: 'You have been assigned work order WO-2002.',
-      titleKey: 'workOrderAssigned',
-      messageKey: 'workOrderAssignedMsg',
-      params: { code: 'WO-2002' },
-      relatedEntityType: 'WorkOrder',
-      relatedEntityId: workOrderDocs[1]!._id,
-      linkUrl: '/maintenance/work-orders',
-      isRead: false,
-      createdAt: hoursAgo(16),
-    },
-    {
-      userId: technicianIds[0]!,
-      type: 'WORK_ORDER_ASSIGNED',
-      title: 'Work order assigned',
-      message: `You have been assigned work order ${recentApprovedWo1.workOrderNumber}.`,
-      titleKey: 'workOrderAssigned',
-      messageKey: 'workOrderAssignedMsg',
-      params: { code: recentApprovedWo1.workOrderNumber },
-      relatedEntityType: 'WorkOrder',
-      relatedEntityId: recentApprovedWo1._id,
-      linkUrl: '/maintenance/work-orders',
-      isRead: false,
-      createdAt: hoursAgo(10),
-    },
-    {
-      userId: adminId,
-      type: 'WORK_ORDER_OVERDUE',
-      title: 'Work order overdue',
-      message: 'WO-2005 has passed its expected completion date.',
-      titleKey: 'workOrderOverdue',
-      messageKey: 'workOrderOverdueMsg',
-      params: { code: 'WO-2005' },
-      relatedEntityType: 'WorkOrder',
-      relatedEntityId: workOrderDocs[4]!._id,
-      linkUrl: '/maintenance/work-orders',
-      isRead: false,
-      createdAt: hoursAgo(8),
     },
     {
       userId: adminId,
@@ -3044,6 +1178,20 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       isRead: true,
       createdAt: hoursAgo(28),
     },
+    {
+      userId: demoEmployeeId,
+      type: 'MATCH_SUGGESTED',
+      title: 'Possible match suggested',
+      message: 'A possible match was suggested for one of the items you are following. Review it in Lost & Found.',
+      titleKey: 'matchConfirmed',
+      messageKey: 'matchConfirmedMsg',
+      params: { code: 'LF-2005' },
+      relatedEntityType: 'ItemMatch',
+      relatedEntityId: matchDocs[2]!._id,
+      linkUrl: '/lost-found',
+      isRead: false,
+      createdAt: hoursAgo(11),
+    },
   ];
 
   await Notification.insertMany(notificationDocs);
@@ -3054,99 +1202,18 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       action: 'USER_CREATED',
       entityType: 'User',
       entityId: userId(EXTRA_STUDENT_EMAILS[0]!),
-      description: 'Created Student/Employee account Sara Mahmoud (sara.mahmoud@std.mansnu.edu.eg)',
+      description: 'Created Student account Sara Mahmoud (sara.mahmoud@std.mansnu.edu.eg)',
       descriptionKey: 'userCreated',
       params: {
-        role: { en: 'Student/Employee', ar: 'طالب / موظف' },
+        role: { en: 'Student', ar: 'طالب' },
         name: { en: 'Sara Mahmoud', ar: 'سارة محمود' },
         email: EXTRA_STUDENT_EMAILS[0]!,
       },
-      metadata: { role: 'STUDENT_EMPLOYEE' },
+      metadata: { role: 'STUDENT' },
       createdAt: daysAgo(12),
     },
     {
       actorId: managerId,
-      action: 'REQUEST_APPROVED',
-      entityType: 'MaintenanceRequest',
-      entityId: requestByKey.get('approved-assigned')!._id,
-      description: 'Approved maintenance request MR-2009 and created work order WO-2002',
-      descriptionKey: 'requestApproved',
-      params: { code: 'MR-2009', workOrderCode: 'WO-2002' },
-      metadata: { workOrderNumber: 'WO-2002' },
-      createdAt: daysAgo(10),
-    },
-    {
-      actorId: managerId,
-      action: 'WORK_ORDER_ASSIGNED',
-      entityType: 'WorkOrder',
-      entityId: workOrderDocs[1]!._id,
-      description: 'Assigned work order WO-2002 to Hassan El-Sayed',
-      descriptionKey: 'workOrderAssigned',
-      params: {
-        code: 'WO-2002',
-        name: { en: 'Hassan El-Sayed', ar: 'حسن السيد' },
-      },
-      metadata: { technician: 'Hassan El-Sayed' },
-      createdAt: daysAgo(9),
-    },
-    {
-      actorId: technicianIds[0]!,
-      action: 'WORK_ORDER_STARTED',
-      entityType: 'WorkOrder',
-      entityId: workOrderDocs[5]!._id,
-      description: 'Technician started work order WO-2006',
-      descriptionKey: 'workOrderStarted',
-      params: { code: 'WO-2006' },
-      metadata: { status: 'IN_PROGRESS' },
-      createdAt: daysAgo(2),
-    },
-    {
-      actorId: technicianIds[0]!,
-      action: 'WORK_ORDER_COMPLETED',
-      entityType: 'WorkOrder',
-      entityId: workOrderDocs[7]!._id,
-      description: 'Technician completed work order WO-2008',
-      descriptionKey: 'workOrderCompleted',
-      params: { code: 'WO-2008' },
-      metadata: { status: 'COMPLETED' },
-      createdAt: daysAgo(27),
-    },
-    {
-      actorId: managerId,
-      action: 'PREVENTIVE_PLAN_CREATED',
-      entityType: 'PreventivePlan',
-      entityId: duePlanId,
-      description: 'Created preventive plan Weekly HVAC filter inspection (Weekly)',
-      descriptionKey: 'preventivePlanCreated',
-      params: {
-        title: {
-          en: 'Weekly HVAC filter inspection',
-          ar: 'فحص فلاتر التكييف الأسبوعي',
-        },
-        recurrence: { en: 'Weekly', ar: 'أسبوعياً' },
-      },
-      metadata: { recurrenceType: 'WEEKLY' },
-      createdAt: daysAgo(16),
-    },
-    {
-      actorId: managerId,
-      action: 'PREVENTIVE_WORK_ORDER_GENERATED',
-      entityType: 'WorkOrder',
-      entityId: preventiveWorkOrder._id,
-      description: `Generated preventive work order ${preventiveWorkOrder.workOrderNumber} from plan Quarterly water tank cleaning`,
-      descriptionKey: 'preventiveWorkOrderGenerated',
-      params: {
-        code: preventiveWorkOrder.workOrderNumber,
-        title: {
-          en: 'Quarterly water tank cleaning',
-          ar: 'تنظيف خزانات المياه ربع السنوي',
-        },
-      },
-      metadata: { schedule: 'quarterly' },
-      createdAt: daysAgo(8),
-    },
-    {
-      actorId: officerId,
       action: 'MATCH_CONFIRMED',
       entityType: 'ItemMatch',
       entityId: matchDocs[0]!._id,
@@ -3157,7 +1224,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       createdAt: daysAgo(7),
     },
     {
-      actorId: officerId,
+      actorId: managerId,
       action: 'CLAIM_APPROVED',
       entityType: 'ClaimRequest',
       entityId: claimDocs[2]!._id,
@@ -3168,7 +1235,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       createdAt: daysAgo(3),
     },
     {
-      actorId: officerId,
+      actorId: managerId,
       action: 'HANDOVER_COMPLETED',
       entityType: 'ClaimRequest',
       entityId: claimDocs[3]!._id,
@@ -3206,32 +1273,18 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       createdAt: daysAgo(1),
     },
     {
-      actorId: managerId,
-      action: 'REQUEST_REOPENED',
-      entityType: 'MaintenanceRequest',
-      entityId: requestByKey.get('reopened-1')!._id,
-      description: 'Reopened request MR-2023: Fault returned',
-      descriptionKey: 'requestReopened',
-      params: {
-        code: 'MR-2023',
-        reason: { en: 'Fault returned', ar: 'تكرار العطل' },
-      },
-      metadata: { reopenCount: 1 },
-      createdAt: hoursAgo(18),
-    },
-    {
       actorId: adminId,
       action: 'USER_DEACTIVATED',
       entityType: 'User',
       entityId: userId('a.elmasry@mansnu.edu.eg'),
-      description: 'Deactivated Student/Employee account Eng. Adel El-Masry (a.elmasry@mansnu.edu.eg)',
+      description: 'Deactivated Employee account Eng. Adel El-Masry (a.elmasry@mansnu.edu.eg)',
       descriptionKey: 'userDeactivated',
       params: {
-        role: { en: 'Student/Employee', ar: 'طالب / موظف' },
+        role: { en: 'Employee', ar: 'موظف' },
         name: { en: 'Eng. Adel El-Masry', ar: 'م. عادل المصري' },
         email: 'a.elmasry@mansnu.edu.eg',
       },
-      metadata: { role: 'STUDENT_EMPLOYEE' },
+      metadata: { role: 'EMPLOYEE' },
       createdAt: hoursAgo(12),
     },
     {
@@ -3257,17 +1310,6 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       actorId: demoStudentId,
-      action: 'FEEDBACK_SUBMITTED',
-      entityType: 'MaintenanceRequest',
-      entityId: recentClosedReq1._id,
-      description: `Submitted 5-star feedback for request ${recentClosedReq1.requestNumber}`,
-      descriptionKey: 'feedbackSubmitted',
-      params: { rating: '5', code: recentClosedReq1.requestNumber },
-      metadata: { rating: 5 },
-      createdAt: hoursAgo(6),
-    },
-    {
-      actorId: demoStudentId,
       action: 'CLAIM_SUBMITTED',
       entityType: 'ClaimRequest',
       entityId: claimDocs[5]!._id,
@@ -3285,7 +1327,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
   await ActivityLog.insertMany(activityLogDocs);
 
   // ---------------------------------------------------------------------------
-  // Cached AI insight (read-only on the admin dashboard)
+  // Cached Arabic AI insights (Lost & Found only)
   // ---------------------------------------------------------------------------
   const sharedInsightBase = {
     period: '7d' as const,
@@ -3295,13 +1337,12 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     rangeEnd: daysAgo(1, 7),
     stats: {
       period: '7d',
-      requests: { total: 14, previousTotal: 8, changePercent: 75, openBacklog: 6 },
-      workOrders: { active: 7, completed: 7, overdue: 2, averageResolutionHours: 5.2 },
-      topCategories: [
-        { category: 'Electrical', count: 3 },
-        { category: 'Hardware', count: 3 },
-        { category: 'Plumbing', count: 3 },
-      ],
+      lostFound: {
+        totalLostItems: 12,
+        totalFoundItems: 12,
+        pendingMatchesCount: 3,
+        pendingClaimsCount: 2,
+      },
     },
     model: 'gemini-2.5-flash',
     createdAt: daysAgo(1, 7),
@@ -3311,109 +1352,59 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
   await AiInsightCache.insertMany([
     {
       ...sharedInsightBase,
-      scope: 'MAINTENANCE' as const,
+      scope: 'LOST_FOUND' as const,
       lang: 'ar' as const,
       insights: {
         observations: [
-          'تستحوذ أعطال الكهرباء والتجهيزات والسباكة على الحصة الأكبر من بلاغات الفترة الحالية بمعدل إنجاز 7 أوامر عمل خلال 7 أيام.',
-          'تجاوز أمرا العمل WO-2005 وWO-2006 موعد الإنجاز المحدد ويحتاجان متابعة عاجلة.',
+          'تتركز بلاغات المفقودات المفتوحة حول الإلكترونيات والهواتف والسماعات في مجمع الهندسة والمجمع الطبي.',
+          'تم تأكيد 4 تطابقات قوية بين بلاغات الفقد وبلاغات العثور خلال الفترة الحالية.',
         ],
         repeatedPatterns: [
-          'تتكرر بلاغات مجمع الهندسة والورش حول تجهيزات المختبرات وشبكات المعامل.',
-          'تسجل المكتبة المركزية ومبنى الإدارة بلاغات متكررة في أنظمة التكييف.',
+          'تتكرر بلاغات الفقد حول المكتبة المركزية ومعامل الهندسة في أوقات المحاضرات المسائية.',
+          'تتصدر الحقائب والمحافظ والأجهزة الإلكترونية الصغيرة فئات البلاغات المتكررة.',
         ],
         operationalRisks: [
-          'تأخر استبدال محول الشبكة في WO-2005 لدى كريم الطنطاوي يهدد استقرار الاتصال أوقات الذروة.',
-          'ضعف تبريد غرفة الخوادم يمثل أعلى أولوية تشغيلية لتفادي توقف الخدمات.',
-        ],
-        preventiveRecommendations: [
-          'إبراهيم عبد الفتاح: تقديم فحص فلاتر التكييف في المكتبة المركزية هذا الأسبوع.',
-          'فريق الصيانة: جدولة فحص شامل لمعدات الشبكات ولوحات الورش قبل انطلاق فترة الامتحانات.',
-        ],
-      },
-    },
-    {
-      ...sharedInsightBase,
-      scope: 'MAINTENANCE' as const,
-      lang: 'en' as const,
-      insights: {
-        observations: [
-          'Electrical, hardware and plumbing issues lead current requests alongside 7 work orders completed over the past 7 days.',
-          'Overdue work orders WO-2005 and WO-2006 have passed their target completion dates.',
-        ],
-        repeatedPatterns: [
-          'Engineering and Workshops requests cluster around laboratory fixtures, feeder panels and lab network hardware.',
-          'The Central Library and Administration wing show recurring HVAC complaints.',
-        ],
-        operationalRisks: [
-          'Delayed switch replacement on WO-2005 risks peak-hour network drops in Engineering.',
-          'Server room cooling load remains the highest operational risk on campus.',
-        ],
-        preventiveRecommendations: [
-          'Ibrahim Abdel-Fattah: Move up the library HVAC filter inspection this week.',
-          'Maintenance Team: Schedule a pre-exam health check across core network switches and workshop panels.',
-        ],
-      },
-    },
-    {
-      ...sharedInsightBase,
-      scope: 'ADMIN' as const,
-      lang: 'ar' as const,
-      insights: {
-        observations: [
-          'يتصدر مجمع الكليات الهندسية كثافة البلاغات المشتركة، يليه مبنى الإدارة والمكتبة المركزية والورش.',
-          'تتركز الفجوة التشغيلية الحالية في تأخر مهام الشبكات والسباكة وتنسيق تسليم المفقودات المعتمدة.',
-        ],
-        repeatedPatterns: [
-          'تتجمع المفقودات المفتوحة حول الإلكترونيات والسماعات والهواتف في الهندسة والورش والمجمع الطبي.',
-          'تم إغلاق 4 بلاغات صيانة بتقييمات مرتفعة مقابل 7 أوامر عمل نشطة حالياً.',
-        ],
-        operationalRisks: [
-          'تجاوز WO-2005 وWO-2006 موعدهما، كما أن خطة فحص فلاتر التكييف الأسبوعية مستحقة للتوليد.',
-          'تنتظر تطابقات LF-2023 وLF-2024 وطلبات الاستلام CLM-2006 إلى CLM-2009 الحسم والتسليم.',
+          'تنتظر طلبات الاستلام CLM-2006 إلى CLM-2009 الحسم، ما يطيل بقاء الأغراض في مكتب المفقودات.',
+          'ما تزال 3 تطابقات مقترحة دون مراجعة وقد يفقد أصحابها فرصة الاستلام السريع.',
         ],
         preventiveRecommendations: [
           'أ. أحمد الدسوقي: حسم التطابقات المقترحة واستكمال تسليم طلبات الاستلام المعتمدة خلال 48 ساعة.',
-          'م. محمود المتولي: توليد خطة التكييف المستحقة وإعادة توزيع مهام الشبكات قبل الامتحانات.',
+          'مكتب المفقودات: تكثيف الإعلان عن الأغراض المعثور عليها في المكتبة المركزية أسبوعياً.',
         ],
       },
     },
     {
       ...sharedInsightBase,
       scope: 'ADMIN' as const,
-      lang: 'en' as const,
+      lang: 'ar' as const,
       insights: {
         observations: [
-          'Engineering Complex A & B leads combined campus load, followed by Administration & Library and Workshops.',
-          '7 recent work orders and 4 rated closures kept SLA steady, while bottlenecks sit in overdue repairs and pending handovers.',
+          'يتصدر مجمع الكليات الهندسية كثافة بلاغات المفقودات والمعثورات، يليه مبنى الإدارة والمكتبة المركزية.',
+          'تتركز الفجوة التشغيلية الحالية في تأخر حسم التطابقات وتنسيق تسليم المفقودات المعتمدة.',
         ],
         repeatedPatterns: [
-          'Open lost items cluster around electronics, headphones and phones across Engineering, Workshops and Medical complexes.',
-          'Critical workload concentrates in Network and HVAC during peak lab hours.',
+          'تتجمع المفقودات المفتوحة حول الإلكترونيات والسماعات والهواتف في الهندسة والورش والمجمع الطبي.',
+          'تتكرر بلاغات الفقد في المكتبة المركزية ومنطقة الأنشطة الطلابية في نهاية اليوم الدراسي.',
         ],
         operationalRisks: [
-          'Work orders WO-2005 and WO-2006 are overdue and the weekly library HVAC plan awaits generation.',
-          'Suggested matches including LF-2023 and LF-2024 plus claims CLM-2006 through CLM-2009 risk stalling.',
+          'تنتظر تطابقات مقترحة وطلبات استلام CLM-2006 إلى CLM-2009 الحسم والتسليم منذ أيام.',
+          'يوجد حساب موظف غير نشط واحد يحتاج مراجعة الإدارة قبل إعادة التفعيل أو الأرشفة.',
         ],
         preventiveRecommendations: [
-          'Ahmed El-Desouky: Resolve open item matches and complete handovers for CLM-2003 and CLM-2008 within 48 hours.',
-          'Eng. Mahmoud El-Metwally: Generate the due HVAC preventive order and rebalance network tasks.',
+          'أ. أحمد الدسوقي: حسم التطابقات المقترحة واستكمال تسليم طلبات الاستلام المعتمدة خلال 48 ساعة.',
+          'إدارة النظام: مراجعة الحسابات غير النشطة وتحديث بيانات المواقع الأكثر بلاغات شهرياً.',
         ],
       },
     },
   ]);
 
   return {
-    requests: requestDocs.length,
-    workOrders: workOrderDocs.length + 2,
-    feedback: feedbackDocs.length,
-    preventivePlans: planDocs.length,
     lostItems: itemDocs.filter((item) => item.reportType === 'LOST').length,
     foundItems: itemDocs.filter((item) => item.reportType === 'FOUND').length,
     matches: matchDocs.length,
     claims: claimDocs.length,
     notifications: notificationDocs.length,
     activityLogs: activityLogDocs.length,
-    insights: 1,
+    insights: 2,
   };
 }

@@ -2,9 +2,9 @@ import { Schema, model, models, type Model } from 'mongoose';
 import type { RequestLanguage } from '../../shared/utils/requestContext';
 
 /** Bump this whenever the insight prompt or stats shape changes materially. */
-export const AI_INSIGHTS_PROMPT_VERSION = 2;
+export const AI_INSIGHTS_PROMPT_VERSION = 3;
 
-export type InsightScope = 'MAINTENANCE' | 'ADMIN';
+export type InsightScope = 'LOST_FOUND' | 'ADMIN';
 
 export interface InsightContent {
   observations: string[];
@@ -43,11 +43,11 @@ const aiInsightCacheSchema = new Schema<IAiInsightCache>(
     scope: {
       type: String,
       required: true,
-      enum: ['MAINTENANCE', 'ADMIN'],
-      default: 'MAINTENANCE',
+      enum: ['LOST_FOUND', 'ADMIN'],
+      default: 'LOST_FOUND',
     },
     period: { type: String, required: true, enum: ['7d', '30d'] },
-    lang: { type: String, required: true, enum: ['ar', 'en'], default: 'ar' },
+    lang: { type: String, required: true, enum: ['ar'], default: 'ar' },
     promptVersion: { type: Number, required: true, default: 1 },
     generatedAt: { type: Date, required: true },
     rangeStart: { type: Date, required: true },
@@ -104,7 +104,7 @@ export async function ensureAiInsightCacheIndexes(): Promise<void> {
   await collection.deleteMany({ lang: { $exists: false } });
   await collection.updateMany(
     { scope: { $exists: false } },
-    { $set: { scope: 'MAINTENANCE' } },
+    { $set: { scope: 'LOST_FOUND' } },
   );
   await AiInsightCache.createIndexes();
 }

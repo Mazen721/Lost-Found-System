@@ -12,7 +12,7 @@ import {
 export const matchRouter = Router();
 
 matchRouter.use(authenticate);
-matchRouter.use(authorizeRoles('LOST_FOUND_OFFICER'));
+matchRouter.use(authorizeRoles('LOST_FOUND_MANAGER', 'SUPER_ADMIN'));
 
 matchRouter.get('/', validate(listMatchesQuerySchema, 'query'), listMatches);
 

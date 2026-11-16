@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { env } from '../../config/env';
-import { DEMO_ACCOUNTS, type Role, type TechnicianAvailability } from '../../config/constants';
+import { DEMO_ACCOUNTS, type Role } from '../../config/constants';
 import { ApiError } from '../../shared/utils/ApiError';
 import { User, type UserDocument } from './user.model';
 import type { ChangePasswordInput, LoginInput } from './auth.validation';
@@ -18,10 +18,6 @@ export interface SafeUser {
   departmentAr?: string;
   contactPhone?: string;
   isActive: boolean;
-  specializations: string[];
-  skills: string[];
-  skillsAr?: string[];
-  availability?: TechnicianAvailability;
   createdAt: Date;
 }
 
@@ -41,10 +37,6 @@ export function toSafeUser(user: UserDocument): SafeUser {
     departmentAr: user.departmentAr,
     contactPhone: user.contactPhone,
     isActive: user.isActive,
-    specializations: user.specializations ?? [],
-    skills: user.skills ?? [],
-    skillsAr: user.skillsAr ?? [],
-    availability: user.availability,
     createdAt: user.createdAt,
   };
 }

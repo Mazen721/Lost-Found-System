@@ -1,36 +1,18 @@
 export const ROLES = [
   'SUPER_ADMIN',
-  'MAINTENANCE_MANAGER',
-  'TECHNICIAN',
-  'LOST_FOUND_OFFICER',
-  'STUDENT_EMPLOYEE',
+  'LOST_FOUND_MANAGER',
+  'STUDENT',
+  'EMPLOYEE',
 ] as const;
 
 export type Role = (typeof ROLES)[number];
 
 export const ROLE_LABELS: Record<Role, string> = {
   SUPER_ADMIN: 'Super Admin',
-  MAINTENANCE_MANAGER: 'Maintenance Manager',
-  TECHNICIAN: 'Technician',
-  LOST_FOUND_OFFICER: 'Lost & Found Officer',
-  STUDENT_EMPLOYEE: 'Student / Employee',
+  LOST_FOUND_MANAGER: 'Lost & Found Manager',
+  STUDENT: 'Student',
+  EMPLOYEE: 'Employee',
 };
-
-export const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
-export type Priority = (typeof PRIORITIES)[number];
-
-export const MAINTENANCE_CATEGORIES = [
-  'Hardware',
-  'Software',
-  'Network',
-  'Electrical',
-  'Plumbing',
-  'Air Conditioning',
-  'Furniture',
-  'General Maintenance',
-  'Other',
-] as const;
-export type MaintenanceCategory = (typeof MAINTENANCE_CATEGORIES)[number];
 
 export const LOST_FOUND_CATEGORIES = [
   'Electronics',
@@ -47,27 +29,6 @@ export const LOST_FOUND_CATEGORIES = [
   'Other',
 ] as const;
 export type LostFoundCategory = (typeof LOST_FOUND_CATEGORIES)[number];
-
-export const REQUEST_STATUSES = [
-  'SUBMITTED',
-  'UNDER_REVIEW',
-  'APPROVED',
-  'REJECTED',
-  'IN_PROGRESS',
-  'COMPLETED',
-  'CLOSED',
-  'REOPENED',
-] as const;
-export type RequestStatus = (typeof REQUEST_STATUSES)[number];
-
-export const WORK_ORDER_STATUSES = [
-  'PENDING_ASSIGNMENT',
-  'ASSIGNED',
-  'IN_PROGRESS',
-  'COMPLETED',
-  'CANCELLED',
-] as const;
-export type WorkOrderStatus = (typeof WORK_ORDER_STATUSES)[number];
 
 export const ITEM_STATUSES = [
   'OPEN',
@@ -97,15 +58,6 @@ export type MatchLevel = (typeof MATCH_LEVELS)[number];
 export const REPORT_TYPES = ['LOST', 'FOUND'] as const;
 export type ReportType = (typeof REPORT_TYPES)[number];
 
-export const SOURCE_TYPES = ['REACTIVE', 'PREVENTIVE'] as const;
-export type SourceType = (typeof SOURCE_TYPES)[number];
-
-export const RECURRENCE_TYPES = ['DAILY', 'WEEKLY', 'MONTHLY', 'CUSTOM_DAYS'] as const;
-export type RecurrenceType = (typeof RECURRENCE_TYPES)[number];
-
-export const TECHNICIAN_AVAILABILITIES = ['AVAILABLE', 'BUSY', 'OFF_DUTY'] as const;
-export type TechnicianAvailability = (typeof TECHNICIAN_AVAILABILITIES)[number];
-
 export const LOCATION_TYPES = ['BUILDING', 'FLOOR', 'ROOM', 'LAB', 'OTHER'] as const;
 export type LocationType = (typeof LOCATION_TYPES)[number];
 
@@ -129,32 +81,25 @@ export const DEMO_ACCOUNTS: Record<Role, DemoAccount> = {
     department: 'Information Technology & Digital Transformation Unit',
     departmentAr: 'وحدة تكنولوجيا المعلومات والتحول الرقمي',
   },
-  MAINTENANCE_MANAGER: {
-    email: 'm.elmetwally@mansnu.edu.eg',
-    name: 'Eng. Mahmoud El-Metwally',
-    nameAr: 'م. محمود المتولي',
-    department: 'Engineering Affairs & Maintenance Department',
-    departmentAr: 'الإدارة العامة للشئون الهندسية والصيانة',
-  },
-  TECHNICIAN: {
-    email: 'h.elsayed@mansnu.edu.eg',
-    name: 'Hassan El-Sayed',
-    nameAr: 'حسن السيد',
-    department: 'Engineering Affairs & Maintenance Department',
-    departmentAr: 'الإدارة العامة للشئون الهندسية والصيانة',
-  },
-  LOST_FOUND_OFFICER: {
+  LOST_FOUND_MANAGER: {
     email: 'a.eldesouky@mansnu.edu.eg',
     name: 'Ahmed El-Desouky',
     nameAr: 'أ. أحمد الدسوقي',
     department: 'University Security, Safety & Lost and Found Office',
     departmentAr: 'إدارة الأمن الجامعي والسلامة — مكتب المفقودات',
   },
-  STUDENT_EMPLOYEE: {
+  STUDENT: {
     email: 'youssef.elashry@std.mansnu.edu.eg',
     name: 'Youssef El-Ashry',
     nameAr: 'يوسف العشري',
     department: 'Faculty of Engineering (Level 3 Mechatronics)',
     departmentAr: 'كلية الهندسة (المستوى الثالث — ميكاترونكس)',
+  },
+  EMPLOYEE: {
+    email: 'm.kamal@mansnu.edu.eg',
+    name: 'Mostafa Kamal',
+    nameAr: 'مصطفى كمال',
+    department: 'Student Affairs Department',
+    departmentAr: 'إدارة شئون الطلاب',
   },
 };

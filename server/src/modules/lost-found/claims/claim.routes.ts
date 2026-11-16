@@ -21,11 +21,11 @@ import {
 export const claimRouter = Router();
 
 claimRouter.use(authenticate);
-claimRouter.use(authorizeRoles('STUDENT_EMPLOYEE', 'LOST_FOUND_OFFICER'));
+claimRouter.use(authorizeRoles('STUDENT', 'EMPLOYEE', 'LOST_FOUND_MANAGER', 'SUPER_ADMIN'));
 
 claimRouter.post(
   '/',
-  authorizeRoles('STUDENT_EMPLOYEE'),
+  authorizeRoles('STUDENT', 'EMPLOYEE'),
   uploadRequestImages,
   validate(createClaimSchema),
   createClaim,
@@ -37,7 +37,7 @@ claimRouter.get('/:id', validate(claimIdSchema, 'params'), getClaim);
 
 claimRouter.patch(
   '/:id/review',
-  authorizeRoles('LOST_FOUND_OFFICER'),
+  authorizeRoles('LOST_FOUND_MANAGER', 'SUPER_ADMIN'),
   validate(claimIdSchema, 'params'),
   validate(reviewClaimSchema),
   reviewClaim,
@@ -45,7 +45,7 @@ claimRouter.patch(
 
 claimRouter.post(
   '/:id/handover',
-  authorizeRoles('LOST_FOUND_OFFICER'),
+  authorizeRoles('LOST_FOUND_MANAGER', 'SUPER_ADMIN'),
   validate(claimIdSchema, 'params'),
   validate(handoverClaimSchema),
   recordHandover,

@@ -217,10 +217,10 @@ export async function listItems(
   }
 
   if (query.scope === 'archived') {
-    if (actor.role !== 'LOST_FOUND_OFFICER' && actor.role !== 'SUPER_ADMIN') {
+    if (actor.role !== 'LOST_FOUND_MANAGER' && actor.role !== 'SUPER_ADMIN') {
       throw ApiError.forbidden(
-        'Only Lost & Found Officers can view archived items',
-        'officerArchivedOnly',
+        'Only Lost & Found Managers can view archived items',
+        'managerArchivedOnly',
       );
     }
     if (query.status) {
@@ -313,7 +313,7 @@ export async function getItem(
   const isReporter = reporterId === actor.id;
   const isPrivileged =
     isReporter ||
-    actor.role === 'LOST_FOUND_OFFICER' ||
+    actor.role === 'LOST_FOUND_MANAGER' ||
     actor.role === 'SUPER_ADMIN';
 
   return serializeItem(item, isPrivileged);
@@ -333,9 +333,10 @@ export async function updateItem(
   }
 
   const isReporter = item.reporterId.toString() === actor.id;
-  const isOfficer = actor.role === 'LOST_FOUND_OFFICER';
+  const isManager =
+    actor.role === 'LOST_FOUND_MANAGER' || actor.role === 'SUPER_ADMIN';
 
-  if (!isReporter && !isOfficer) {
+  if (!isReporter && !isManager) {
     throw ApiError.forbidden('You cannot edit this lost and found item', 'itemEditForbidden');
   }
 
@@ -345,11 +346,11 @@ export async function updateItem(
   const hasFieldChanges = fieldChanges.length > 0;
 
   if (hasFieldChanges) {
-    if (isReporter && !isOfficer && item.status !== 'OPEN') {
+    if (isReporter && !isManager && item.status !== 'OPEN') {
       throw ApiError.forbidden('Only open reports can be edited', 'openReportsEditOnly');
     }
 
-    if (isOfficer && (item.status === 'RETURNED' || item.status === 'CLOSED')) {
+    if (isManager && (item.status === 'RETURNED' || item.status === 'CLOSED')) {
       throw ApiError.conflict(
         `Items with status ${item.status} cannot be edited`,
         'statusCannotBeEdited',
@@ -359,7 +360,7 @@ export async function updateItem(
   }
 
   if (input.status === 'CLOSED') {
-    if (isReporter && !isOfficer) {
+    if (isReporter && !isManager) {
       if (item.reportType !== 'LOST') {
         throw ApiError.forbidden(
           'Only the reporter of a LOST report can close it',
@@ -368,7 +369,7 @@ export async function updateItem(
       }
       assertItemTransition(item.status, 'CLOSED', 'REPORTER');
     } else {
-      assertItemTransition(item.status, 'CLOSED', 'LOST_FOUND_OFFICER');
+      assertItemTransition(item.status, 'CLOSED', 'LOST_FOUND_MANAGER');
     }
 
     item.status = 'CLOSED';

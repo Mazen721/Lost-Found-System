@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-export type RequestLanguage = 'ar' | 'en';
+export type RequestLanguage = 'ar';
 
 export interface RequestContextStore {
   lang: RequestLanguage;
@@ -9,5 +9,5 @@ export interface RequestContextStore {
 export const requestContext = new AsyncLocalStorage<RequestContextStore>();
 
 export function getRequestLang(): RequestLanguage {
-  return requestContext.getStore()?.lang ?? 'ar';
+  return 'ar';
 }

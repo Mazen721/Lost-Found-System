@@ -1,11 +1,5 @@
 import { Schema, model, models, type HydratedDocument, type Model } from 'mongoose';
-import {
-  MAINTENANCE_CATEGORIES,
-  ROLES,
-  TECHNICIAN_AVAILABILITIES,
-  type Role,
-  type TechnicianAvailability,
-} from '../../config/constants';
+import { ROLES, type Role } from '../../config/constants';
 
 export interface IUser {
   name: string;
@@ -17,10 +11,6 @@ export interface IUser {
   departmentAr?: string;
   contactPhone?: string;
   isActive: boolean;
-  specializations: string[];
-  skills: string[];
-  skillsAr?: string[];
-  availability?: TechnicianAvailability;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,14 +34,6 @@ const userSchema = new Schema<IUser>(
     departmentAr: { type: String, trim: true, maxlength: 120 },
     contactPhone: { type: String, trim: true, maxlength: 40 },
     isActive: { type: Boolean, default: true },
-    specializations: {
-      type: [String],
-      enum: MAINTENANCE_CATEGORIES,
-      default: [],
-    },
-    skills: { type: [String], default: [] },
-    skillsAr: { type: [String], default: [] },
-    availability: { type: String, enum: TECHNICIAN_AVAILABILITIES },
   },
   {
     timestamps: true,

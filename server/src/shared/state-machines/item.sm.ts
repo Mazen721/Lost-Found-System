@@ -21,7 +21,7 @@ export const ITEM_TRANSITIONS: readonly ItemTransitionRule[] = [
   {
     from: 'OPEN',
     to: 'MATCH_CONFIRMED',
-    actors: ['LOST_FOUND_OFFICER'],
+    actors: ['LOST_FOUND_MANAGER'],
   },
   {
     from: 'OPEN',
@@ -36,37 +36,37 @@ export const ITEM_TRANSITIONS: readonly ItemTransitionRule[] = [
   {
     from: 'CLAIM_UNDER_REVIEW',
     to: 'APPROVED_FOR_HANDOVER',
-    actors: ['LOST_FOUND_OFFICER'],
+    actors: ['LOST_FOUND_MANAGER'],
   },
   {
     from: 'CLAIM_UNDER_REVIEW',
     to: 'OPEN',
-    actors: ['LOST_FOUND_OFFICER', 'SYSTEM'],
+    actors: ['LOST_FOUND_MANAGER', 'SYSTEM'],
   },
   {
     from: 'APPROVED_FOR_HANDOVER',
     to: 'RETURNED',
-    actors: ['LOST_FOUND_OFFICER', 'SYSTEM'],
+    actors: ['LOST_FOUND_MANAGER', 'SYSTEM'],
   },
   // Handover side effect: the claimant's linked LOST item returns to its owner
   // even though its own claim flow never moved it to APPROVED_FOR_HANDOVER.
   { from: 'OPEN', to: 'RETURNED', actors: ['SYSTEM'] },
   { from: 'MATCH_CONFIRMED', to: 'RETURNED', actors: ['SYSTEM'] },
-  { from: 'OPEN', to: 'CLOSED', actors: ['LOST_FOUND_OFFICER', 'REPORTER'] },
+  { from: 'OPEN', to: 'CLOSED', actors: ['LOST_FOUND_MANAGER', 'REPORTER'] },
   {
     from: 'MATCH_CONFIRMED',
     to: 'CLOSED',
-    actors: ['LOST_FOUND_OFFICER', 'REPORTER'],
+    actors: ['LOST_FOUND_MANAGER', 'REPORTER'],
   },
   {
     from: 'CLAIM_UNDER_REVIEW',
     to: 'CLOSED',
-    actors: ['LOST_FOUND_OFFICER', 'REPORTER'],
+    actors: ['LOST_FOUND_MANAGER', 'REPORTER'],
   },
   {
     from: 'APPROVED_FOR_HANDOVER',
     to: 'CLOSED',
-    actors: ['LOST_FOUND_OFFICER', 'REPORTER'],
+    actors: ['LOST_FOUND_MANAGER', 'REPORTER'],
   },
 ];
 

@@ -1,19 +1,9 @@
 import mongoose from 'mongoose';
-import {
-  DEMO_ACCOUNTS,
-  ROLES,
-  type MaintenanceCategory,
-  type Role,
-  type TechnicianAvailability,
-} from '../config/constants';
+import { DEMO_ACCOUNTS, ROLES, type Role } from '../config/constants';
 import { env } from '../config/env';
 import { hashPassword } from '../modules/auth/auth.service';
 import { User } from '../modules/auth/user.model';
 import { Location } from '../modules/locations/location.model';
-import { MaintenanceRequest } from '../modules/maintenance/requests/maintenanceRequest.model';
-import { WorkOrder } from '../modules/maintenance/work-orders/workOrder.model';
-import { PreventivePlan } from '../modules/preventive/preventivePlan.model';
-import { ServiceFeedback } from '../modules/maintenance/feedback/serviceFeedback.model';
 import { LostFoundItem } from '../modules/lost-found/items/lostFoundItem.model';
 import { ItemMatch } from '../modules/lost-found/matches/itemMatch.model';
 import { ClaimRequest } from '../modules/lost-found/claims/claimRequest.model';
@@ -24,7 +14,7 @@ import { Notification } from '../shared/models/Notification.model';
 import { ActivityLog } from '../shared/models/ActivityLog.model';
 import { seedDemoData, type DemoDataCounts } from './demoData';
 
-export const SEED_PASSWORD = 'CampusCare#2026';
+export const SEED_PASSWORD = 'Campus@2025';
 
 interface SeedUser {
   name: string;
@@ -34,15 +24,10 @@ interface SeedUser {
   department: string;
   departmentAr?: string;
   contactPhone?: string;
-  specializations?: MaintenanceCategory[];
-  skills?: string[];
-  skillsAr?: string[];
-  availability?: TechnicianAvailability;
 }
 
 interface SeedReport {
   accounts: number;
-  technicians: number;
   locations: number;
   buildings: number;
   demo?: DemoDataCounts;
@@ -51,7 +36,7 @@ interface SeedReport {
 interface SeedOptions {
   silent?: boolean;
   /**
-   * Adds the full Day 6 demo dataset. Defaults to true outside tests so the
+   * Adds the full demo dataset. Defaults to true outside tests so the
    * earlier phase suites, which assume an otherwise empty workflow, keep a
    * minimal foundation.
    */
@@ -66,84 +51,12 @@ const ALL_MODELS: IndexableModel[] = [
   Counter,
   User,
   Location,
-  MaintenanceRequest,
-  WorkOrder,
-  PreventivePlan,
-  ServiceFeedback,
   LostFoundItem,
   ItemMatch,
   ClaimRequest,
   Notification,
   ActivityLog,
   AiInsightCache,
-];
-
-const TECHNICIANS: SeedUser[] = [
-  {
-    name: DEMO_ACCOUNTS.TECHNICIAN.name,
-    nameAr: DEMO_ACCOUNTS.TECHNICIAN.nameAr,
-    email: DEMO_ACCOUNTS.TECHNICIAN.email,
-    role: 'TECHNICIAN',
-    department: DEMO_ACCOUNTS.TECHNICIAN.department,
-    departmentAr: DEMO_ACCOUNTS.TECHNICIAN.departmentAr,
-    contactPhone: '+20 100 555 0142',
-    specializations: ['Electrical', 'Air Conditioning'],
-    skills: ['Electrical wiring', 'Distribution boards', 'Power diagnostics'],
-    skillsAr: ['التمديدات الكهربائية', 'لوحات التوزيع الكهربائية', 'تشخيص أعطال الطاقة'],
-    availability: 'AVAILABLE',
-  },
-  {
-    name: 'Mohamed El-Gohary',
-    nameAr: 'محمد الجوهري',
-    email: 'm.elgohary@mansnu.edu.eg',
-    role: 'TECHNICIAN',
-    department: 'Engineering Affairs & Maintenance Department',
-    departmentAr: 'الإدارة العامة للشئون الهندسية والصيانة',
-    contactPhone: '+20 100 555 0188',
-    specializations: ['Plumbing', 'General Maintenance'],
-    skills: ['Water networks', 'Sanitation maintenance', 'Leak detection'],
-    skillsAr: ['شبكات المياه', 'صيانة الصرف الصحي', 'كشف التسريبات'],
-    availability: 'AVAILABLE',
-  },
-  {
-    name: 'Karim El-Tantawy',
-    nameAr: 'كريم الطنطاوي',
-    email: 'k.eltantawy@mansnu.edu.eg',
-    role: 'TECHNICIAN',
-    department: 'Information Technology & Digital Transformation Unit',
-    departmentAr: 'وحدة تكنولوجيا المعلومات والتحول الرقمي',
-    contactPhone: '+20 100 555 0164',
-    specializations: ['Hardware', 'Network', 'Software'],
-    skills: ['Lab PC maintenance', 'Fiber & LAN cabling', 'Access point configuration'],
-    skillsAr: ['صيانة حواسيب المعامل', 'كابلات الألياف والشبكات المحلية', 'إعداد نقاط الوصول اللاسلكية'],
-    availability: 'BUSY',
-  },
-  {
-    name: 'Ibrahim Abdel-Fattah',
-    nameAr: 'إبراهيم عبد الفتاح',
-    email: 'i.abdelfattah@mansnu.edu.eg',
-    role: 'TECHNICIAN',
-    department: 'Engineering Affairs & Maintenance Department',
-    departmentAr: 'الإدارة العامة للشئون الهندسية والصيانة',
-    contactPhone: '+20 100 555 0127',
-    specializations: ['Air Conditioning', 'General Maintenance'],
-    skills: ['Central HVAC servicing', 'Chiller maintenance', 'Air handling units'],
-    skillsAr: ['صيانة التكييف المركزي', 'صيانة المبردات المركزية (Chillers)', 'وحدات مناولة الهواء'],
-    availability: 'AVAILABLE',
-  },
-  {
-    name: 'Sameh Radwan',
-    nameAr: 'سامح رضوان',
-    email: 's.radwan@mansnu.edu.eg',
-    role: 'TECHNICIAN',
-    department: 'General Services & Facilities Management',
-    departmentAr: 'إدارة الشئون الإدارية والخدمات الداخلية',
-    contactPhone: '+20 100 555 0196',
-    specializations: ['Furniture', 'General Maintenance'],
-    skills: ['Lecture hall seating repair', 'Carpentry', 'Door & lock hardware'],
-    skillsAr: ['إصلاح مقاعد المدرجات', 'أعمال النجارة والأثاث', 'صيانة الأبواب والأقفال'],
-    availability: 'OFF_DUTY',
-  },
 ];
 
 interface RoomTemplate {
@@ -279,8 +192,9 @@ const FLOOR_LABELS_AR = [
   'الطابق الرابع',
 ] as const;
 
+
 function buildSeedUsers(): SeedUser[] {
-  const demoUsers: SeedUser[] = ROLES.map((role) => {
+  return ROLES.map((role) => {
     const account = DEMO_ACCOUNTS[role];
     return {
       name: account.name,
@@ -291,9 +205,7 @@ function buildSeedUsers(): SeedUser[] {
       departmentAr: account.departmentAr,
       contactPhone: '+20 100 555 0100',
     };
-  }).filter((user) => user.role !== 'TECHNICIAN');
-
-  return [...demoUsers, ...TECHNICIANS];
+  });
 }
 
 function buildLocations(): Array<{
@@ -335,10 +247,10 @@ function buildLocations(): Array<{
 }
 
 /**
- * Wipes the configured database and recreates the demo foundation: one account
- * per role, five technicians, four buildings with rooms, and (unless running
- * under NODE_ENV=test without an explicit override) the full Day 6 workflow,
- * preventive, Lost & Found, notification, log and insight dataset.
+ * Wipes the configured database and recreates the demo foundation: one
+ * account per role (Student, Employee, Lost & Found Manager, Super Admin),
+ * four buildings with rooms, and (unless running under NODE_ENV=test
+ * without an explicit override) the full Lost & Found demo dataset.
  */
 export async function seedDatabase(options: SeedOptions = {}): Promise<SeedReport> {
   if (process.env.NODE_ENV === 'production') {
@@ -358,8 +270,7 @@ export async function seedDatabase(options: SeedOptions = {}): Promise<SeedRepor
       await model.createIndexes();
     }
 
-    // Counter has no secondary indexes, so initialise it explicitly to keep all
-    // 13 collections present immediately after seeding.
+    // Counter has no secondary indexes, so initialise it explicitly.
     await Counter.insertMany(COUNTER_PREFIXES.map((_id) => ({ _id, seq: 0 })));
 
     const passwordHash = await hashPassword(SEED_PASSWORD);
@@ -370,9 +281,6 @@ export async function seedDatabase(options: SeedOptions = {}): Promise<SeedRepor
         ...user,
         passwordHash,
         isActive: true,
-        specializations: user.specializations ?? [],
-        skills: user.skills ?? [],
-        skillsAr: user.skillsAr ?? [],
       })),
     );
 
@@ -382,29 +290,23 @@ export async function seedDatabase(options: SeedOptions = {}): Promise<SeedRepor
     const includeDemoData = options.fullDemoData ?? process.env.NODE_ENV !== 'test';
     const demo = includeDemoData ? await seedDemoData(passwordHash) : undefined;
     const accountCount = await User.countDocuments({});
-    const technicianCount = await User.countDocuments({ role: 'TECHNICIAN' });
     const locationCount = await Location.countDocuments({});
     const buildingNames = await Location.distinct('buildingName');
 
     const report: SeedReport = {
       accounts: accountCount,
-      technicians: technicianCount,
       locations: locationCount,
       buildings: buildingNames.length,
       demo,
     };
 
     if (!options.silent) {
-      console.log('\nCampusCare seed complete');
-      console.log('------------------------');
+      console.log('\nCampusCare Lost & Found seed complete');
+      console.log('-------------------------------------');
       console.log(`Accounts:    ${report.accounts}`);
-      console.log(`Technicians: ${report.technicians}`);
       console.log(`Buildings:   ${report.buildings}`);
       console.log(`Locations:   ${report.locations}`);
       if (report.demo) {
-        console.log(`Requests:    ${report.demo.requests}`);
-        console.log(`Work orders: ${report.demo.workOrders}`);
-        console.log(`Plans:       ${report.demo.preventivePlans}`);
         console.log(
           `Lost/found:  ${report.demo.lostItems} lost, ${report.demo.foundItems} found`,
         );
@@ -433,7 +335,7 @@ if (require.main === module) {
   void seedDatabase()
     .then(() => process.exit(0))
     .catch((error: unknown) => {
-      console.error('[campuscare] seed failed', error);
+      console.error('[campuscare-lostfound] seed failed', error);
       process.exit(1);
     });
 }

@@ -250,7 +250,7 @@ async function loadClaimableFoundItem(
 
 async function markItemReturned(
   item: ItemDocument | null,
-  actorRole: 'LOST_FOUND_OFFICER' | 'SYSTEM',
+  actorRole: 'LOST_FOUND_MANAGER' | 'SYSTEM',
   session: ClientSession,
 ): Promise<void> {
   if (!item || item.status === 'RETURNED') return;
@@ -336,7 +336,7 @@ function serializeClaimItem(
 
 function serializeClaim(
   doc: PopulatedClaim,
-  includeOfficerFields: boolean,
+  includeManagerFields: boolean,
 ): SerializedClaim {
   const claimant = isPopulatedPerson(doc.claimantId)
     ? {
@@ -381,7 +381,7 @@ function serializeClaim(
     claimNumber: doc.claimNumber,
     status: doc.status,
     item: isProjectableItem(doc.itemId)
-      ? serializeClaimItem(doc.itemId, includeOfficerFields)
+      ? serializeClaimItem(doc.itemId, includeManagerFields)
       : null,
     linkedLostItem: isProjectableItem(doc.linkedLostItemId)
       ? toPublicItem(doc.linkedLostItemId)
@@ -391,7 +391,7 @@ function serializeClaim(
     claimDescriptionAr: doc.claimDescriptionAr,
     identifyingDetailsProvided: doc.identifyingDetailsProvided,
     supportingEvidence: doc.supportingEvidence ?? [],
-    ...(includeOfficerFields
+    ...(includeManagerFields
       ? {
           verificationNotes: doc.verificationNotes,
           verificationNotesAr: doc.verificationNotesAr,
@@ -408,7 +408,12 @@ function serializeClaim(
 }
 
 function assertClaimModuleRole(actor: ClaimActor): void {
-  if (actor.role !== 'LOST_FOUND_OFFICER' && actor.role !== 'STUDENT_EMPLOYEE') {
+  if (
+    actor.role !== 'LOST_FOUND_MANAGER' &&
+    actor.role !== 'SUPER_ADMIN' &&
+    actor.role !== 'STUDENT' &&
+    actor.role !== 'EMPLOYEE'
+  ) {
     throw ApiError.forbidden('You do not have access to claim requests', 'claimsAccessForbidden');
   }
 }
@@ -419,10 +424,11 @@ async function loadClaimById(
   session?: ClientSession,
 ): Promise<SerializedClaim> {
   assertClaimModuleRole(actor);
-  const includeOfficerFields = actor.role === 'LOST_FOUND_OFFICER';
+  const includeManagerFields =
+    actor.role === 'LOST_FOUND_MANAGER' || actor.role === 'SUPER_ADMIN';
 
   const query = ClaimRequest.findById(id)
-    .populate(itemPopulate('itemId', includeOfficerFields))
+    .populate(itemPopulate('itemId', includeManagerFields))
     .populate(itemPopulate('linkedLostItemId'))
     .populate(CLAIMANT_POPULATE)
     .populate(REVIEWER_POPULATE)
@@ -438,11 +444,11 @@ async function loadClaimById(
     throw ApiError.notFound('Claim request not found', 'claimNotFound');
   }
 
-  if (!includeOfficerFields && personIdOf(doc.claimantId) !== actor.id) {
+  if (!includeManagerFields && personIdOf(doc.claimantId) !== actor.id) {
     throw ApiError.forbidden('You do not have access to this claim', 'claimAccessForbidden');
   }
 
-  return serializeClaim(doc, includeOfficerFields);
+  return serializeClaim(doc, includeManagerFields);
 }
 
 export async function createClaim(
@@ -450,7 +456,7 @@ export async function createClaim(
   input: CreateClaimInput,
   images: ImageAsset[],
 ): Promise<SerializedClaim> {
-  if (actor.role !== 'STUDENT_EMPLOYEE') {
+  if (actor.role !== 'STUDENT' && actor.role !== 'EMPLOYEE') {
     throw ApiError.forbidden(
       'Only students and employees can submit claims',
       'claimsStudentsEmployeesOnly',
@@ -523,15 +529,15 @@ export async function createClaim(
       await item.save({ session });
     }
 
-    const officers = await User.find({
-      role: 'LOST_FOUND_OFFICER',
+    const managers = await User.find({
+      role: { $in: ['LOST_FOUND_MANAGER', 'SUPER_ADMIN'] },
       isActive: true,
     })
       .select('_id')
       .session(session);
 
     await notify(
-      officers.map((officer) => officer._id),
+      managers.map((manager) => manager._id),
       {
         type: 'CLAIM_SUBMITTED',
         title: 'New claim submitted',
@@ -580,9 +586,10 @@ export async function listClaims(
   assertClaimModuleRole(actor);
   const { page, limit } = parsePagination(query);
   const filter: FilterQuery<IClaimRequest> = {};
-  const includeOfficerFields = actor.role === 'LOST_FOUND_OFFICER';
+  const includeManagerFields =
+    actor.role === 'LOST_FOUND_MANAGER' || actor.role === 'SUPER_ADMIN';
 
-  if (!includeOfficerFields) {
+  if (!includeManagerFields) {
     filter.claimantId = new Types.ObjectId(actor.id);
   }
 
@@ -596,7 +603,7 @@ export async function listClaims(
 
   const [documents, total] = await Promise.all([
     ClaimRequest.find(filter)
-      .populate(itemPopulate('itemId', includeOfficerFields))
+      .populate(itemPopulate('itemId', includeManagerFields))
       .populate(itemPopulate('linkedLostItemId'))
       .populate(CLAIMANT_POPULATE)
       .populate(REVIEWER_POPULATE)
@@ -609,7 +616,7 @@ export async function listClaims(
   ]);
 
   return paginate(
-    documents.map((doc) => serializeClaim(doc, includeOfficerFields)),
+    documents.map((doc) => serializeClaim(doc, includeManagerFields)),
     page,
     limit,
     total,
@@ -633,7 +640,7 @@ async function startVerification(
   assertClaimTransition(
     claim.status,
     'UNDER_VERIFICATION',
-    'LOST_FOUND_OFFICER',
+    'LOST_FOUND_MANAGER',
   );
 
   claim.status = 'UNDER_VERIFICATION';
@@ -663,7 +670,7 @@ async function approveClaim(
   return withTransaction(async (session) => {
     const claim = await loadClaimDocument(id, session);
 
-    assertClaimTransition(claim.status, 'APPROVED', 'LOST_FOUND_OFFICER');
+    assertClaimTransition(claim.status, 'APPROVED', 'LOST_FOUND_MANAGER');
 
     const item = await LostFoundItem.findById(claim.itemId).session(session);
 
@@ -674,7 +681,7 @@ async function approveClaim(
     assertItemTransition(
       item.status,
       'APPROVED_FOR_HANDOVER',
-      'LOST_FOUND_OFFICER',
+      'LOST_FOUND_MANAGER',
     );
 
     item.status = 'APPROVED_FOR_HANDOVER';
@@ -743,7 +750,7 @@ async function rejectClaim(
   return withTransaction(async (session) => {
     const claim = await loadClaimDocument(id, session);
 
-    assertClaimTransition(claim.status, 'REJECTED', 'LOST_FOUND_OFFICER');
+    assertClaimTransition(claim.status, 'REJECTED', 'LOST_FOUND_MANAGER');
 
     claim.status = 'REJECTED';
     claim.rejectionReason = reason;
@@ -820,7 +827,7 @@ export async function recordHandover(
       throw ApiError.conflict('Only approved claims can be handed over', 'approvedClaimsOnlyHandover');
     }
 
-    assertClaimTransition(claim.status, 'COMPLETED', 'LOST_FOUND_OFFICER');
+    assertClaimTransition(claim.status, 'COMPLETED', 'LOST_FOUND_MANAGER');
 
     claim.status = 'COMPLETED';
     claim.handover = {
@@ -832,7 +839,7 @@ export async function recordHandover(
     await claim.save({ session });
 
     const foundItem = await LostFoundItem.findById(claim.itemId).session(session);
-    await markItemReturned(foundItem, 'LOST_FOUND_OFFICER', session);
+    await markItemReturned(foundItem, 'LOST_FOUND_MANAGER', session);
 
     if (claim.linkedLostItemId) {
       const lostItem = await LostFoundItem.findById(

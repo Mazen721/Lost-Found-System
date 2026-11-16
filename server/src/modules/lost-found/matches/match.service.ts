@@ -242,8 +242,8 @@ async function confirmMatch(
       throw ApiError.notFound('One of the matched items no longer exists', 'matchedItemMissing');
     }
 
-    assertItemTransition(lost.status, 'MATCH_CONFIRMED', 'LOST_FOUND_OFFICER');
-    assertItemTransition(found.status, 'MATCH_CONFIRMED', 'LOST_FOUND_OFFICER');
+    assertItemTransition(lost.status, 'MATCH_CONFIRMED', 'LOST_FOUND_MANAGER');
+    assertItemTransition(found.status, 'MATCH_CONFIRMED', 'LOST_FOUND_MANAGER');
 
     lost.status = 'MATCH_CONFIRMED';
     found.status = 'MATCH_CONFIRMED';
