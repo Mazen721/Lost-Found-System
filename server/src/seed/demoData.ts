@@ -160,6 +160,7 @@ const EXTRA_DEMO_LOCATIONS = [
 
 interface ItemSpec {
   key: string;
+  photos: string[];
   reportType: 'LOST' | 'FOUND';
   itemTitle: string;
   itemTitleAr?: string;
@@ -273,6 +274,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
   const itemSpecs: ItemSpec[] = [
     {
       key: 'lost-backpack',
+      photos: ['https://cdn.iz.ru/sites/default/files/styles/900x506/public/news-2025-02/ANS04225_0.jpg?itok=vkc5hX33', 'https://bagdup.com/cdn/shop/files/c7f8cadad2941c8320bc73c02a5715b9ff1f7ad1725837b8c5c4905b27390ec1.jpg?v=1743096763&width=980'],
       itemTitleAr: 'حقيبة ظهر North Face سوداء',
       descriptionAr:
         'فُقدت بالقرب من معمل الهندسة بعد محاضرة بعد الظهر. الحقيبة بها ميدالية مفاتيح زرقاء داخل الجيب الأمامي.',
@@ -297,6 +299,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-backpack',
+      photos: ['https://newscast.jp/attachments/OBQOuQUmHWPPP7JhEc9e.jpg?w=700&h=700'],
       itemTitleAr: 'حقيبة ظهر North Face سوداء',
       descriptionAr:
         'عُثر عليها بالقرب من معمل الهندسة وبداخل الجيب الأمامي ميدالية مفاتيح زرقاء ومذكرات ميكاترونكس.',
@@ -321,6 +324,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'lost-bottle',
+      photos: ['https://images.pexels.com/photos/7869542/pexels-photo-7869542.jpeg?auto=compress&cs=tinysrgb&w=1200'],
       itemTitleAr: 'زجاجة ماء زرقاء من الفولاذ المقاوم للصدأ',
       descriptionAr:
         'فقدت زجاجة ماء زرقاء من الفولاذ مع غطاء به صدمة في مكان ما بين الكافتيريا والمكتبة.',
@@ -344,6 +348,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-bottle',
+      photos: ['https://portal-images.azureedge.net/auctions-2024/sphere10036/images/ab09b42c-7544-4781-993f-b13a00d425c6.jpg?w=1920&h=1920&mode=max'],
       itemTitleAr: 'زجاجة ماء زرقاء من الفولاذ المقاوم للصدأ',
       descriptionAr:
         'عُثر على زجاجة ماء زرقاء من الفولاذ مع غطاء به صدمة على طاولة دراسة بالمكتبة.',
@@ -367,6 +372,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'lost-phone',
+      photos: ['https://comunidad.movistar.es/t5/s/movistar/images/bS0zMjgxNzQ4LTEyODQ2M2lGMkJGNDNGMUYyQTU5MDQy?image-dimensions=992x558&revision=3'],
       itemTitleAr: 'آيفون 13 فضي',
       descriptionAr:
         'فقدت هاتف iPhone 13 فضياً في جراب شفاف بالقرب من مدخل المجمع الطبي. شاشة القفل تعرض صورة قطة.',
@@ -391,6 +397,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-phone',
+      photos: ['https://cdn.mos.cms.futurecdn.net/t5Wa5J3C4imLbytYaHQPkh.jpg'],
       itemTitleAr: 'آيفون 13 فضي',
       descriptionAr:
         'عُثر على هاتف iPhone 13 فضي في جراب شفاف عند مدخل المجمع الطبي. الهاتف مغلق.',
@@ -415,6 +422,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'lost-keys',
+      photos: ['https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Key_ring.jpg/330px-Key_ring.jpg'],
       itemTitleAr: 'مجموعة مفاتيح بميدالية حمراء',
       descriptionAr:
         'فقدت مجموعة من ثلاثة مفاتيح بميدالية بلاستيكية حمراء بالقرب من مبنى العلوم الإنسانية.',
@@ -437,6 +445,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-keys',
+      photos: ['https://static2sensa.mondo.rs/api/v3/images/1280/2560/104349?ts=2026-08-24T15:39:10'],
       itemTitleAr: 'مجموعة مفاتيح بميدالية حمراء',
       descriptionAr:
         'عُثر على مجموعة من ثلاثة مفاتيح بميدالية بلاستيكية حمراء عند بوابة مبنى العلوم الإنسانية.',
@@ -459,6 +468,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'lost-umbrella',
+      photos: ['https://p1-a50ece1c.imageflux.jp/c/f=webp:jpeg,w=1024,h=1024,a=0/store/reviewattachmentfile/53/16402/file/4b49c7b6d9db3e92ba4bfaad80ecaa63.jpeg'],
       itemTitleAr: 'مظلة كحلية',
       descriptionAr:
         'فقدت مظلة كحلية بمقبض خشبي في بهو المكتبة.',
@@ -480,6 +490,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-umbrella',
+      photos: ['https://cdn.shopify.com/s/files/1/0560/0008/6216/files/200856_1.jpg?v=1689917727'],
       itemTitleAr: 'مظلة كحلية',
       descriptionAr:
         'عُثر على مظلة كحلية بمقبض خشبي بالقرب من مدخل المكتبة.',
@@ -501,6 +512,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'lost-id',
+      photos: ['https://localwiki.org/media/cache/4c/2d/4c2dc1585136f7e4da4355f7833041d0.jpg'],
       itemTitleAr: 'بطاقة هوية جامعية',
       descriptionAr:
         'فقدت بطاقة هوية طالب في حافظة شفافة في مكان ما بمبنى العلوم الإنسانية.',
@@ -521,6 +533,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-id',
+      photos: ['https://img1.kakaocdn.net/thumb/R1280x0.fwebp/?fname=https://t1.kakaocdn.net/brunch/service/user/iI3H/image/3zH_htMcYIg7__La9TPVHN8gAMQ'],
       itemTitleAr: 'بطاقة هوية جامعية',
       descriptionAr:
         'عُثر على بطاقة هوية طالب في حافظة شفافة على أرضية ممر العلوم الإنسانية.',
@@ -541,6 +554,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'lost-hoodie',
+      photos: ['https://img.tori.net/dynamic/1280w/item/36653863/aaf0dcfd-8163-426d-917e-2de11557fedf'],
       itemTitleAr: 'سترة جامعية رمادية (Hoodie)',
       descriptionAr:
         'تركت سترة جامعية رمادية في قاعة استذكار الهندسة. بها بقعة حبر صغيرة على الكم.',
@@ -562,6 +576,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-hoodie',
+      photos: ['https://talc-paris.fr/cdn/shop/files/NEW_Menu_images-7.jpg?v=1741888609&width=540'],
       itemTitleAr: 'سترة جامعية رمادية (Hoodie)',
       descriptionAr:
         'عُثر على سترة جامعية رمادية على كرسي في قاعة استذكار الهندسة.',
@@ -583,6 +598,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'lost-textbook',
+      photos: ['https://www.lsmason.com/images/wp-59-600.jpg'],
       itemTitleAr: 'كتاب هياكل البيانات',
       descriptionAr:
         'فقدت كتاب هياكل البيانات في المكتبة. اسم عمر خالد مكتوب داخل الغلاف.',
@@ -602,6 +618,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-textbook',
+      photos: ['https://images.pexels.com/photos/4219042/pexels-photo-4219042.jpeg?auto=compress&cs=tinysrgb&w=1200'],
       itemTitleAr: 'كتاب هياكل البيانات',
       descriptionAr:
         'عُثر على كتاب هياكل البيانات متروكاً على مكتب في المكتبة بعد وقت الإغلاق.',
@@ -621,6 +638,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'lost-usb',
+      photos: ['https://www.getusb.info/wp-content/uploads/2022/06/060622a.jpg'],
       itemTitleAr: 'ذاكرة فلاش 32 جيجابايت USB',
       descriptionAr:
         'فقدت ذاكرة فلاش USB سوداء بغطاء أحمر بالقرب من طابعات معمل الحاسب.',
@@ -642,6 +660,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-usb',
+      photos: ['https://crossplay.pl/wp-content/uploads/2026/07/w8_2.jpg'],
       itemTitleAr: 'ذاكرة فلاش 32 جيجابايت USB',
       descriptionAr:
         'عُثر على ذاكرة فلاش USB سوداء بغطاء أحمر بجوار طابعات معمل الحاسب.',
@@ -663,6 +682,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'lost-headphones',
+      photos: ['https://images.pexels.com/photos/610945/pexels-photo-610945.jpeg?auto=compress&cs=tinysrgb&w=1200'],
       itemTitleAr: 'سماعات لاسلكية Sony WH-CH720N سوداء',
       descriptionAr:
         'فقدت سماعات رأس لاسلكية سوداء من نوع Sony في حافظة رمادية بساحة الورش الهندسية.',
@@ -687,6 +707,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-headphones',
+      photos: ['https://images.pexels.com/photos/11340544/pexels-photo-11340544.jpeg?auto=compress&cs=tinysrgb&w=1200'],
       itemTitleAr: 'سماعات لاسلكية Sony WH-CH720N سوداء',
       descriptionAr:
         'تم تسليم سماعات رأس Sony سوداء داخل حافظة رمادية من الورش الهندسية.',
@@ -711,6 +732,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'lost-wallet',
+      photos: ['https://images.pexels.com/photos/33277784/pexels-photo-33277784.jpeg?auto=compress&cs=tinysrgb&w=1200'],
       itemTitleAr: 'محفظة جلدية بنية',
       descriptionAr:
         'فقدت محفظة جلدية بنية تحتوي على بطاقة مكتبة وكروت مواصلات في الصالة الرياضية المغطاة.',
@@ -733,6 +755,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-wallet',
+      photos: ['https://i.etsystatic.com/61921830/r/il/e4c9fd/7950078557/il_600x600.7950078557_2ag0.jpg'],
       itemTitleAr: 'محفظة جلدية بنية',
       descriptionAr:
         'عُثر على محفظة جلدية بنية عند مدخل مدرجات الصالة الرياضية المغطاة.',
@@ -755,6 +778,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'lost-calculator',
+      photos: ['https://everylittlethingblog.weebly.com/uploads/4/3/7/8/43783451/img-5415_orig.jpg'],
       itemTitleAr: 'آلة حاسبة علمية Casio fx-991ARX',
       descriptionAr:
         'فقدت آلة حاسبة علمية Casio fx-991ARX بغطاء منزلق في مدرج الهندسة 3.',
@@ -779,6 +803,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-calculator',
+      photos: ['https://email-editor-production.s3.amazonaws.com/images/596438/admin-ajax_32.jpeg'],
       itemTitleAr: 'آلة حاسبة علمية Casio fx-991ARX',
       descriptionAr:
         'عُثر على آلة حاسبة علمية Casio fx-991ARX على المنصة الأمامية بمدرج الهندسة 3.',
@@ -803,6 +828,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-charger',
+      photos: ['https://upload.wikimedia.org/wikipedia/commons/b/b0/Lenovo_mini_laptop_Charger.jpg'],
       itemTitleAr: 'شاحن لابتوب USB-C بقدرة 65 واط Lenovo',
       descriptionAr:
         'عُثر على شاحن لابتوب USB-C بقدرة 65 واط في مقابس قاعة القراءة بالمبنى الإداري.',
@@ -827,6 +853,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     },
     {
       key: 'found-glasses',
+      photos: ['https://optika-kamenets.com.ua/wp-content/uploads/2025/09/care_for_glasses-1024x683-1.jpg'],
       itemTitleAr: 'نظارة طبية بإطار أسود في حافظة صلبة',
       descriptionAr:
         'تم العثور على نظارة طبية بإطار أسود داخل حافظة صلبة في صالة انتظار المجمع الطبي وتم تسليمها للأمن.',
@@ -867,7 +894,10 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     locationDetails: spec.locationDetails,
     locationDetailsAr: spec.locationDetailsAr,
     occurrenceDate: daysAgo(spec.occurrenceDaysAgo, 12),
-    images: [],
+    images: spec.photos.map((url, imageIndex) => ({
+      url,
+      publicId: `seed/${spec.key}-${imageIndex + 1}`,
+    })),
     reporterId: userId(spec.reporterEmail),
     status: spec.status,
     createdAt: daysAgo(spec.occurrenceDaysAgo, 13),
