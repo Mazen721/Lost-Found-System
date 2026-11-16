@@ -1,8 +1,8 @@
 {
-  "name": "@campuscare/server",
+  "name": "@campuscare-lost-found/server",
   "version": "1.0.0",
   "private": true,
-  "description": "CampusCare API — Express, Mongoose, TypeScript",
+  "description": "CampusCare Lost & Found API — Express, Mongoose, TypeScript",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
