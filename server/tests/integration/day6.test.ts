@@ -15,22 +15,19 @@ let SEED_PASSWORD: string;
 let DEMO_ACCOUNTS: (typeof import('../../src/config/constants'))['DEMO_ACCOUNTS'];
 let Location: (typeof import('../../src/modules/locations/location.model'))['Location'];
 let User: (typeof import('../../src/modules/auth/user.model'))['User'];
-let MaintenanceRequest: (typeof import('../../src/modules/maintenance/requests/maintenanceRequest.model'))['MaintenanceRequest'];
-let WorkOrder: (typeof import('../../src/modules/maintenance/work-orders/workOrder.model'))['WorkOrder'];
-let PreventivePlan: (typeof import('../../src/modules/preventive/preventivePlan.model'))['PreventivePlan'];
 let LostFoundItem: (typeof import('../../src/modules/lost-found/items/lostFoundItem.model'))['LostFoundItem'];
 let ClaimRequest: (typeof import('../../src/modules/lost-found/claims/claimRequest.model'))['ClaimRequest'];
 let Notification: (typeof import('../../src/shared/models/Notification.model'))['Notification'];
 let ActivityLog: (typeof import('../../src/shared/models/ActivityLog.model'))['ActivityLog'];
 let AiInsightCache: (typeof import('../../src/modules/ai/aiInsightCache.model'))['AiInsightCache'];
 let Counter: (typeof import('../../src/shared/models/Counter.model'))['Counter'];
-let generateMaintenanceInsights: (typeof import('../../src/modules/ai/maintenanceInsights.service'))['generateMaintenanceInsights'];
+let generateLostFoundInsights: (typeof import('../../src/modules/ai/lostFoundInsights.service'))['generateLostFoundInsights'];
+let generateAdminInsights: (typeof import('../../src/modules/ai/lostFoundInsights.service'))['generateAdminInsights'];
 let parseInsightsContent: (typeof import('../../src/modules/ai/ai.validation'))['parseInsightsContent'];
 
 const tokens = new Map<Role, string>();
 let managerId = '';
 let adminId = '';
-let technicianId = '';
 
 function bearer(role: Role): string {
   return `Bearer ${tokens.get(role) ?? ''}`;
@@ -73,15 +70,6 @@ beforeAll(async () => {
   ({ DEMO_ACCOUNTS } = await import('../../src/config/constants'));
   ({ Location } = await import('../../src/modules/locations/location.model'));
   ({ User } = await import('../../src/modules/auth/user.model'));
-  ({ MaintenanceRequest } = await import(
-    '../../src/modules/maintenance/requests/maintenanceRequest.model'
-  ));
-  ({ WorkOrder } = await import(
-    '../../src/modules/maintenance/work-orders/workOrder.model'
-  ));
-  ({ PreventivePlan } = await import(
-    '../../src/modules/preventive/preventivePlan.model'
-  ));
   ({ LostFoundItem } = await import(
     '../../src/modules/lost-found/items/lostFoundItem.model'
   ));
@@ -92,28 +80,21 @@ beforeAll(async () => {
   ({ ActivityLog } = await import('../../src/shared/models/ActivityLog.model'));
   ({ AiInsightCache } = await import('../../src/modules/ai/aiInsightCache.model'));
   ({ Counter } = await import('../../src/shared/models/Counter.model'));
-  ({ generateMaintenanceInsights } = await import(
-    '../../src/modules/ai/maintenanceInsights.service'
+  ({ generateLostFoundInsights, generateAdminInsights } = await import(
+    '../../src/modules/ai/lostFoundInsights.service'
   ));
   ({ parseInsightsContent } = await import('../../src/modules/ai/ai.validation'));
   ({ app } = await import('../../src/app'));
 
   await seedDatabase({ silent: true, fullDemoData: true });
 
-  const roles: Role[] = [
-    'SUPER_ADMIN',
-    'MAINTENANCE_MANAGER',
-    'TECHNICIAN',
-    'LOST_FOUND_OFFICER',
-    'STUDENT_EMPLOYEE',
-  ];
+  const roles: Role[] = ['SUPER_ADMIN', 'LOST_FOUND_MANAGER', 'STUDENT', 'EMPLOYEE'];
 
   for (const role of roles) {
     const response = await login(DEMO_ACCOUNTS[role].email, SEED_PASSWORD).expect(200);
     tokens.set(role, response.body.token as string);
     if (role === 'SUPER_ADMIN') adminId = response.body.user.id as string;
-    if (role === 'MAINTENANCE_MANAGER') managerId = response.body.user.id as string;
-    if (role === 'TECHNICIAN') technicianId = response.body.user.id as string;
+    if (role === 'LOST_FOUND_MANAGER') managerId = response.body.user.id as string;
   }
 }, 240_000);
 
@@ -123,130 +104,47 @@ afterAll(async () => {
 });
 
 describe('Day 6 — demo seed (T067)', () => {
-  it('seeds the full cross-module demo dataset', async () => {
-    expect(await MaintenanceRequest.countDocuments({})).toBe(34);
-    expect(await WorkOrder.countDocuments({})).toBe(30);
-    expect(await PreventivePlan.countDocuments({})).toBe(5);
+  it('seeds the full Lost & Found demo dataset', async () => {
     expect(await LostFoundItem.countDocuments({})).toBe(26);
     expect(await ClaimRequest.countDocuments({})).toBe(9);
-    expect(await Notification.countDocuments({})).toBe(14);
-    expect(await ActivityLog.countDocuments({})).toBe(16);
-    expect(await AiInsightCache.countDocuments({})).toBe(4);
+    expect(await Notification.countDocuments({})).toBe(6);
+    expect(await ActivityLog.countDocuments({})).toBe(8);
+    expect(await AiInsightCache.countDocuments({})).toBe(2);
   });
 
   it('seeds demo numbers separately and leaves counters zeroed', async () => {
-    const seededRequest = await MaintenanceRequest.findOne({
-      requestNumber: 'MR-2001',
+    const seededItem = await LostFoundItem.findOne({
+      reportNumber: 'LF-2001',
     }).lean();
-    expect(seededRequest).not.toBeNull();
+    expect(seededItem).not.toBeNull();
 
     const counters = await Counter.find({}).lean();
-    expect(counters).toHaveLength(4);
+    expect(counters).toHaveLength(2);
     expect(counters.every((counter) => counter.seq === 0)).toBe(true);
   });
 });
 
 describe('Day 6 — dashboard (T060)', () => {
-  it('returns a manager payload with the section 5.8 metrics', async () => {
+  it('returns a Lost & Found manager payload with triage counts', async () => {
     const week = await request(app)
       .get('/api/v1/dashboard')
       .query({ period: '7d' })
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .expect(200);
 
-    expect(week.body.role).toBe('MAINTENANCE_MANAGER');
+    expect(week.body.role).toBe('LOST_FOUND_MANAGER');
     expect(week.body.period).toBe('7d');
     expect(week.body.rangeStart).toBeTruthy();
     expect(week.body.rangeEnd).toBeTruthy();
 
-    const weekMetrics = week.body.metrics as {
-      totalRequests: number;
-      requestsByStatus: Record<string, number>;
-      requestsByCategory: Array<{ category: string; count: number }>;
-      requestsByBuilding: Array<{ building: string; count: number }>;
-      activeWorkOrders: number;
-      completedWorkOrders: number;
-      overdueWorkOrders: number;
-      averageResolutionHours: number | null;
-      technicianWorkload: Array<{ id: string; name: string }>;
-      feedback: {
-        total: number;
-        averageRating: number | null;
-        distribution: Array<{ rating: number; count: number }>;
-      };
-    };
-
-    expect(weekMetrics.totalRequests).toBeGreaterThan(0);
-    expect(weekMetrics.totalRequests).toBeLessThan(34);
-    expect(typeof weekMetrics.requestsByStatus.SUBMITTED).toBe('number');
-    expect(typeof weekMetrics.requestsByStatus.CLOSED).toBe('number');
-    expect(weekMetrics.requestsByCategory.length).toBeGreaterThan(0);
-    expect(weekMetrics.requestsByBuilding.length).toBeGreaterThan(0);
-    expect(weekMetrics.activeWorkOrders).toBe(8);
-    expect(weekMetrics.overdueWorkOrders).toBe(2);
-    expect(weekMetrics.technicianWorkload).toHaveLength(5);
-    expect(weekMetrics.averageResolutionHours).toBeGreaterThan(0);
-    expect(weekMetrics.feedback.total).toBe(4);
-
     const all = await request(app)
       .get('/api/v1/dashboard')
       .query({ period: 'all' })
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .expect(200);
 
     expect(all.body.rangeStart).toBeNull();
-    const allMetrics = all.body.metrics as typeof weekMetrics;
-
-    expect(allMetrics.totalRequests).toBe(34);
-    expect(allMetrics.totalRequests).toBeGreaterThanOrEqual(weekMetrics.totalRequests);
-    expect(allMetrics.completedWorkOrders).toBe(17);
-    expect(allMetrics.overdueWorkOrders).toBe(2);
-    expect(allMetrics.averageResolutionHours).toBeGreaterThan(0);
-    expect(allMetrics.feedback.total).toBe(8);
-    expect(allMetrics.feedback.averageRating).toBe(4.5);
-    expect(allMetrics.feedback.distribution).toHaveLength(5);
-  });
-
-  it('returns role-specific payloads for every role', async () => {
-    const admin = await request(app)
-      .get('/api/v1/dashboard')
-      .query({ period: 'all' })
-      .set('Authorization', bearer('SUPER_ADMIN'))
-      .expect(200);
-
-    expect(admin.body.role).toBe('SUPER_ADMIN');
-    expect(admin.body.totals.users).toBeGreaterThanOrEqual(12);
-    expect(admin.body.totals.technicians).toBe(5);
-    expect(admin.body.totals.maintenanceRequests).toBeGreaterThanOrEqual(34);
-    expect(admin.body.totals.workOrders).toBeGreaterThanOrEqual(30);
-    expect(admin.body.totals.lostItems).toBe(12);
-    expect(admin.body.totals.foundItems).toBe(14);
-    expect(admin.body.latestInsights).not.toBeNull();
-    expect(admin.body.latestInsights.period).toBe('7d');
-
-    const technician = await request(app)
-      .get('/api/v1/dashboard')
-      .query({ period: '7d' })
-      .set('Authorization', bearer('TECHNICIAN'))
-      .expect(200);
-
-    expect(technician.body.role).toBe('TECHNICIAN');
-    expect(technician.body.counts).toMatchObject({
-      assigned: 2,
-      inProgress: 2,
-      overdue: 1,
-    });
-    expect(technician.body.schedule).toHaveLength(4);
-    expect(technician.body.schedule[0].location).toBeTruthy();
-
-    const officer = await request(app)
-      .get('/api/v1/dashboard')
-      .query({ period: 'all' })
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
-      .expect(200);
-
-    expect(officer.body.role).toBe('LOST_FOUND_OFFICER');
-    expect(officer.body.counts).toMatchObject({
+    expect(all.body.counts).toMatchObject({
       totalLostItems: 12,
       totalFoundItems: 14,
       openLostItems: 6,
@@ -257,34 +155,65 @@ describe('Day 6 — dashboard (T060)', () => {
       claimsAwaitingHandover: 2,
       completedHandovers: 2,
     });
+    expect(all.body.analytics.itemsByCategory.length).toBeGreaterThan(0);
+    expect(all.body.analytics.claimsByStatus.length).toBeGreaterThan(0);
+  });
+
+  it('returns role-specific payloads for every role', async () => {
+    const admin = await request(app)
+      .get('/api/v1/dashboard')
+      .query({ period: 'all' })
+      .set('Authorization', bearer('SUPER_ADMIN'))
+      .expect(200);
+
+    expect(admin.body.role).toBe('SUPER_ADMIN');
+    expect(admin.body.totals.users).toBe(9);
+    expect(admin.body.totals.lostItems).toBe(12);
+    expect(admin.body.totals.foundItems).toBe(14);
+    expect(admin.body.totals).not.toHaveProperty('maintenanceRequests');
+    expect(admin.body.totals).not.toHaveProperty('workOrders');
+    expect(admin.body.totals).not.toHaveProperty('technicians');
+    expect(admin.body.latestInsights).not.toBeNull();
+    expect(admin.body.latestInsights.period).toBe('7d');
 
     const student = await request(app)
       .get('/api/v1/dashboard')
       .query({ period: 'all' })
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .expect(200);
 
-    expect(student.body.role).toBe('STUDENT_EMPLOYEE');
-    expect(student.body.requests.total).toBe(14);
+    expect(student.body.role).toBe('STUDENT');
+    expect(student.body).not.toHaveProperty('requests');
     expect(student.body.claims.total).toBe(3);
     expect(student.body.reports).toMatchObject({ total: 5, lost: 4, found: 1 });
-    expect(student.body.notifications.unreadCount).toBe(3);
-    expect(student.body.requests.recent).toHaveLength(5);
+    expect(student.body.notifications.unreadCount).toBeGreaterThanOrEqual(1);
+
+    const employee = await request(app)
+      .get('/api/v1/dashboard')
+      .query({ period: 'all' })
+      .set('Authorization', bearer('EMPLOYEE'))
+      .expect(200);
+
+    expect(employee.body.role).toBe('EMPLOYEE');
+    expect(employee.body).not.toHaveProperty('requests');
+    expect(employee.body.claims).toBeTruthy();
+    expect(employee.body.reports).toBeTruthy();
+    expect(employee.body.notifications).toBeTruthy();
   });
 
   it('takes the role from the JWT only and validates the period', async () => {
     const response = await request(app)
       .get('/api/v1/dashboard')
       .query({ period: '30d', role: 'SUPER_ADMIN' })
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .expect(200);
 
-    expect(response.body.role).toBe('MAINTENANCE_MANAGER');
+    expect(response.body.role).toBe('LOST_FOUND_MANAGER');
 
     await request(app)
       .get('/api/v1/dashboard')
       .query({ period: 'weekly' })
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .expect(400);
 
     await request(app).get('/api/v1/dashboard').expect(401);
@@ -293,12 +222,7 @@ describe('Day 6 — dashboard (T060)', () => {
 
 describe('Day 6 — activity logs (T062)', () => {
   it('restricts the audit trail to administrators', async () => {
-    for (const role of [
-      'MAINTENANCE_MANAGER',
-      'TECHNICIAN',
-      'LOST_FOUND_OFFICER',
-      'STUDENT_EMPLOYEE',
-    ] as Role[]) {
+    for (const role of ['LOST_FOUND_MANAGER', 'STUDENT', 'EMPLOYEE'] as Role[]) {
       await request(app)
         .get('/api/v1/activity-logs')
         .set('Authorization', bearer(role))
@@ -315,7 +239,7 @@ describe('Day 6 — activity logs (T062)', () => {
 
     expect(response.body.page).toBe(1);
     expect(response.body.limit).toBe(5);
-    expect(response.body.total).toBe(16);
+    expect(response.body.total).toBe(8);
     expect(response.body.data).toHaveLength(5);
 
     const entry = response.body.data[0] as {
@@ -338,21 +262,21 @@ describe('Day 6 — activity logs (T062)', () => {
       .query({ page: 2, limit: 5 })
       .set('Authorization', bearer('SUPER_ADMIN'))
       .expect(200);
-    expect(pageTwo.body.data).toHaveLength(5);
+    expect(pageTwo.body.data).toHaveLength(3);
     expect(pageTwo.body.data[0].id).not.toBe(response.body.data[0].id);
   });
 
   it('filters by entity type, actor and date range', async () => {
     const byEntity = await request(app)
       .get('/api/v1/activity-logs')
-      .query({ entityType: 'PreventivePlan', limit: 100 })
+      .query({ entityType: 'ClaimRequest', limit: 100 })
       .set('Authorization', bearer('SUPER_ADMIN'))
       .expect(200);
 
-    expect(byEntity.body.total).toBe(1);
+    expect(byEntity.body.total).toBe(3);
     expect(
       (byEntity.body.data as Array<{ entityType: string }>).every(
-        (entry) => entry.entityType === 'PreventivePlan',
+        (entry) => entry.entityType === 'ClaimRequest',
       ),
     ).toBe(true);
 
@@ -362,7 +286,7 @@ describe('Day 6 — activity logs (T062)', () => {
       .set('Authorization', bearer('SUPER_ADMIN'))
       .expect(200);
 
-    expect(byActor.body.total).toBeGreaterThanOrEqual(4);
+    expect(byActor.body.total).toBeGreaterThanOrEqual(3);
     expect(
       (byActor.body.data as Array<{ actor: { id: string } | null }>).every(
         (entry) => entry.actor?.id === managerId,
@@ -393,293 +317,78 @@ describe('Day 6 — activity logs (T062)', () => {
   });
 });
 
-describe('Day 6 — preventive maintenance (T064–T066)', () => {
-  function planPayload(overrides: Record<string, unknown> = {}) {
-    return {
-      title: uniqueTitle('Inspect emergency lighting'),
-      description:
-        'Inspect and test the emergency lighting circuits and replace failed batteries.',
-      category: 'Electrical',
-      priority: 'HIGH',
-      assignedTechnicianId: technicianId,
-      recurrenceType: 'WEEKLY',
-      startDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
-      expectedDurationHours: 2,
-      isActive: true,
-      ...overrides,
-    };
-  }
-
-  it('lets managers and admins read plans but only managers change them', async () => {
-    const locationId = await activeLocationId();
-
+describe('Day 6 — AI Lost & Found insights (T063)', () => {
+  it('is manager-only for Lost & Found insights and validates the period', async () => {
     await request(app)
-      .get('/api/v1/preventive-maintenance')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .expect(200);
-
-    const adminView = await request(app)
-      .get('/api/v1/preventive-maintenance')
-      .set('Authorization', bearer('SUPER_ADMIN'))
-      .expect(200);
-    expect(adminView.body.total).toBe(5);
-
-    await request(app)
-      .get('/api/v1/preventive-maintenance')
-      .set('Authorization', bearer('TECHNICIAN'))
-      .expect(403);
-
-    await request(app)
-      .get('/api/v1/preventive-maintenance')
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
-      .expect(403);
-
-    await request(app)
-      .post('/api/v1/preventive-maintenance')
-      .set('Authorization', bearer('SUPER_ADMIN'))
-      .send(planPayload({ locationId }))
-      .expect(403);
-  });
-
-  it('creates, updates and toggles a plan', async () => {
-    const locationId = await activeLocationId();
-    const startDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
-
-    const created = await request(app)
-      .post('/api/v1/preventive-maintenance')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .send(
-        planPayload({
-          title: uniqueTitle('Monthly generator inspection'),
-          category: 'Electrical',
-          priority: 'HIGH',
-          locationId,
-          recurrenceType: 'MONTHLY',
-          startDate,
-        }),
-      )
-      .expect(201);
-
-    const plan = created.body.plan as {
-      id: string;
-      title: string;
-      category: string;
-      priority: string;
-      isActive: boolean;
-      overdue: boolean;
-      nextScheduledDate: string;
-      startDate: string;
-      recurrenceType: string;
-      location: { id: string };
-      assignedTechnician: { id: string };
-    };
-
-    expect(plan.title).toContain('Monthly generator inspection');
-    expect(plan.category).toBe('Electrical');
-    expect(plan.priority).toBe('HIGH');
-    expect(plan.isActive).toBe(true);
-    expect(plan.overdue).toBe(false);
-    expect(plan.recurrenceType).toBe('MONTHLY');
-    expect(plan.location.id).toBe(locationId);
-    expect(plan.assignedTechnician.id).toBe(technicianId);
-    expect(new Date(plan.nextScheduledDate).getTime()).toBe(new Date(startDate).getTime());
-
-    const updated = await request(app)
-      .patch(`/api/v1/preventive-maintenance/${plan.id}`)
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .send({ title: uniqueTitle('Monthly generator load test'), priority: 'LOW' })
-      .expect(200);
-
-    expect(updated.body.plan.priority).toBe('LOW');
-    expect(updated.body.plan.title).toContain('Monthly generator load test');
-    expect(new Date(updated.body.plan.nextScheduledDate).getTime()).toBe(
-      new Date(startDate).getTime(),
-    );
-
-    const deactivated = await request(app)
-      .patch(`/api/v1/preventive-maintenance/${plan.id}/status`)
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .send({ isActive: false })
-      .expect(200);
-    expect(deactivated.body.plan.isActive).toBe(false);
-
-    const reactivated = await request(app)
-      .patch(`/api/v1/preventive-maintenance/${plan.id}/status`)
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .send({ isActive: true })
-      .expect(200);
-    expect(reactivated.body.plan.isActive).toBe(true);
-  });
-
-  it('generates due work orders once, skips misses and never runs automatically', async () => {
-    const locationId = await activeLocationId();
-    const scheduledStart = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
-
-    const dueResponse = await request(app)
-      .post('/api/v1/preventive-maintenance')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .send(
-        planPayload({
-          title: uniqueTitle('Weekly cooling tower check'),
-          locationId,
-          recurrenceType: 'WEEKLY',
-          startDate: scheduledStart.toISOString(),
-        }),
-      )
-      .expect(201);
-    const duePlan = dueResponse.body.plan as { id: string };
-
-    const inactiveResponse = await request(app)
-      .post('/api/v1/preventive-maintenance')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .send(
-        planPayload({
-          title: uniqueTitle('Inactive cooling tower check'),
-          locationId,
-          recurrenceType: 'WEEKLY',
-          startDate: scheduledStart.toISOString(),
-          isActive: false,
-        }),
-      )
-      .expect(201);
-    const inactivePlan = inactiveResponse.body.plan as { id: string };
-
-    // Loading the dashboard must not run generation.
-    await request(app)
-      .get('/api/v1/dashboard')
-      .query({ period: '7d' })
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .expect(200);
-    expect(await WorkOrder.countDocuments({ preventivePlanId: duePlan.id })).toBe(0);
-
-    const firstRun = await request(app)
-      .post('/api/v1/preventive-maintenance/generate-due')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .expect(200);
-
-    expect(firstRun.body).toEqual({ created: expect.any(Number) });
-    expect(firstRun.body.created).toBeGreaterThanOrEqual(2);
-
-    const advanced = await PreventivePlan.findById(duePlan.id).lean();
-    if (!advanced) throw new Error('Due plan disappeared');
-    expect(advanced.lastGeneratedDate?.getTime()).toBe(scheduledStart.getTime());
-    expect(advanced.nextScheduledDate.getTime()).toBeGreaterThan(Date.now());
-
-    const generated = await WorkOrder.findOne({ preventivePlanId: duePlan.id }).lean();
-    if (!generated) throw new Error('Expected a preventive work order');
-    expect(generated.sourceType).toBe('PREVENTIVE');
-    expect(generated.status).toBe('ASSIGNED');
-    expect(generated.assignedTechnicianId?.toString()).toBe(technicianId);
-    expect(generated.scheduledStart?.getTime()).toBe(scheduledStart.getTime());
-    expect(generated.expectedCompletion?.getTime()).toBe(
-      scheduledStart.getTime() + 2 * 60 * 60 * 1000,
-    );
-
-    expect(await WorkOrder.countDocuments({ preventivePlanId: inactivePlan.id })).toBe(0);
-
-    const seededDue = await PreventivePlan.findOne({
-      title: 'Weekly HVAC filter inspection',
-    }).lean();
-    if (!seededDue) throw new Error('Seeded due plan is missing');
-    expect(seededDue.nextScheduledDate.getTime()).toBeGreaterThan(Date.now());
-
-    // Restore the original occurrence to force the duplicate-key path.
-    await PreventivePlan.updateOne(
-      { _id: duePlan.id },
-      { $set: { nextScheduledDate: scheduledStart } },
-    );
-
-    const duplicate = await request(app)
-      .post('/api/v1/preventive-maintenance/generate-due')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .expect(200);
-
-    expect(duplicate.body).toEqual({ created: 0 });
-    expect(await WorkOrder.countDocuments({ preventivePlanId: duePlan.id })).toBe(1);
-  });
-
-  it('rejects invalid plans and missing ids', async () => {
-    await request(app)
-      .post('/api/v1/preventive-maintenance')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .send({ title: 'Missing fields' })
-      .expect(400);
-
-    await request(app)
-      .post('/api/v1/preventive-maintenance')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .send(
-        planPayload({
-          locationId: await activeLocationId(),
-          recurrenceType: 'CUSTOM_DAYS',
-          recurrenceIntervalDays: undefined,
-        }),
-      )
-      .expect(400);
-
-    await request(app)
-      .patch('/api/v1/preventive-maintenance/64b000000000000000000001')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
-      .send({ title: 'Nonexistent plan' })
-      .expect(404);
-  });
-});
-
-describe('Day 6 — AI maintenance insights (T063)', () => {
-  it('is manager-only and validates the period', async () => {
-    await request(app)
-      .post('/api/v1/ai/maintenance-insights')
+      .post('/api/v1/ai/lost-found-insights')
       .set('Authorization', bearer('SUPER_ADMIN'))
       .send({ period: '7d' })
       .expect(403);
 
     await request(app)
-      .post('/api/v1/ai/maintenance-insights')
-      .set('Authorization', bearer('TECHNICIAN'))
+      .post('/api/v1/ai/lost-found-insights')
+      .set('Authorization', bearer('STUDENT'))
       .send({ period: '7d' })
       .expect(403);
 
     await request(app)
-      .post('/api/v1/ai/maintenance-insights')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
+      .post('/api/v1/ai/lost-found-insights')
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .send({ period: '90d' })
       .expect(400);
   });
 
-  it('serves the seeded cache and falls back gracefully without Gemini', async () => {
+  it('is admin-only for platform insights', async () => {
+    await request(app)
+      .post('/api/v1/ai/admin-insights')
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
+      .send({ period: '7d' })
+      .expect(403);
+
+    const admin = await request(app)
+      .post('/api/v1/ai/admin-insights')
+      .set('Authorization', bearer('SUPER_ADMIN'))
+      .send({ period: '7d' })
+      .expect(200);
+
+    expect(admin.body.available).toBe(true);
+    expect(admin.body.insights).toBeTruthy();
+    expect(admin.body.stats.scope).toBe('ADMIN');
+  });
+
+  it('serves the seeded Arabic cache and falls back gracefully without Gemini', async () => {
     const withCache = await request(app)
-      .post('/api/v1/ai/maintenance-insights')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
+      .post('/api/v1/ai/lost-found-insights')
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .send({ period: '7d' })
       .expect(200);
 
     expect(withCache.body.available).toBe(true);
     expect(withCache.body.message).toBeUndefined();
-    expect(withCache.body.stats.requests.total).toBeGreaterThan(0);
-    expect(withCache.body.stats.technicians[0].name).toBeTruthy();
-    expect(withCache.body.stats.technicians[0].label).toBeUndefined();
+    expect(withCache.body.stats.lostFound.totalLostItems).toBeGreaterThan(0);
     expect(withCache.body.insights).toBeTruthy();
+    expect(withCache.body.insights.observations[0]).toMatch(/[\u0600-\u06FF]/);
     expect(withCache.body.generatedAt).toBeTruthy();
     expect(withCache.body.rangeStart).toBeTruthy();
 
     const withoutCache = await request(app)
-      .post('/api/v1/ai/maintenance-insights')
-      .set('Authorization', bearer('MAINTENANCE_MANAGER'))
+      .post('/api/v1/ai/lost-found-insights')
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .send({ period: '30d' })
       .expect(200);
 
     expect(withoutCache.body.available).toBe(false);
     expect(withoutCache.body.message).toContain('GEMINI_API_KEY');
-    expect(withoutCache.body.stats.requests.total).toBeGreaterThanOrEqual(0);
+    expect(withoutCache.body.stats.lostFound.totalLostItems).toBeGreaterThanOrEqual(0);
     expect(withoutCache.body.insights).toBeUndefined();
   });
 
   it('parses wrapped insight JSON and rejects unreadable payloads', () => {
     const content = {
-      observations: ['Electrical issues dominate the engineering complex.'],
-      repeatedPatterns: ['The same corridor lights are reported repeatedly.'],
-      operationalRisks: ['An overdue work order threatens exam connectivity.'],
-      preventiveRecommendations: ['Schedule a quarterly lighting inspection.'],
+      observations: ['Electronics dominate the open lost reports this week.'],
+      repeatedPatterns: ['Losses cluster around the central library in the evening.'],
+      operationalRisks: ['Suggested matches waiting too long reduce recovery chances.'],
+      preventiveRecommendations: ['Review suggested matches within 48 hours.'],
     };
 
     expect(parseInsightsContent(JSON.stringify({ insights: content }))).toEqual(content);
@@ -691,30 +400,33 @@ describe('Day 6 — AI maintenance insights (T063)', () => {
     await AiInsightCache.deleteMany({});
 
     const firstContent = {
-      observations: ['Hardware requests are the largest category this week.'],
-      repeatedPatterns: ['Engineering lab equipment fails repeatedly.'],
-      operationalRisks: ['One network work order is overdue.'],
-      preventiveRecommendations: ['Inspect lab power outlets next month.'],
+      observations: ['Bags are the largest open lost category this week.'],
+      repeatedPatterns: ['Library losses repeat on weekday evenings.'],
+      operationalRisks: ['Two claims have waited a week for verification.'],
+      preventiveRecommendations: ['Verify pending claims within two days.'],
     };
     const secondContent = {
-      observations: ['Plumbing requests increased slightly this week.'],
-      repeatedPatterns: ['Washroom fixtures recur across buildings.'],
-      operationalRisks: ['Server room cooling remains a critical risk.'],
-      preventiveRecommendations: ['Add a weekly washroom fixture check.'],
+      observations: ['Phone reports increased slightly this week.'],
+      repeatedPatterns: ['Found wallets recur near the sports complex.'],
+      operationalRisks: ['Unreviewed matches may go stale.'],
+      preventiveRecommendations: ['Add a weekly found-items announcement.'],
     };
 
     let capturedPrompt = '';
+    let capturedInstruction = '';
     let calls = 0;
     const firstGenerator = async (
       prompt: string,
+      systemInstruction: string,
     ): Promise<{ available: true; text: string }> => {
       calls += 1;
       capturedPrompt = prompt;
+      capturedInstruction = systemInstruction;
       return { available: true, text: JSON.stringify(firstContent) };
     };
 
-    const manager = { id: managerId, role: 'MAINTENANCE_MANAGER' as const };
-    const generated = await generateMaintenanceInsights(
+    const manager = { id: managerId, role: 'LOST_FOUND_MANAGER' as const };
+    const generated = await generateLostFoundInsights(
       manager,
       { period: '7d' },
       firstGenerator,
@@ -724,11 +436,15 @@ describe('Day 6 — AI maintenance insights (T063)', () => {
     expect(generated.insights).toEqual(firstContent);
     expect(generated.generatedAt).toBeInstanceOf(Date);
     expect(calls).toBe(1);
-    expect(capturedPrompt).toContain('Hassan El-Sayed');
-    expect(capturedPrompt).toContain('overdueDetails');
+    expect(capturedPrompt).toContain('Period: 7d');
+    expect(capturedInstruction).toContain('Arabic');
 
-    const cachedDoc = await AiInsightCache.findOne({ period: '7d' }).lean();
+    const cachedDoc = await AiInsightCache.findOne({
+      scope: 'LOST_FOUND',
+      period: '7d',
+    }).lean();
     expect(cachedDoc).not.toBeNull();
+    expect(cachedDoc?.lang).toBe('ar');
     expect(cachedDoc?.model).toBe(process.env.GEMINI_MODEL);
     expect(cachedDoc?.insights).toEqual(firstContent);
     expect(cachedDoc?.stats).toBeTruthy();
@@ -736,7 +452,7 @@ describe('Day 6 — AI maintenance insights (T063)', () => {
     const cacheGenerator = async (): Promise<{ available: true; text: string }> => {
       throw new Error('The generator must not run when a cache exists');
     };
-    const fromCache = await generateMaintenanceInsights(
+    const fromCache = await generateLostFoundInsights(
       manager,
       { period: '7d' },
       cacheGenerator,
@@ -754,7 +470,7 @@ describe('Day 6 — AI maintenance insights (T063)', () => {
       calls += 1;
       return { available: true, text: JSON.stringify(secondContent) };
     };
-    const regenerated = await generateMaintenanceInsights(
+    const regenerated = await generateLostFoundInsights(
       manager,
       { period: '7d', regenerate: true },
       regenerateGenerator,
@@ -762,11 +478,12 @@ describe('Day 6 — AI maintenance insights (T063)', () => {
 
     expect(calls).toBe(1);
     expect(regenerated.insights).toEqual(secondContent);
-    expect((await AiInsightCache.findOne({ period: '7d' }).lean())?.insights).toEqual(
-      secondContent,
-    );
+    expect(
+      (await AiInsightCache.findOne({ scope: 'LOST_FOUND', period: '7d' }).lean())
+        ?.insights,
+    ).toEqual(secondContent);
 
-    const malformed = await generateMaintenanceInsights(
+    const malformed = await generateLostFoundInsights(
       manager,
       { period: '7d', regenerate: true },
       async () => ({ available: true, text: 'not valid JSON' }),
@@ -776,7 +493,7 @@ describe('Day 6 — AI maintenance insights (T063)', () => {
     expect(malformed.message).toContain('unreadable');
     expect(malformed.insights).toEqual(secondContent);
 
-    const offline = await generateMaintenanceInsights(
+    const offline = await generateLostFoundInsights(
       manager,
       { period: '30d', regenerate: true },
       async () => ({ available: false, message: 'AI is offline for this test' }),
@@ -785,13 +502,17 @@ describe('Day 6 — AI maintenance insights (T063)', () => {
     expect(offline.available).toBe(false);
     expect(offline.message).toBe('AI is offline for this test');
     expect(offline.insights).toBeUndefined();
-    expect(offline.stats.requests).toBeTruthy();
+    expect(offline.stats.lostFound).toBeTruthy();
   });
 
-  it('refuses non-manager service calls', async () => {
+  it('refuses cross-scope service calls', async () => {
     await expect(
-      generateMaintenanceInsights(
-        { id: adminId, role: 'SUPER_ADMIN' },
+      generateLostFoundInsights({ id: adminId, role: 'SUPER_ADMIN' }, { period: '7d' }),
+    ).rejects.toMatchObject({ statusCode: 403 });
+
+    await expect(
+      generateAdminInsights(
+        { id: managerId, role: 'LOST_FOUND_MANAGER' },
         { period: '7d' },
       ),
     ).rejects.toMatchObject({ statusCode: 403 });

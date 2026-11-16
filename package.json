@@ -1,8 +1,8 @@
 {
-  "name": "campuscare",
+  "name": "campuscare-lost-found",
   "version": "1.0.0",
   "private": true,
-  "description": "CampusCare — university maintenance and lost & found operations platform",
+  "description": "CampusCare Lost & Found — university lost & found operations platform",
   "workspaces": [
     "server",
     "client"

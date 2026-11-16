@@ -26,21 +26,21 @@ describe('Item state machine (MASTER_SPEC 6.2)', () => {
 
   it('allows the documented match, claim, handover and close transitions', () => {
     const allowed: Array<[ItemStatus, ItemStatus, ItemTransitionActor]> = [
-      ['OPEN', 'MATCH_CONFIRMED', 'LOST_FOUND_OFFICER'],
+      ['OPEN', 'MATCH_CONFIRMED', 'LOST_FOUND_MANAGER'],
       ['OPEN', 'CLAIM_UNDER_REVIEW', 'SYSTEM'],
       ['MATCH_CONFIRMED', 'CLAIM_UNDER_REVIEW', 'SYSTEM'],
-      ['CLAIM_UNDER_REVIEW', 'APPROVED_FOR_HANDOVER', 'LOST_FOUND_OFFICER'],
-      ['CLAIM_UNDER_REVIEW', 'OPEN', 'LOST_FOUND_OFFICER'],
+      ['CLAIM_UNDER_REVIEW', 'APPROVED_FOR_HANDOVER', 'LOST_FOUND_MANAGER'],
+      ['CLAIM_UNDER_REVIEW', 'OPEN', 'LOST_FOUND_MANAGER'],
       ['CLAIM_UNDER_REVIEW', 'OPEN', 'SYSTEM'],
-      ['APPROVED_FOR_HANDOVER', 'RETURNED', 'LOST_FOUND_OFFICER'],
+      ['APPROVED_FOR_HANDOVER', 'RETURNED', 'LOST_FOUND_MANAGER'],
       ['APPROVED_FOR_HANDOVER', 'RETURNED', 'SYSTEM'],
       ['OPEN', 'RETURNED', 'SYSTEM'],
       ['MATCH_CONFIRMED', 'RETURNED', 'SYSTEM'],
-      ['OPEN', 'CLOSED', 'LOST_FOUND_OFFICER'],
+      ['OPEN', 'CLOSED', 'LOST_FOUND_MANAGER'],
       ['OPEN', 'CLOSED', 'REPORTER'],
-      ['MATCH_CONFIRMED', 'CLOSED', 'LOST_FOUND_OFFICER'],
-      ['CLAIM_UNDER_REVIEW', 'CLOSED', 'LOST_FOUND_OFFICER'],
-      ['APPROVED_FOR_HANDOVER', 'CLOSED', 'LOST_FOUND_OFFICER'],
+      ['MATCH_CONFIRMED', 'CLOSED', 'LOST_FOUND_MANAGER'],
+      ['CLAIM_UNDER_REVIEW', 'CLOSED', 'LOST_FOUND_MANAGER'],
+      ['APPROVED_FOR_HANDOVER', 'CLOSED', 'LOST_FOUND_MANAGER'],
     ];
 
     for (const [from, to, actor] of allowed) {
@@ -61,15 +61,15 @@ describe('Item state machine (MASTER_SPEC 6.2)', () => {
     ];
 
     for (const [from, to] of forbidden) {
-      expect(isItemTransitionAllowed(from, to, 'LOST_FOUND_OFFICER')).toBe(false);
-      expect(() => assertItemTransition(from, to, 'LOST_FOUND_OFFICER')).toThrowError(
+      expect(isItemTransitionAllowed(from, to, 'LOST_FOUND_MANAGER')).toBe(false);
+      expect(() => assertItemTransition(from, to, 'LOST_FOUND_MANAGER')).toThrowError(
         /cannot change/i,
       );
     }
   });
 
   it('restricts the handover side effect on a linked lost item to SYSTEM', () => {
-    expect(isItemTransitionAllowed('OPEN', 'RETURNED', 'LOST_FOUND_OFFICER')).toBe(false);
+    expect(isItemTransitionAllowed('OPEN', 'RETURNED', 'LOST_FOUND_MANAGER')).toBe(false);
     expect(isItemTransitionAllowed('MATCH_CONFIRMED', 'RETURNED', 'REPORTER')).toBe(false);
     expect(isItemTransitionAllowed('OPEN', 'RETURNED', 'SYSTEM')).toBe(true);
     expect(isItemTransitionAllowed('MATCH_CONFIRMED', 'RETURNED', 'SYSTEM')).toBe(true);
@@ -77,7 +77,7 @@ describe('Item state machine (MASTER_SPEC 6.2)', () => {
 
   it('uses a 409 conflict error for illegal item transitions', () => {
     try {
-      assertItemTransition('OPEN', 'APPROVED_FOR_HANDOVER', 'LOST_FOUND_OFFICER');
+      assertItemTransition('OPEN', 'APPROVED_FOR_HANDOVER', 'LOST_FOUND_MANAGER');
       throw new Error('Expected assertItemTransition to throw');
     } catch (error) {
       expect(error).toMatchObject({ statusCode: 409, code: 'CONFLICT' });
@@ -98,14 +98,14 @@ describe('Claim state machine (MASTER_SPEC 6.4)', () => {
   });
 
   it('allows verification, approval, rejection and completion', () => {
-    const allowed: Array<[ClaimStatus, ClaimStatus, 'LOST_FOUND_OFFICER' | 'SYSTEM']> = [
-      ['PENDING_REVIEW', 'UNDER_VERIFICATION', 'LOST_FOUND_OFFICER'],
-      ['UNDER_VERIFICATION', 'APPROVED', 'LOST_FOUND_OFFICER'],
-      ['PENDING_REVIEW', 'REJECTED', 'LOST_FOUND_OFFICER'],
-      ['UNDER_VERIFICATION', 'REJECTED', 'LOST_FOUND_OFFICER'],
+    const allowed: Array<[ClaimStatus, ClaimStatus, 'LOST_FOUND_MANAGER' | 'SYSTEM']> = [
+      ['PENDING_REVIEW', 'UNDER_VERIFICATION', 'LOST_FOUND_MANAGER'],
+      ['UNDER_VERIFICATION', 'APPROVED', 'LOST_FOUND_MANAGER'],
+      ['PENDING_REVIEW', 'REJECTED', 'LOST_FOUND_MANAGER'],
+      ['UNDER_VERIFICATION', 'REJECTED', 'LOST_FOUND_MANAGER'],
       ['PENDING_REVIEW', 'REJECTED', 'SYSTEM'],
       ['UNDER_VERIFICATION', 'REJECTED', 'SYSTEM'],
-      ['APPROVED', 'COMPLETED', 'LOST_FOUND_OFFICER'],
+      ['APPROVED', 'COMPLETED', 'LOST_FOUND_MANAGER'],
     ];
 
     for (const [from, to, actor] of allowed) {
@@ -125,8 +125,8 @@ describe('Claim state machine (MASTER_SPEC 6.4)', () => {
     ];
 
     for (const [from, to] of forbidden) {
-      expect(isClaimTransitionAllowed(from, to, 'LOST_FOUND_OFFICER')).toBe(false);
-      expect(() => assertClaimTransition(from, to, 'LOST_FOUND_OFFICER')).toThrowError(
+      expect(isClaimTransitionAllowed(from, to, 'LOST_FOUND_MANAGER')).toBe(false);
+      expect(() => assertClaimTransition(from, to, 'LOST_FOUND_MANAGER')).toThrowError(
         /cannot change/i,
       );
     }
@@ -142,7 +142,7 @@ describe('Claim state machine (MASTER_SPEC 6.4)', () => {
 
   it('uses a 409 conflict error for illegal claim transitions', () => {
     try {
-      assertClaimTransition('PENDING_REVIEW', 'APPROVED', 'LOST_FOUND_OFFICER');
+      assertClaimTransition('PENDING_REVIEW', 'APPROVED', 'LOST_FOUND_MANAGER');
       throw new Error('Expected assertClaimTransition to throw');
     } catch (error) {
       expect(error).toMatchObject({ statusCode: 409, code: 'CONFLICT' });

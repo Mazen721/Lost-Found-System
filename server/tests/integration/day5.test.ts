@@ -22,7 +22,7 @@ const SECOND_STUDENT_EMAIL = 'mariam.abdelrahman@std.mansnu.edu.eg';
 const SECOND_STUDENT_PASSWORD = 'SecondStudent123!';
 const tokens = new Map<Role, string>();
 let studentId = '';
-let officerId = '';
+let managerId = '';
 let secondStudentId = '';
 let secondStudentToken = '';
 
@@ -143,30 +143,22 @@ beforeAll(async () => {
 
   await seedDatabase({ silent: true });
 
-  const roles: Role[] = [
-    'SUPER_ADMIN',
-    'MAINTENANCE_MANAGER',
-    'TECHNICIAN',
-    'LOST_FOUND_OFFICER',
-    'STUDENT_EMPLOYEE',
-  ];
+  const roles: Role[] = ['SUPER_ADMIN', 'LOST_FOUND_MANAGER', 'STUDENT'];
 
   for (const role of roles) {
     const response = await login(DEMO_ACCOUNTS[role].email, SEED_PASSWORD).expect(200);
     tokens.set(role, response.body.token as string);
-    if (role === 'STUDENT_EMPLOYEE') studentId = response.body.user.id as string;
-    if (role === 'LOST_FOUND_OFFICER') officerId = response.body.user.id as string;
+    if (role === 'STUDENT') studentId = response.body.user.id as string;
+    if (role === 'LOST_FOUND_MANAGER') managerId = response.body.user.id as string;
   }
 
   const secondStudent = await User.create({
     name: 'Mariam Abdelrahman',
     email: SECOND_STUDENT_EMAIL,
     passwordHash: await hashPassword(SECOND_STUDENT_PASSWORD),
-    role: 'STUDENT_EMPLOYEE',
+    role: 'STUDENT',
     department: 'Faculty of Commerce',
     isActive: true,
-    specializations: [],
-    skills: [],
   });
   secondStudentId = secondStudent._id.toString();
 
@@ -184,14 +176,14 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
     const title = uniqueTitle('Black North Face backpack');
     const sharedDescription =
       'Lost near the engineering lab with a blue keychain inside the front pocket.';
-    const lost = await createItem('STUDENT_EMPLOYEE', {
+    const lost = await createItem('STUDENT', {
       reportType: 'LOST',
       itemTitle: title,
       description: sharedDescription,
       privateIdentificationDetails: 'Initials Y.E. under the flap and a blue keychain.',
       occurrenceDate: '2026-11-01T10:00:00.000Z',
     });
-    const found = await createItem('LOST_FOUND_OFFICER', {
+    const found = await createItem('LOST_FOUND_MANAGER', {
       reportType: 'FOUND',
       itemTitle: title,
       description:
@@ -203,13 +195,13 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
     await request(app)
       .get('/api/v1/lost-found/matches')
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .expect(403);
 
     const suggestions = await request(app)
       .get('/api/v1/lost-found/matches')
       .query({ status: 'SUGGESTED', itemId: lost.id })
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .expect(200);
 
     const match = (
@@ -232,13 +224,13 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
     await request(app)
       .patch(`/api/v1/lost-found/matches/${match?.id}`)
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .send({ action: 'CONFIRM' })
       .expect(403);
 
     const confirmed = await request(app)
       .patch(`/api/v1/lost-found/matches/${match?.id}`)
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .send({ action: 'CONFIRM' })
       .expect(200);
 
@@ -256,7 +248,7 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
     );
     expect(matchNotification?.linkUrl).toContain(`linkedLostItemId=${lost.id}`);
 
-    const claim = await submitClaim(tokens.get('STUDENT_EMPLOYEE') ?? '', {
+    const claim = await submitClaim(tokens.get('STUDENT') ?? '', {
       itemId: found.id,
       claimDescription:
         'I left my backpack on the bench outside Lab 204 after the afternoon lecture and realised later that evening.',
@@ -289,7 +281,7 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
     const ownList = await request(app)
       .get('/api/v1/lost-found/claims')
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .expect(200);
     expect(
       (ownList.body.data as Array<{ claimant: { id: string } }>).every(
@@ -299,7 +291,7 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
     const queue = await request(app)
       .get('/api/v1/lost-found/claims')
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .expect(200);
     const queueEntry = (
       queue.body.data as Array<{
@@ -318,20 +310,20 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
     const ownClaim = await request(app)
       .get(`/api/v1/lost-found/claims/${claim.id}`)
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .expect(200);
     expect(ownClaim.body.claim).not.toHaveProperty('verificationNotes');
     expect(ownClaim.body.claim.item).not.toHaveProperty('privateIdentificationDetails');
 
     await request(app)
       .patch(`/api/v1/lost-found/claims/${claim.id}/review`)
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .send({ action: 'START_VERIFICATION' })
       .expect(403);
 
     const started = await request(app)
       .patch(`/api/v1/lost-found/claims/${claim.id}/review`)
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .send({
         action: 'START_VERIFICATION',
         notes: 'Serial checked against the private details on the found report.',
@@ -344,7 +336,7 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
     const approved = await request(app)
       .patch(`/api/v1/lost-found/claims/${claim.id}/review`)
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .send({ action: 'APPROVE', notes: 'Private details matched.' })
       .expect(200);
     expect(approved.body.claim.status).toBe('APPROVED');
@@ -363,19 +355,19 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
     await request(app)
       .post(`/api/v1/lost-found/claims/${claim.id}/handover`)
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .send({ receivedByName: 'Youssef El-Ashry' })
       .expect(403);
 
     const handedOver = await request(app)
       .post(`/api/v1/lost-found/claims/${claim.id}/handover`)
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .send({ receivedByName: 'Youssef El-Ashry', notes: 'Student ID checked.' })
       .expect(200);
 
     expect(handedOver.body.claim.status).toBe('COMPLETED');
     expect(handedOver.body.claim.handover.receivedByName).toBe('Youssef El-Ashry');
-    expect(handedOver.body.claim.handover.handedOverBy.id).toBe(officerId);
+    expect(handedOver.body.claim.handover.handedOverBy.id).toBe(managerId);
     expect(handedOver.body.claim.handover.handedOverAt).toBeTruthy();
     expect(handedOver.body.claim.handover.notes).toBe('Student ID checked.');
     expect((await LostFoundItem.findById(found.id))?.status).toBe('RETURNED');
@@ -389,14 +381,14 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
     const completedView = await request(app)
       .get(`/api/v1/lost-found/claims/${claim.id}`)
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .expect(200);
     expect(completedView.body.claim.status).toBe('COMPLETED');
     expect(completedView.body.claim).not.toHaveProperty('verificationNotes');
   });
 
   it('returns the found item to OPEN when its only claim is rejected', async () => {
-    const found = await createItem('LOST_FOUND_OFFICER', {
+    const found = await createItem('LOST_FOUND_MANAGER', {
       reportType: 'FOUND',
       itemTitle: uniqueTitle('Silver laptop charger'),
       description: 'A silver laptop charger found on the library second floor.',
@@ -408,7 +400,7 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
       locationDetails: 'Library second-floor study desk',
     });
 
-    const claim = await submitClaim(tokens.get('STUDENT_EMPLOYEE') ?? '', {
+    const claim = await submitClaim(tokens.get('STUDENT') ?? '', {
       itemId: found.id,
       claimDescription:
         'I left my charger at the library desk after studying for an exam and forgot to collect it.',
@@ -417,7 +409,7 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
     const rejected = await request(app)
       .patch(`/api/v1/lost-found/claims/${claim.id}/review`)
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .send({
         action: 'REJECT',
         rejectionReason: 'The identifying details do not match the private details on the found report.',
@@ -430,13 +422,13 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
     const studentView = await request(app)
       .get(`/api/v1/lost-found/claims/${claim.id}`)
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .expect(200);
     expect(studentView.body.claim.rejectionReason).toContain('do not match');
   });
 
   it('enforces claim eligibility, linkage and role rules', async () => {
-    const lost = await createItem('STUDENT_EMPLOYEE', {
+    const lost = await createItem('STUDENT', {
       reportType: 'LOST',
       itemTitle: uniqueTitle('Brown leather wallet'),
       description: 'Lost a brown leather wallet near the cafeteria.',
@@ -446,13 +438,13 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
       occurrenceDate: '2026-11-03T10:00:00.000Z',
     });
 
-    await submitClaimRequest(tokens.get('STUDENT_EMPLOYEE') ?? '', {
+    await submitClaimRequest(tokens.get('STUDENT') ?? '', {
       itemId: lost.id,
       claimDescription: 'This is my lost wallet and I would like it returned to me.',
       identifyingDetailsProvided: 'Student card inside.',
     }).expect(400);
 
-    const found = await createItem('LOST_FOUND_OFFICER', {
+    const found = await createItem('LOST_FOUND_MANAGER', {
       reportType: 'FOUND',
       itemTitle: uniqueTitle('Brown leather wallet'),
       description: 'A brown leather wallet was handed in at the cafeteria.',
@@ -469,7 +461,7 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
       linkedLostItemId: lost.id,
     }).expect(400);
 
-    await submitClaimRequest(tokens.get('LOST_FOUND_OFFICER') ?? '', {
+    await submitClaimRequest(tokens.get('LOST_FOUND_MANAGER') ?? '', {
       itemId: found.id,
       claimDescription: 'Officers cannot submit claims on behalf of students.',
       identifyingDetailsProvided: 'None.',
@@ -478,7 +470,7 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
   it('never resurrects a dismissed match when recalculation runs', async () => {
     const title = uniqueTitle('Navy blue umbrella');
-    const lost = await createItem('STUDENT_EMPLOYEE', {
+    const lost = await createItem('STUDENT', {
       reportType: 'LOST',
       itemTitle: title,
       description: 'Lost a navy blue umbrella in the main library.',
@@ -488,7 +480,7 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
       occurrenceDate: '2026-11-04T10:00:00.000Z',
       locationDetails: 'Main library entrance',
     });
-    const found = await createItem('LOST_FOUND_OFFICER', {
+    const found = await createItem('LOST_FOUND_MANAGER', {
       reportType: 'FOUND',
       itemTitle: title,
       description: 'Found a navy blue umbrella in the main library.',
@@ -502,7 +494,7 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
     const suggestions = await request(app)
       .get('/api/v1/lost-found/matches')
       .query({ status: 'SUGGESTED', itemId: lost.id })
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .expect(200);
     const match = (
       suggestions.body.data as Array<{
@@ -518,18 +510,18 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
 
     await request(app)
       .patch(`/api/v1/lost-found/matches/${match?.id}`)
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .send({ action: 'DISMISS' })
       .expect(200);
 
     await request(app)
       .post(`/api/v1/lost-found/items/${lost.id}/recalculate`)
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .expect(403);
 
     const recalculated = await request(app)
       .post(`/api/v1/lost-found/items/${lost.id}/recalculate`)
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .expect(200);
     expect(recalculated.body.created).toBe(0);
     expect(recalculated.body.skipped).toBeGreaterThanOrEqual(1);
@@ -544,7 +536,7 @@ describe('Day 5 — Lost & Found matching, claims and handover (US3)', () => {
     const suggestedAfter = await request(app)
       .get('/api/v1/lost-found/matches')
       .query({ status: 'SUGGESTED', itemId: lost.id })
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .expect(200);
     expect(
       (suggestedAfter.body.data as Array<{

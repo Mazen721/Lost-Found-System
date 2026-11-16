@@ -1,24 +1,20 @@
-# CampusCare
+# CampusCare Lost & Found
 
-CampusCare is a university operations platform that combines maintenance request handling and Lost &
-Found reporting in a single role-aware web application. It is a TypeScript monorepo with an Express
+CampusCare Lost & Found is Mansoura National University's role-aware platform for Lost & Found reporting, matching, claims, and handovers in a single web application. It is a TypeScript monorepo with an Express
 and Mongoose API (`server/`) and a React single-page app (`client/`).
 
 ## Features
 
-- **Maintenance workflow** — students and employees submit requests with photos; managers review,
-  approve, assign technicians, and monitor work orders through completion, confirmation, reopen, and
-  cancellation paths.
-- **Lost & Found** — report lost or found items, deterministic match suggestions with score
-  breakdowns, private claim verification, approval, and recorded handovers.
-- **AI assistance** — work-order summaries and manager maintenance insights use Gemini when a key is
-  configured, and return a structured fallback without one.
+- **Lost & Found** — students and employees report lost or found items with photos; the system
+  suggests deterministic matches with score breakdowns, and the Lost & Found manager verifies
+  claims privately, approves them, and records handovers.
+- **AI assistance** — Arabic Lost & Found insights for the manager and platform insights for the
+  administrator use Gemini when a key is configured, and return a structured fallback without one.
 - **Operations dashboards** — role-specific metrics and charts powered by live aggregation queries.
-- **Preventive maintenance** — recurring plans and manual due-date work-order generation.
 - **Audit and notifications** — activity logs for administrators and in-app notifications for workflow
   events.
-- **Five roles** — SUPER_ADMIN, MAINTENANCE_MANAGER, TECHNICIAN, LOST_FOUND_OFFICER, and
-  STUDENT_EMPLOYEE.
+- **Four roles** — SUPER_ADMIN, LOST_FOUND_MANAGER, STUDENT, and EMPLOYEE. The interface is
+  Arabic-only (RTL) with the Cairo typeface.
 
 ## Tech stack
 
@@ -82,8 +78,8 @@ npm run seed
 ```
 
 The seed refuses to run when `NODE_ENV=production`. It wipes the target database and recreates the
-demo users, locations, requests, work orders, preventive plans, Lost & Found reports, matches,
-claims, notifications, and activity logs.
+demo users, locations, Lost & Found reports, matches, claims, notifications, activity logs, and
+cached Arabic AI insights.
 
 Start both applications:
 
@@ -170,10 +166,10 @@ npm run typecheck -w client  # client TypeScript project
 npm test -w server
 ```
 
-The suite covers request, work-order, item, and claim state machines; Lost & Found matching and
-recurrence logic; public item projection privacy; and integration flows for authentication, RBAC,
-locations, users, maintenance, Lost & Found, dashboards, preventive plans, activity logs, and AI
-fallbacks. Integration tests start an in-memory MongoDB replica set, so they do not need the
+The suite covers the item and claim state machines; Lost & Found matching; public item projection
+privacy; and integration flows for authentication, RBAC (including STUDENT/EMPLOYEE parity and
+manager/admin access), locations, users, Lost & Found, dashboards, activity logs, Arabic-only
+language behavior, and AI fallbacks. Integration tests start an in-memory MongoDB replica set, so they do not need the
 development database.
 
 Run the compile checks separately:
@@ -227,11 +223,9 @@ Warm the API before a demo with a request to `GET /health`.
 The manual acceptance flows are listed in
 [`specs/001-campuscare-platform/quickstart.md`](specs/001-campuscare-platform/quickstart.md):
 
-1. Maintenance: submit → approve → assign → start → complete → confirm → feedback, plus reopen and
-   cancel paths.
-2. Lost & Found: lost report → found report → match → claim → verification → approval → handover.
-3. AI: generate insights, confirm caching, and verify the fallback when no Gemini key is configured.
-4. Security: role restrictions, ownership checks, and private Lost & Found details never exposed in
+1. Lost & Found: lost report → found report → match → claim → verification → approval → handover.
+2. AI: generate insights, confirm caching, and verify the fallback when no Gemini key is configured.
+3. Security: role restrictions, ownership checks, and private Lost & Found details never exposed in
    public responses.
 
 ## Troubleshooting

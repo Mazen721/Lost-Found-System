@@ -45,7 +45,7 @@ afterAll(async () => {
 });
 
 describe('AI insight cache index migration', () => {
-  it('replaces the legacy period-only unique index and keeps both languages', async () => {
+  it('replaces the legacy period-only unique index, drops lang-less docs, and scopes uniqueness per scope', async () => {
     const collection = AiInsightCache.collection;
 
     await collection.createIndex({ period: 1 }, { unique: true, name: 'period_1' });
@@ -66,13 +66,16 @@ describe('AI insight cache index migration', () => {
     expect(
       indexes.some(
         (index) =>
-          index.unique === true && index.key.period === 1 && index.key.lang === 1,
+          index.unique === true &&
+          index.key.scope === 1 &&
+          index.key.period === 1 &&
+          index.key.lang === 1,
       ),
     ).toBe(true);
     expect(await collection.countDocuments({ lang: { $exists: false } })).toBe(0);
 
-    await collection.insertOne({ ...baseCache, lang: 'ar' });
-    await collection.insertOne({ ...baseCache, lang: 'en' });
+    await collection.insertOne({ ...baseCache, lang: 'ar', scope: 'LOST_FOUND' });
+    await collection.insertOne({ ...baseCache, lang: 'ar', scope: 'ADMIN' });
 
     expect(await collection.countDocuments({ period: '7d' })).toBe(2);
   });

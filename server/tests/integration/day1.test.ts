@@ -3,11 +3,9 @@ import mongoose from 'mongoose';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { WorkOrder as WorkOrderModel } from '../../src/modules/maintenance/work-orders/workOrder.model';
 
 type SeedFn = (options?: { silent?: boolean }) => Promise<{
   accounts: number;
-  technicians: number;
   locations: number;
   buildings: number;
 }>;
@@ -18,8 +16,6 @@ let seedDatabase: SeedFn;
 let SEED_PASSWORD: string;
 let User: (typeof import('../../src/modules/auth/user.model'))['User'];
 let Location: (typeof import('../../src/modules/locations/location.model'))['Location'];
-let WorkOrder: typeof WorkOrderModel;
-let ServiceFeedback: (typeof import('../../src/modules/maintenance/feedback/serviceFeedback.model'))['ServiceFeedback'];
 let ItemMatch: (typeof import('../../src/modules/lost-found/matches/itemMatch.model'))['ItemMatch'];
 let nextNumber: (typeof import('../../src/shared/services/counter.service'))['nextNumber'];
 let authenticate: (typeof import('../../src/shared/middleware/authenticate'))['authenticate'];
@@ -49,10 +45,6 @@ beforeAll(async () => {
   ({ seedDatabase, SEED_PASSWORD } = await import('../../src/seed/seed'));
   ({ User } = await import('../../src/modules/auth/user.model'));
   ({ Location } = await import('../../src/modules/locations/location.model'));
-  ({ WorkOrder } = await import('../../src/modules/maintenance/work-orders/workOrder.model'));
-  ({ ServiceFeedback } = await import(
-    '../../src/modules/maintenance/feedback/serviceFeedback.model'
-  ));
   ({ ItemMatch } = await import('../../src/modules/lost-found/matches/itemMatch.model'));
   ({ nextNumber } = await import('../../src/shared/services/counter.service'));
   ({ authenticate } = await import('../../src/shared/middleware/authenticate'));
@@ -76,7 +68,7 @@ function login(email: string, password: string) {
 }
 
 describe('Day 1 seed data and indexes', () => {
-  it('creates the 13 collections with all required unique indexes', async () => {
+  it('creates the 9 collections with all required unique indexes', async () => {
     const db = mongoose.connection.db;
     expect(db).toBeDefined();
 
@@ -86,10 +78,6 @@ describe('Day 1 seed data and indexes', () => {
         'counters',
         'users',
         'locations',
-        'maintenancerequests',
-        'workorders',
-        'preventiveplans',
-        'servicefeedbacks',
         'lostfounditems',
         'itemmatches',
         'claimrequests',
@@ -98,29 +86,18 @@ describe('Day 1 seed data and indexes', () => {
         'aiinsightcaches',
       ]),
     );
+    expect(collections).not.toContain('maintenancerequests');
+    expect(collections).not.toContain('workorders');
+    expect(collections).not.toContain('preventiveplans');
+    expect(collections).not.toContain('servicefeedbacks');
 
     const userIndexes = await User.collection.indexes();
     expect(userIndexes.some((index) => index.key.email === 1 && index.unique === true)).toBe(true);
 
-    const requestIndexKeys = (await mongoose.connection.collection('maintenancerequests').indexes())
-      .map((index) => index.key);
-    expect(requestIndexKeys.some((key) => key.requestNumber === 1)).toBe(true);
-
-    const workOrderIndexes = await WorkOrder.collection.indexes();
-    const preventiveUnique = workOrderIndexes.find(
-      (index) => index.key.preventivePlanId === 1 && index.key.scheduledStart === 1,
-    );
-    expect(preventiveUnique?.unique).toBe(true);
-    expect(preventiveUnique?.partialFilterExpression).toEqual({
-      preventivePlanId: { $type: 'objectId' },
-    });
-
-    const feedbackIndexes = await ServiceFeedback.collection.indexes();
-    expect(
-      feedbackIndexes.some(
-        (index) => index.key.maintenanceRequestId === 1 && index.unique === true,
-      ),
-    ).toBe(true);
+    const itemIndexKeys = (
+      await mongoose.connection.collection('lostfounditems').indexes()
+    ).map((index) => index.key);
+    expect(itemIndexKeys.some((key) => key.reportNumber === 1)).toBe(true);
 
     const matchIndexes = await ItemMatch.collection.indexes();
     expect(
@@ -131,27 +108,25 @@ describe('Day 1 seed data and indexes', () => {
     ).toBe(true);
   });
 
-  it('creates one demo account per role, five technicians and four buildings', async () => {
+  it('creates one demo account per role across the four roles', async () => {
     const counts = await User.aggregate<{ _id: string; count: number }>([
       { $group: { _id: '$role', count: { $sum: 1 } } },
     ]);
     const byRole = new Map(counts.map((entry) => [entry._id, entry.count]));
 
+    expect([...byRole.keys()].sort()).toEqual([...ROLES].sort());
     for (const role of ROLES) {
       expect(byRole.get(role) ?? 0).toBeGreaterThanOrEqual(1);
     }
-    expect(byRole.get('TECHNICIAN')).toBe(5);
 
     const buildings = await Location.distinct('buildingName');
-    expect(buildings).toHaveLength(4);
+    expect(buildings.length).toBeGreaterThanOrEqual(4);
     expect(await Location.countDocuments({ isActive: true })).toBeGreaterThanOrEqual(20);
   });
 
   it('generates sequential human-readable numbers', async () => {
-    await expect(nextNumber('MR')).resolves.toBe('MR-1001');
-    await expect(nextNumber('MR')).resolves.toBe('MR-1002');
-    await expect(nextNumber('WO')).resolves.toBe('WO-1001');
     await expect(nextNumber('LF')).resolves.toBe('LF-1001');
+    await expect(nextNumber('LF')).resolves.toBe('LF-1002');
     await expect(nextNumber('CLM')).resolves.toBe('CLM-1001');
   });
 });
@@ -174,11 +149,11 @@ describe('Day 1 authentication and RBAC', () => {
   it('returns the current user for a valid bearer token', async () => {
     const response = await request(app)
       .get('/api/v1/auth/me')
-      .set('Authorization', `Bearer ${tokens.get('STUDENT_EMPLOYEE')}`)
+      .set('Authorization', `Bearer ${tokens.get('STUDENT')}`)
       .expect(200);
 
-    expect(response.body.user.role).toBe('STUDENT_EMPLOYEE');
-    expect(response.body.user.email).toBe(DEMO_ACCOUNTS.STUDENT_EMPLOYEE.email);
+    expect(response.body.user.role).toBe('STUDENT');
+    expect(response.body.user.email).toBe(DEMO_ACCOUNTS.STUDENT.email);
   });
 
   it('rejects a missing or invalid token with 401', async () => {
@@ -211,19 +186,19 @@ describe('Day 1 authentication and RBAC', () => {
   });
 
   it('refuses a deactivated user at login and with an existing session', async () => {
-    const student = await User.findOne({ email: DEMO_ACCOUNTS.STUDENT_EMPLOYEE.email });
+    const student = await User.findOne({ email: DEMO_ACCOUNTS.STUDENT.email });
     expect(student).not.toBeNull();
 
     student!.isActive = false;
     await student!.save();
 
-    const loginResponse = await login(DEMO_ACCOUNTS.STUDENT_EMPLOYEE.email, SEED_PASSWORD);
+    const loginResponse = await login(DEMO_ACCOUNTS.STUDENT.email, SEED_PASSWORD);
     expect(loginResponse.status).toBe(401);
     expect(loginResponse.body.error.code).toBe('UNAUTHORIZED');
 
     await request(app)
       .get('/api/v1/auth/me')
-      .set('Authorization', `Bearer ${tokens.get('STUDENT_EMPLOYEE')}`)
+      .set('Authorization', `Bearer ${tokens.get('STUDENT')}`)
       .expect(401);
 
     student!.isActive = true;
@@ -231,7 +206,7 @@ describe('Day 1 authentication and RBAC', () => {
 
     await request(app)
       .get('/api/v1/auth/me')
-      .set('Authorization', `Bearer ${tokens.get('STUDENT_EMPLOYEE')}`)
+      .set('Authorization', `Bearer ${tokens.get('STUDENT')}`)
       .expect(200);
   });
 
@@ -247,7 +222,7 @@ describe('Day 1 authentication and RBAC', () => {
 
     const denied = await request(roleProbe)
       .get('/admin-only')
-      .set('Authorization', `Bearer ${tokens.get('STUDENT_EMPLOYEE')}`)
+      .set('Authorization', `Bearer ${tokens.get('STUDENT')}`)
       .expect(403);
     expect(denied.body.error.code).toBe('FORBIDDEN');
 
@@ -262,16 +237,16 @@ describe('Day 1 authentication and RBAC', () => {
 
     await request(app)
       .patch('/api/v1/auth/change-password')
-      .set('Authorization', `Bearer ${tokens.get('STUDENT_EMPLOYEE')}`)
+      .set('Authorization', `Bearer ${tokens.get('STUDENT')}`)
       .send({ currentPassword: SEED_PASSWORD, newPassword })
       .expect(200);
 
-    await login(DEMO_ACCOUNTS.STUDENT_EMPLOYEE.email, SEED_PASSWORD).expect(401);
-    await login(DEMO_ACCOUNTS.STUDENT_EMPLOYEE.email, newPassword).expect(200);
+    await login(DEMO_ACCOUNTS.STUDENT.email, SEED_PASSWORD).expect(401);
+    await login(DEMO_ACCOUNTS.STUDENT.email, newPassword).expect(200);
 
     await request(app)
       .patch('/api/v1/auth/change-password')
-      .set('Authorization', `Bearer ${tokens.get('STUDENT_EMPLOYEE')}`)
+      .set('Authorization', `Bearer ${tokens.get('STUDENT')}`)
       .send({ currentPassword: newPassword, newPassword: SEED_PASSWORD })
       .expect(200);
   });
@@ -279,7 +254,7 @@ describe('Day 1 authentication and RBAC', () => {
   it('refuses an incorrect current password with 400', async () => {
     await request(app)
       .patch('/api/v1/auth/change-password')
-      .set('Authorization', `Bearer ${tokens.get('STUDENT_EMPLOYEE')}`)
+      .set('Authorization', `Bearer ${tokens.get('STUDENT')}`)
       .send({ currentPassword: 'wrong-password', newPassword: 'AnotherCampus#2026' })
       .expect(400);
   });

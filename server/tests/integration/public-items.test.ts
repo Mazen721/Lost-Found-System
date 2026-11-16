@@ -119,13 +119,7 @@ beforeAll(async () => {
 
   await seedDatabase({ silent: true });
 
-  const roles: Role[] = [
-    'SUPER_ADMIN',
-    'MAINTENANCE_MANAGER',
-    'TECHNICIAN',
-    'LOST_FOUND_OFFICER',
-    'STUDENT_EMPLOYEE',
-  ];
+  const roles: Role[] = ['SUPER_ADMIN', 'EMPLOYEE', 'LOST_FOUND_MANAGER', 'STUDENT'];
 
   for (const role of roles) {
     const response = await login(DEMO_ACCOUNTS[role].email, SEED_PASSWORD).expect(200);
@@ -140,7 +134,7 @@ afterAll(async () => {
 
 describe('Day 4 — Lost & Found public privacy (US4)', () => {
   it('reports an item and returns its private details to the reporter', async () => {
-    const item = await createItem('STUDENT_EMPLOYEE', {
+    const item = await createItem('STUDENT', {
       itemTitle: 'Reporter private check backpack',
     });
 
@@ -150,14 +144,14 @@ describe('Day 4 — Lost & Found public privacy (US4)', () => {
   });
 
   it('never leaks private details or reporter contact through list, search or detail', async () => {
-    const item = await createItem('STUDENT_EMPLOYEE', {
+    const item = await createItem('STUDENT', {
       itemTitle: 'Privacy probe green satchel',
       privateIdentificationDetails: 'Hidden lining mark PRIVATE-LEAK-CHECK',
     });
 
     const list = await request(app)
       .get('/api/v1/lost-found/items?limit=100')
-      .set('Authorization', bearer('TECHNICIAN'))
+      .set('Authorization', bearer('EMPLOYEE'))
       .expect(200);
 
     expect(list.body.total).toBeGreaterThan(0);
@@ -169,27 +163,27 @@ describe('Day 4 — Lost & Found public privacy (US4)', () => {
     const search = await request(app)
       .get('/api/v1/lost-found/items')
       .query({ q: 'Privacy probe green satchel' })
-      .set('Authorization', bearer('TECHNICIAN'))
+      .set('Authorization', bearer('EMPLOYEE'))
       .expect(200);
 
     expect(search.body.total).toBeGreaterThan(0);
     expectPublicOnly(search.body.data[0]);
     expect(JSON.stringify(search.body)).not.toContain('PRIVATE-LEAK-CHECK');
 
-    const detail = await getItem('TECHNICIAN', item.id).expect(200);
+    const detail = await getItem('EMPLOYEE', item.id).expect(200);
     expectPublicOnly(detail.body.item);
     expect(JSON.stringify(detail.body)).not.toContain('PRIVATE-LEAK-CHECK');
   });
 
-  it('shows private details to the reporter, officer and admin', async () => {
+  it('shows private details to the reporter, manager and admin', async () => {
     const secret = 'Serial PRIVILEGED-7788 with an engraved initials plate';
-    const item = await createItem('STUDENT_EMPLOYEE', {
+    const item = await createItem('STUDENT', {
       itemTitle: 'Privileged detail visibility wallet',
       category: 'Wallets',
       privateIdentificationDetails: secret,
     });
 
-    for (const role of ['STUDENT_EMPLOYEE', 'LOST_FOUND_OFFICER', 'SUPER_ADMIN'] as const) {
+    for (const role of ['STUDENT', 'LOST_FOUND_MANAGER', 'SUPER_ADMIN'] as const) {
       const response = await getItem(role, item.id).expect(200);
       expect(response.body.item.privateIdentificationDetails).toBe(secret);
       expect(response.body.item.reporter).toEqual(
@@ -200,7 +194,7 @@ describe('Day 4 — Lost & Found public privacy (US4)', () => {
 
   it('filters items by type, category, colour, brand, building, date and status', async () => {
     const location = await activeLocation();
-    const lost = await createItem('STUDENT_EMPLOYEE', {
+    const lost = await createItem('STUDENT', {
       itemTitle: 'Filter target black wallet',
       reportType: 'LOST',
       category: 'Wallets',
@@ -208,7 +202,7 @@ describe('Day 4 — Lost & Found public privacy (US4)', () => {
       brand: 'Fossil',
       occurrenceDate: '2026-09-20T09:00:00.000Z',
     });
-    const found = await createItem('LOST_FOUND_OFFICER', {
+    const found = await createItem('LOST_FOUND_MANAGER', {
       itemTitle: 'Filter target blue umbrella',
       reportType: 'FOUND',
       category: 'Accessories',
@@ -221,7 +215,7 @@ describe('Day 4 — Lost & Found public privacy (US4)', () => {
       const response = await request(app)
         .get('/api/v1/lost-found/items')
         .query({ limit: '100', ...query })
-        .set('Authorization', bearer('TECHNICIAN'))
+        .set('Authorization', bearer('EMPLOYEE'))
         .expect(200);
       return (response.body.data as Array<{ id: string }>).map((item) => item.id);
     };
@@ -244,34 +238,34 @@ describe('Day 4 — Lost & Found public privacy (US4)', () => {
   });
 
   it('lists only the current user reports when mine=true', async () => {
-    const studentItem = await createItem('STUDENT_EMPLOYEE', {
+    const studentItem = await createItem('STUDENT', {
       itemTitle: 'My report only student',
     });
-    const officerItem = await createItem('LOST_FOUND_OFFICER', {
-      itemTitle: 'My report only officer',
+    const managerItem = await createItem('LOST_FOUND_MANAGER', {
+      itemTitle: 'My report only manager',
     });
 
     const mine = await request(app)
       .get('/api/v1/lost-found/items')
       .query({ mine: 'true', limit: '100' })
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .expect(200);
 
     const ids = (mine.body.data as Array<{ id: string }>).map((item) => item.id);
     expect(ids).toContain(studentItem.id);
-    expect(ids).not.toContain(officerItem.id);
+    expect(ids).not.toContain(managerItem.id);
   });
 });
 
 describe('Day 4 — Lost & Found edits and closing (US4)', () => {
   it('lets the reporter edit an open report and close their own LOST report', async () => {
-    const item = await createItem('STUDENT_EMPLOYEE', {
+    const item = await createItem('STUDENT', {
       itemTitle: 'Editable open report',
     });
 
     const updated = await request(app)
       .patch(`/api/v1/lost-found/items/${item.id}`)
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .send({ itemTitle: 'Edited open report title', color: 'Navy' })
       .expect(200);
 
@@ -280,7 +274,7 @@ describe('Day 4 — Lost & Found edits and closing (US4)', () => {
 
     const closed = await request(app)
       .patch(`/api/v1/lost-found/items/${item.id}`)
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .send({ status: 'CLOSED' })
       .expect(200);
 
@@ -288,46 +282,46 @@ describe('Day 4 — Lost & Found edits and closing (US4)', () => {
 
     await request(app)
       .patch(`/api/v1/lost-found/items/${item.id}`)
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .send({ description: 'This edit should be refused after closing.' })
       .expect(403);
   });
 
   it('refuses a reporter closing a FOUND report', async () => {
-    const found = await createItem('STUDENT_EMPLOYEE', {
+    const found = await createItem('STUDENT', {
       reportType: 'FOUND',
       itemTitle: 'Found item cannot be closed by reporter',
     });
 
     await request(app)
       .patch(`/api/v1/lost-found/items/${found.id}`)
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .send({ status: 'CLOSED' })
       .expect(403);
   });
 
   it('refuses editing a report by a user who does not own it', async () => {
-    const item = await createItem('STUDENT_EMPLOYEE', {
+    const item = await createItem('STUDENT', {
       reportType: 'FOUND',
       itemTitle: 'Found item cannot be edited by a technician',
     });
 
     await request(app)
       .patch(`/api/v1/lost-found/items/${item.id}`)
-      .set('Authorization', bearer('TECHNICIAN'))
+      .set('Authorization', bearer('EMPLOYEE'))
       .send({ itemTitle: 'Technician attempt' })
       .expect(403);
   });
 
-  it('lets an officer edit and close any non-returned item', async () => {
-    const item = await createItem('STUDENT_EMPLOYEE', {
+  it('lets a manager edit and close any non-returned item', async () => {
+    const item = await createItem('STUDENT', {
       itemTitle: 'Officer managed item',
       reportType: 'FOUND',
     });
 
     const edited = await request(app)
       .patch(`/api/v1/lost-found/items/${item.id}`)
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .send({ description: 'Officer confirmed the item is held at the security desk.' })
       .expect(200);
 
@@ -335,7 +329,7 @@ describe('Day 4 — Lost & Found edits and closing (US4)', () => {
 
     const closed = await request(app)
       .patch(`/api/v1/lost-found/items/${item.id}`)
-      .set('Authorization', bearer('LOST_FOUND_OFFICER'))
+      .set('Authorization', bearer('LOST_FOUND_MANAGER'))
       .send({ status: 'CLOSED' })
       .expect(200);
 
@@ -346,7 +340,7 @@ describe('Day 4 — Lost & Found edits and closing (US4)', () => {
     const location = await activeLocation();
     await request(app)
       .post('/api/v1/lost-found/items')
-      .set('Authorization', bearer('STUDENT_EMPLOYEE'))
+      .set('Authorization', bearer('STUDENT'))
       .field('reportType', 'LOST')
       .field('itemTitle', 'No')
       .field('description', 'short')
