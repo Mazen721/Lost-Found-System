@@ -9,13 +9,16 @@ interface DashboardPeriodSelectProps {
   value: DashboardPeriod;
   onChange: (period: DashboardPeriod) => void;
   className?: string;
+  tone?: 'light' | 'onDark';
 }
 
 export function DashboardPeriodSelect({
   value,
   onChange,
   className,
+  tone = 'light',
 }: DashboardPeriodSelectProps) {
+  const onDark = tone === 'onDark';
   const { t } = useTranslation();
 
   const labels: Record<DashboardPeriod, { short: string; full: string }> = {
@@ -30,7 +33,10 @@ export function DashboardPeriodSelect({
       role="group"
       aria-label={t('dashboard.period')}
       className={cn(
-        'inline-flex h-9 items-center rounded-lg border border-border/80 bg-card p-1 text-xs shadow-xs',
+        'inline-flex h-9 items-center rounded-lg border p-1 text-xs shadow-xs',
+        onDark
+          ? 'border-white/20 bg-white/10 text-white'
+          : 'border-border/80 bg-card',
         className,
       )}
     >
@@ -46,8 +52,12 @@ export function DashboardPeriodSelect({
             className={cn(
               'rounded-md px-2.5 py-1 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               active
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground',
+                ? onDark
+                  ? 'bg-[hsl(var(--mnu-gold))] text-[hsl(var(--mnu-navy))] shadow-xs'
+                  : 'bg-primary text-primary-foreground shadow-xs'
+                : onDark
+                  ? 'text-white/75 hover:text-white'
+                  : 'text-muted-foreground hover:text-foreground',
             )}
           >
             {labels[period].short}

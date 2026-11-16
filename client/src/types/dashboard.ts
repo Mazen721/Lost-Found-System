@@ -4,6 +4,46 @@ import type { InsightContent } from '@/types/insights';
 export const DASHBOARD_PERIODS = ['7d', '30d', '90d', 'all'] as const;
 export type DashboardPeriod = (typeof DASHBOARD_PERIODS)[number];
 
+export interface DashboardItemCard {
+  id: string;
+  reportNumber: string;
+  reportType: string;
+  itemTitle: string;
+  itemTitleAr?: string;
+  category: string;
+  status: string;
+  imageUrl: string | null;
+  building: string;
+  buildingAr?: string;
+  createdAt: string;
+}
+
+export interface UrgentQueueClaim {
+  id: string;
+  claimNumber: string;
+  itemTitle: string;
+  itemTitleAr?: string;
+  itemImageUrl: string | null;
+  createdAt: string;
+}
+
+export interface UrgentQueue {
+  pendingClaims: UrgentQueueClaim[];
+  suggestedMatches: Array<{
+    id: string;
+    score: number;
+    level: string;
+    lostTitle: string;
+    lostTitleAr?: string;
+    foundTitle: string;
+    foundTitleAr?: string;
+    lostImageUrl: string | null;
+    foundImageUrl: string | null;
+    createdAt: string;
+  }>;
+  handoversWaiting: UrgentQueueClaim[];
+}
+
 interface DashboardBase {
   period: DashboardPeriod;
   rangeStart: string | null;
@@ -41,6 +81,8 @@ export interface AdminDashboard extends DashboardBase {
     }>;
     moduleVolume: Array<{ module: string; count: number }>;
   };
+  recentItems: DashboardItemCard[];
+  urgentQueue: UrgentQueue;
 }
 
 export interface ManagerDashboard extends DashboardBase {
@@ -61,6 +103,8 @@ export interface ManagerDashboard extends DashboardBase {
     itemsByCategory: Array<{ category: string; lost: number; found: number }>;
     claimsByStatus: Array<{ status: string; count: number }>;
   };
+  recentItems: DashboardItemCard[];
+  urgentQueue: UrgentQueue;
 }
 
 export interface StudentDashboard extends DashboardBase {
@@ -72,6 +116,8 @@ export interface StudentDashboard extends DashboardBase {
       claimNumber: string;
       itemTitle: string;
       itemTitleAr?: string;
+      itemCategory?: string;
+      itemImageUrl: string | null;
       status: string;
       createdAt: string;
     }>;
@@ -86,6 +132,8 @@ export interface StudentDashboard extends DashboardBase {
       reportType: string;
       itemTitle: string;
       itemTitleAr?: string;
+      category: string;
+      imageUrl: string | null;
       status: string;
       createdAt: string;
     }>;

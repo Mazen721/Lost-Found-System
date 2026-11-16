@@ -28,6 +28,46 @@ export interface PeriodRange {
   to: Date;
 }
 
+export interface DashboardItemCard {
+  id: string;
+  reportNumber: string;
+  reportType: string;
+  itemTitle: string;
+  itemTitleAr?: string;
+  category: string;
+  status: string;
+  imageUrl: string | null;
+  building: string;
+  buildingAr?: string;
+  createdAt: Date;
+}
+
+export interface UrgentQueueClaim {
+  id: string;
+  claimNumber: string;
+  itemTitle: string;
+  itemTitleAr?: string;
+  itemImageUrl: string | null;
+  createdAt: Date;
+}
+
+export interface UrgentQueue {
+  pendingClaims: UrgentQueueClaim[];
+  suggestedMatches: Array<{
+    id: string;
+    score: number;
+    level: string;
+    lostTitle: string;
+    lostTitleAr?: string;
+    foundTitle: string;
+    foundTitleAr?: string;
+    lostImageUrl: string | null;
+    foundImageUrl: string | null;
+    createdAt: Date;
+  }>;
+  handoversWaiting: UrgentQueueClaim[];
+}
+
 export interface AdminDashboard {
   role: 'SUPER_ADMIN';
   period: DashboardPeriod;
@@ -51,6 +91,8 @@ export interface AdminDashboard {
     rangeEnd: Date;
     insights: InsightContent;
   } | null;
+  recentItems: DashboardItemCard[];
+  urgentQueue: UrgentQueue;
   analytics: {
     usersByRole: Array<{ role: Role; count: number }>;
     activityByBuilding: Array<{
@@ -85,6 +127,8 @@ export interface ManagerDashboard {
     itemsByCategory: Array<{ category: string; lost: number; found: number }>;
     claimsByStatus: Array<{ status: string; count: number }>;
   };
+  recentItems: DashboardItemCard[];
+  urgentQueue: UrgentQueue;
 }
 
 export interface StudentDashboard {
@@ -99,6 +143,8 @@ export interface StudentDashboard {
       claimNumber: string;
       itemTitle: string;
       itemTitleAr?: string;
+      itemCategory?: string;
+      itemImageUrl: string | null;
       status: string;
       createdAt: Date;
     }>;
@@ -113,6 +159,8 @@ export interface StudentDashboard {
       reportType: string;
       itemTitle: string;
       itemTitleAr?: string;
+      category: string;
+      imageUrl: string | null;
       status: string;
       createdAt: Date;
     }>;
@@ -170,6 +218,119 @@ function localize(en: string | undefined, ar: string | undefined): string {
 
 function ageInDays(from: Date, to: Date): number {
   return Math.max(0, Math.floor((to.getTime() - from.getTime()) / 86_400_000));
+}
+
+interface ItemImageDoc {
+  images?: Array<{ url?: string }>;
+}
+
+function firstImageUrl(doc: ItemImageDoc | null | undefined): string | null {
+  return doc?.images?.[0]?.url ?? null;
+}
+
+/**
+ * Shared Lost & Found board extras for the Manager and Admin dashboards:
+ * the newest reported items (with photos) and the urgent triage queue
+ * (claims awaiting review, suggested matches, approved claims awaiting
+ * handover).
+ */
+async function getBoardExtras(): Promise<{
+  recentItems: DashboardItemCard[];
+  urgentQueue: UrgentQueue;
+}> {
+  const [recentItems, pendingClaims, suggestedMatches, handoversWaiting] =
+    await Promise.all([
+      LostFoundItem.find({})
+        .sort({ createdAt: -1 })
+        .limit(6)
+        .select(
+          'reportNumber reportType itemTitle itemTitleAr category status images createdAt',
+        )
+        .populate('locationId', 'buildingName buildingNameAr')
+        .lean(),
+      ClaimRequest.find({ status: 'PENDING_REVIEW' })
+        .sort({ createdAt: 1 })
+        .limit(5)
+        .populate('itemId', 'itemTitle itemTitleAr images')
+        .lean(),
+      ItemMatch.find({ status: 'SUGGESTED' })
+        .sort({ score: -1 })
+        .limit(5)
+        .populate('lostItemId', 'itemTitle itemTitleAr images')
+        .populate('foundItemId', 'itemTitle itemTitleAr images')
+        .lean(),
+      ClaimRequest.find({ status: 'APPROVED' })
+        .sort({ createdAt: 1 })
+        .limit(5)
+        .populate('itemId', 'itemTitle itemTitleAr images')
+        .lean(),
+    ]);
+
+  const mapClaim = (claim: (typeof pendingClaims)[number]): UrgentQueueClaim => {
+    const item = claim.itemId as unknown as {
+      itemTitle?: string;
+      itemTitleAr?: string;
+      images?: Array<{ url?: string }>;
+    } | null;
+    return {
+      id: claim._id.toString(),
+      claimNumber: claim.claimNumber,
+      itemTitle: item?.itemTitle ?? 'Lost & found item',
+      itemTitleAr: item?.itemTitleAr,
+      itemImageUrl: firstImageUrl(item),
+      createdAt: claim.createdAt,
+    };
+  };
+
+  return {
+    recentItems: recentItems.map((item) => {
+      const location = item.locationId as unknown as {
+        buildingName?: string;
+        buildingNameAr?: string;
+      } | null;
+      return {
+        id: item._id.toString(),
+        reportNumber: item.reportNumber,
+        reportType: item.reportType,
+        itemTitle: item.itemTitle,
+        itemTitleAr: (item as unknown as { itemTitleAr?: string }).itemTitleAr,
+        category: item.category,
+        status: item.status,
+        imageUrl: firstImageUrl(item as unknown as ItemImageDoc),
+        building: location?.buildingName ?? '',
+        buildingAr: location?.buildingNameAr,
+        createdAt: item.createdAt,
+      };
+    }),
+    urgentQueue: {
+      pendingClaims: pendingClaims.map(mapClaim),
+      suggestedMatches: suggestedMatches.map((match) => {
+        const lost = match.lostItemId as unknown as {
+          itemTitle?: string;
+          itemTitleAr?: string;
+          images?: Array<{ url?: string }>;
+        } | null;
+        const found = match.foundItemId as unknown as {
+          itemTitle?: string;
+          itemTitleAr?: string;
+          images?: Array<{ url?: string }>;
+        } | null;
+        return {
+          id: match._id.toString(),
+          score: match.score,
+          level: match.level,
+          lostTitle: lost?.itemTitle ?? 'Lost item',
+          lostTitleAr: lost?.itemTitleAr,
+          foundTitle: found?.itemTitle ?? 'Found item',
+          foundTitleAr: found?.itemTitleAr,
+          lostImageUrl: firstImageUrl(lost),
+          foundImageUrl: firstImageUrl(found),
+          createdAt: match.createdAt,
+        };
+      }),
+      handoversWaiting: handoversWaiting.map(mapClaim),
+    },
+  };
 }
 
 async function getAdminDashboard(
@@ -234,6 +395,8 @@ async function getAdminDashboard(
     ItemMatch.countDocuments(createdAtMatch(range)),
   ]);
 
+  const boardExtras = await getBoardExtras();
+
   const userRoleMap = new Map(userRoleRows.map((row) => [row._id, row.count]));
   const usersByRole = ROLES.map((role) => ({
     role,
@@ -289,6 +452,8 @@ async function getAdminDashboard(
       activityByBuilding,
       moduleVolume,
     },
+    recentItems: boardExtras.recentItems,
+    urgentQueue: boardExtras.urgentQueue,
   };
 }
 
@@ -357,6 +522,8 @@ async function getManagerDashboard(
     .sort((a, b) => b.lost + b.found - (a.lost + a.found))
     .slice(0, 6);
 
+  const boardExtras = await getBoardExtras();
+
   const claimStatusMap = new Map(claimStatusRows.map((row) => [row._id, row.count]));
   const claimsByStatus = CLAIM_STATUSES.map((status) => ({
     status,
@@ -384,6 +551,8 @@ async function getManagerDashboard(
       itemsByCategory,
       claimsByStatus,
     },
+    recentItems: boardExtras.recentItems,
+    urgentQueue: boardExtras.urgentQueue,
   };
 }
 
@@ -410,7 +579,7 @@ async function getStudentDashboard(
     ClaimRequest.find({ claimantId: userId, ...rangeMatch })
       .sort({ createdAt: -1 })
       .limit(5)
-      .populate('itemId', 'itemTitle itemTitleAr')
+      .populate('itemId', 'itemTitle itemTitleAr category images')
       .lean(),
     LostFoundItem.aggregate<CountRow>([
       { $match: { reporterId: userId, ...rangeMatch } },
@@ -419,7 +588,7 @@ async function getStudentDashboard(
     LostFoundItem.find({ reporterId: userId, ...rangeMatch })
       .sort({ createdAt: -1 })
       .limit(5)
-      .select('reportNumber reportType itemTitle itemTitleAr status createdAt')
+      .select('reportNumber reportType itemTitle itemTitleAr category status images createdAt')
       .lean(),
     Notification.countDocuments({ userId, isRead: false }),
     Notification.find({ userId })
@@ -441,12 +610,19 @@ async function getStudentDashboard(
     claims: {
       total: totalClaims,
       recent: recentClaims.map((claim) => {
-        const item = claim.itemId as unknown as { itemTitle?: string; itemTitleAr?: string } | null;
+        const item = claim.itemId as unknown as {
+          itemTitle?: string;
+          itemTitleAr?: string;
+          category?: string;
+          images?: Array<{ url?: string }>;
+        } | null;
         return {
           id: claim._id.toString(),
           claimNumber: claim.claimNumber,
           itemTitle: item?.itemTitle ?? 'Lost & found item',
           itemTitleAr: item?.itemTitleAr,
+          itemCategory: item?.category,
+          itemImageUrl: firstImageUrl(item),
           status: claim.status,
           createdAt: claim.createdAt,
         };
@@ -462,6 +638,8 @@ async function getStudentDashboard(
         reportType: report.reportType,
         itemTitle: report.itemTitle,
         itemTitleAr: (report as unknown as { itemTitleAr?: string }).itemTitleAr,
+        category: report.category,
+        imageUrl: firstImageUrl(report as unknown as ItemImageDoc),
         status: report.status,
         createdAt: report.createdAt,
       })),

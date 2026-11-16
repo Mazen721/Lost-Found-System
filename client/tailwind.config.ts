@@ -70,6 +70,8 @@ export default {
       boxShadow: {
         xs: '0 1px 2px 0 rgb(4 21 62 / 0.05)',
         panel: '0 1px 2px rgba(23, 33, 28, 0.04), 0 8px 24px -16px rgba(23, 33, 28, 0.18)',
+        card: '0 1px 2px rgb(4 21 62 / 0.05), 0 16px 36px -20px rgb(4 21 62 / 0.25)',
+        hero: '0 24px 48px -24px rgb(4 21 62 / 0.45)',
       },
       keyframes: {
         'fade-in': {

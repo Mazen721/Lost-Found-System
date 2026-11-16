@@ -11,6 +11,7 @@ import {
   type StudentTrackerItem,
   type TrackerTone,
 } from '@/features/dashboard/studentHelpers';
+import { RecentItemsStrip } from '@/features/dashboard/RecentItemsStrip';
 import { StudentSummaryGrid } from '@/features/dashboard/StudentSummaryGrid';
 import { ReportTypeBadge } from '@/features/lost-found/items/ReportTypeBadge';
 import { resolveParams } from '@/i18n/localize';
@@ -300,6 +301,22 @@ export function StudentDashboard({ data }: { data: StudentDashboardData }) {
         <StudentTrackerPanel data={data} />
         <RecentUpdatesRail notifications={data.notifications} />
       </section>
+      <RecentItemsStrip
+        items={data.reports.recent.slice(0, 3).map((report) => ({
+          id: report.id,
+          reportNumber: report.reportNumber,
+          reportType: report.reportType,
+          itemTitle: report.itemTitle,
+          itemTitleAr: report.itemTitleAr,
+          category: report.category,
+          status: report.status,
+          imageUrl: report.imageUrl,
+          building: '',
+          createdAt: report.createdAt,
+        }))}
+        titleKey="dashboard.recentReports"
+        viewAllTo="/lost-found/my-reports"
+      />
     </div>
   );
 }

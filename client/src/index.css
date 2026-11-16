@@ -160,6 +160,19 @@
     text-underline-offset: 4px;
   }
 
+  /* Institutional navy hero surface (dashboards, login): deep Mansoura navy
+     easing into the lighter navy used for hover states, with a restrained
+     gold hairline along the bottom edge. */
+  .bg-hero-navy {
+    background-image: linear-gradient(
+      128deg,
+      hsl(var(--mnu-navy-active)) 0%,
+      hsl(var(--mnu-navy)) 46%,
+      hsl(var(--mnu-navy-hover)) 100%
+    );
+    box-shadow: inset 0 -2px 0 0 hsl(var(--mnu-gold));
+  }
+
   .mnu-portal-surface ::selection {
     background-color: hsl(var(--mnu-gold) / 0.32);
     color: hsl(var(--mnu-navy));

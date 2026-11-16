@@ -1,6 +1,6 @@
 ---
 name: CampusCare — MNU Portal Design System
-description: Navy-and-gold institutional portal design system for CampusCare at Mansoura National University, spanning the frosted sign-in threshold and all five role operational workspaces (student/employee, lost-and-found officer, technician, maintenance manager, and super admin).
+description: Navy-and-gold institutional portal design system for CampusCare Lost & Found at Mansoura National University, spanning the frosted sign-in threshold and the four role workspaces (student, employee, Lost & Found manager, and super admin). Arabic-only, RTL, set in Cairo.
 colors:
   mnu-navy: "#04153E"
   mnu-navy-hover: "#0A2361"
@@ -29,63 +29,63 @@ colors:
   pill-navy-hover: "rgba(4, 21, 62, 0.92)"
 typography:
   headline:
-    fontFamily: 'Inter, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif'
+    fontFamily: 'Cairo, ui-sans-serif, system-ui, sans-serif'
     fontSize: "1.75rem"
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: "-0.02em"
     fontFeature: "'cv02', 'cv03', 'cv04', 'cv11'"
   headline-compact:
-    fontFamily: 'Inter, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif'
+    fontFamily: 'Cairo, ui-sans-serif, system-ui, sans-serif'
     fontSize: "1.65rem"
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: "-0.02em"
     fontFeature: "'cv02', 'cv03', 'cv04', 'cv11'"
   kpi-value:
-    fontFamily: 'Inter, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif'
+    fontFamily: 'Cairo, ui-sans-serif, system-ui, sans-serif'
     fontSize: "1.75rem"
     fontWeight: 700
     lineHeight: 1
     letterSpacing: "-0.02em"
     fontFeature: "'cv02', 'cv03', 'cv04', 'cv11'"
   section-heading:
-    fontFamily: 'Inter, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif'
+    fontFamily: 'Cairo, ui-sans-serif, system-ui, sans-serif'
     fontSize: "1rem"
     fontWeight: 600
     lineHeight: 1.375
     letterSpacing: "-0.01em"
     fontFeature: "'cv02', 'cv03', 'cv04', 'cv11'"
   body:
-    fontFamily: 'Inter, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif'
+    fontFamily: 'Cairo, ui-sans-serif, system-ui, sans-serif'
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.625
     letterSpacing: "0em"
     fontFeature: "'cv02', 'cv03', 'cv04', 'cv11'"
   action:
-    fontFamily: 'Inter, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif'
+    fontFamily: 'Cairo, ui-sans-serif, system-ui, sans-serif'
     fontSize: "0.875rem"
     fontWeight: 600
     lineHeight: 1.43
     letterSpacing: "0em"
     fontFeature: "'cv02', 'cv03', 'cv04', 'cv11'"
   label:
-    fontFamily: 'Inter, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif'
+    fontFamily: 'Cairo, ui-sans-serif, system-ui, sans-serif'
     fontSize: "0.8125rem"
     fontWeight: 500
     lineHeight: 1
     letterSpacing: "0em"
     fontFeature: "'cv02', 'cv03', 'cv04', 'cv11'"
   caption:
-    fontFamily: 'Inter, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif'
+    fontFamily: 'Cairo, ui-sans-serif, system-ui, sans-serif'
     fontSize: "0.75rem"
     fontWeight: 400
     lineHeight: 1.625
     letterSpacing: "0em"
     fontFeature: "'cv02', 'cv03', 'cv04', 'cv11'"
   chip-label:
-    fontFamily: 'Inter, "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif'
+    fontFamily: 'Cairo, ui-sans-serif, system-ui, sans-serif'
     fontSize: "11.5px"
     fontWeight: 500
     lineHeight: 1
@@ -208,7 +208,7 @@ CampusCare completes its role-portal visual migration (`PRODUCT.md`) under the M
 **Key Characteristics:**
 - High-contrast MNU Deep Navy (`#04153E`) typography, primary CTAs, and job-grouped sidebar framing paired with disciplined MNU Crest Gold (`#F9B301`) focus rings, active start-edge indicator bars, and hover highlights.
 - Frosted translucent white threshold glass (`linear-gradient(to bottom, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.68))` with `12px` backdrop blur) on sign-in, handing off to flat `#FFFFFF` single-border (`#CAD1E2`) ledger cards over `#F5F7FA` cool paper inside the workspace.
-- Bilingual Arabic-default (`dir="rtl"`) and English (`dir="ltr"`) typography with `IBM Plex Sans Arabic` and `Inter` parity, logical spacing, `dir="auto"` mixed-script ledger wrapping, and LTR-locked credential inputs.
+- Arabic-only (`dir="rtl"`) typography set in Cairo for Latin and Arabic alike, logical spacing, `dir="auto"` mixed-script ledger wrapping, and LTR-locked credential inputs.
 - Tactile, accessible interactive states using `150ms` color transitions, crisp `1px` navy-tinted borders, full-row ledger link targets, and `2px` gold `focus-visible` rings.
 
 ## Colors
@@ -251,9 +251,7 @@ A disciplined institutional palette drawn from the Mansoura National University 
 
 ## Typography
 
-**Display & UI Font (English / LTR):** Inter (`ui-sans-serif, system-ui, sans-serif` fallback)
-**Primary Font (Arabic / RTL):** IBM Plex Sans Arabic (`Inter, sans-serif` fallback)
-**Configured Unused Display Token:** Instrument Serif (`tailwind.config.ts` `font-display`, overridden to `IBM Plex Sans Arabic` / `Inter` inside `.mnu-portal-surface`)
+**Single typeface:** Cairo (`ui-sans-serif, system-ui, sans-serif` fallback) for Arabic and Latin alike — loaded from Google Fonts in weights 400–900 and bound to both `font-sans` and `font-display` in `tailwind.config.ts`. The product is Arabic-only RTL; no second locale or font stack exists.
 
 **Character:** Clean institutional neo-grotesque pairing tuned for crisp bilingual parity across Arabic RTL and English LTR workflows, giving greetings, tabular KPI figures, ledger titles, credentials, and status pills high scan clarity without ornamental serif flourishes.
 
@@ -267,7 +265,7 @@ A disciplined institutional palette drawn from the Mansoura National University 
 - **Caption** (`400–600`, `0.75rem` / `12px`, `1.625` line-height on notices and `text-pretty` notification messages; `11.5px` on compact timestamps and demo chips): Account notices, sidebar group headers (`ltr:uppercase ltr:tracking-[0.12em]`), metadata codes (`font-mono tabular-nums`), role pills, and floating language pill text.
 
 ### Named Rules
-**The Bilingual Reset Rule.** English surfaces enable Inter stylistic alternates (`'cv02', 'cv03', 'cv04', 'cv11'`) and scope uppercase tracking to `ltr:` (`ltr:uppercase ltr:tracking-wide`), whereas `html[lang='ar']` switches `body` to `'IBM Plex Sans Arabic', 'Inter', sans-serif` and resets `font-feature-settings` to `normal` so Arabic glyphs and ligatures render cleanly.
+**The Arabic Rule.** The document is always `lang="ar" dir="rtl"`; Cairo renders Arabic glyphs and ligatures with default feature settings, and Latin strings (emails, report numbers) are wrapped in `bdi`/`dir="ltr"` islands instead of switching the page direction.
 
 **The Mixed-Script Ledger Rule.** User-authored maintenance and lost-and-found titles inside ledger rows render with `dir="auto"` and `text-start` (plus `line-clamp-2` below `640px`, `sm:truncate` above), preventing RTL ellipsis from clipping the start of English titles while staying flush to the reading edge.
 
@@ -308,7 +306,7 @@ On initial mount of `LoginPage`, the threshold card plays a subtle entrance sett
 
 ### Shadow Vocabulary
 - **Threshold Card Float** (`box-shadow: 0 24px 60px -14px rgba(4, 21, 62, 0.52), inset 0 0 0 1px rgba(255, 255, 255, 0.75)`): Elevation for the centered frosted glass card over the scrimmed campus backdrop.
-- **Interactive Control Lift** (`box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05)`): Subtle `shadow-sm` depth on buttons, inputs, period select, `UserMenu` trigger, and floating language pill.
+- **Interactive Control Lift** (`box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05)`): Subtle `shadow-sm` depth on buttons, inputs, period select, `UserMenu` trigger, and floating pills.
 - **Flat Workspace Surface** (`box-shadow: none`): Workspace KPI and ledger cards declare depth through `1px` `#CAD1E2` borders over `#F5F7FA` rather than drop shadows.
 
 ### Named Rules
@@ -367,3 +365,30 @@ Single floating bilingual pill on entry; job-grouped Deep Navy sidebar and unifi
 - **Don't** render bright MNU Crest Gold (`#F9B301`) or yellow `amber-400` as solid badge/button fills or body text against light surfaces.
 - **Don't** place nested card boxes inside ledger cards (`rounded-lg bg-secondary/65` inside `divide-y` inside `PortalLedgerCard`) or duplicate user/sign-out panels in both the top bar and sidebar footer.
 - **Don't** apply `uppercase` or positive `letter-spacing` (`tracking-wide`) unconditionally across Arabic RTL strings; guard letter-spaced uppercase with `ltr:`.
+
+## Lost & Found refresh (2026-11)
+
+The standalone Lost & Found product keeps the navy/gold institutional identity
+and layers a modern-but-official refresh on top:
+
+- **Navy hero surface** — dashboards open with a deep navy gradient hero
+  (`.bg-hero-navy`: navy-active → navy → navy-hover at 128deg, gold hairline
+  along the bottom edge) carrying the greeting, role badge, period filter,
+  AI insights toggle, and the role's primary action in gold.
+- **Cards** — 16px radius (`rounded-2xl`) with the soft `shadow-card`
+  elevation (navy-tinted, declared once per card; no border + shadow stacks).
+  KPI cards keep colored icon tiles (navy / gold / emerald accents) with
+  progress meters.
+- **Category system** — every Lost & Found category owns a Lucide icon and a
+  soft tinted chip (`client/src/lib/categoryStyle.ts`, rendered by
+  `CategoryChip`): Electronics violet, Phones sky, Laptops indigo,
+  Headphones fuchsia, Wallets amber, Bags orange, Keys yellow,
+  Documents teal, Clothing rose, Books emerald, Accessories cyan,
+  Other slate. Photo-less items fall back to the category tile + icon.
+- **Photo-first items** — browse cards and dashboard recent-items lead with
+  the item photo (4:3 browse, 16:9 dashboard), status and report-type badges
+  overlaid on the photo, category chip under the title, location, and
+  relative time ("منذ…").
+- **Urgent queue** — Manager and Admin dashboards share an urgent triage
+  panel (claims pending review, suggested matches with score pills,
+  handovers waiting) fed by `urgentQueue` in the dashboard payload.

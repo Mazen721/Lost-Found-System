@@ -1,13 +1,14 @@
 import { AdminCharts } from '@/features/dashboard/AdminCharts';
 import { AdminGovernanceLedgers } from '@/features/dashboard/AdminGovernanceLedgers';
 import { AdminSummaryGrid } from '@/features/dashboard/AdminSummaryGrid';
+import { RecentItemsStrip } from '@/features/dashboard/RecentItemsStrip';
+import { UrgentQueuePanel } from '@/features/dashboard/UrgentQueuePanel';
 import type { AdminDashboard as AdminDashboardData } from '@/types/dashboard';
 
 /**
- * Dedicated whole-system tracking command board for Super Admins pairing:
- * - Row 1: 3 executive subsystem domain monitors
- * - Row 2: 7/5 Campus Building Cross-System Load Matrix & Role Governance
- * - Row 3: 8/4 filterable Cross-System Audit Trail & Account Directory Rail
+ * Whole-system command board for Super Admins: executive domain monitors,
+ * the same urgent Lost & Found queue and recent items the manager works
+ * from, building/role analytics, and the governance ledgers.
  */
 export function AdminDashboard({ data }: { data: AdminDashboardData }) {
   const { totals, analytics } = data;
@@ -15,6 +16,8 @@ export function AdminDashboard({ data }: { data: AdminDashboardData }) {
   return (
     <div className="space-y-7">
       <AdminSummaryGrid totals={totals} />
+      <UrgentQueuePanel queue={data.urgentQueue} />
+      <RecentItemsStrip items={data.recentItems} />
       {analytics ? <AdminCharts analytics={analytics} /> : null}
       <AdminGovernanceLedgers totals={totals} />
     </div>

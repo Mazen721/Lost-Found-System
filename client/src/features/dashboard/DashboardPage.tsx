@@ -114,60 +114,62 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-7">
-      <header className="flex flex-col gap-4 border-b border-border/80 pb-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0 space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl font-bold leading-tight tracking-[-0.02em] text-foreground sm:text-[1.75rem]">
-              {greeting}
-              {greetingSeparator}
-              <bdi>{firstName}</bdi>
-            </h1>
-            <Badge
-              variant="outline"
-              className="border-primary/20 bg-primary/[0.08] font-semibold text-primary"
-            >
-              {enumLabel('role', user.role)}
-            </Badge>
+      <header className="bg-hero-navy overflow-hidden rounded-3xl px-6 py-7 text-white shadow-hero sm:px-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0 space-y-2.5">
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-extrabold leading-tight tracking-[-0.02em] sm:text-3xl">
+                {greeting}
+                {greetingSeparator}
+                <bdi>{firstName}</bdi>
+              </h1>
+              <Badge
+                variant="outline"
+                className="border-[hsl(var(--mnu-gold))]/50 bg-[hsl(var(--mnu-gold))]/15 font-bold text-[hsl(var(--mnu-gold))]"
+              >
+                {enumLabel('role', user.role)}
+              </Badge>
+            </div>
+            <p className="max-w-2xl text-sm leading-relaxed text-white/80">
+              {t(portalHeader.subtitleKey)}
+            </p>
           </div>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            {t(portalHeader.subtitleKey)}
-          </p>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {showHeaderAiDrawer ? (
+          <div className="flex flex-wrap items-center gap-2.5">
+            {showHeaderAiDrawer ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-expanded={aiOpen}
+                onClick={() => setAiOpen((prev) => !prev)}
+                className={cn(
+                  'h-9 gap-1.5 rounded-lg border px-3.5 text-xs font-bold shadow-none transition-colors',
+                  aiOpen
+                    ? 'border-[hsl(var(--mnu-gold))] bg-[hsl(var(--mnu-gold))] text-[hsl(var(--mnu-navy))] hover:bg-[hsl(var(--mnu-gold))] hover:text-[hsl(var(--mnu-navy))]'
+                    : 'border-white/25 bg-white/10 text-white hover:border-[hsl(var(--mnu-gold))]/60 hover:bg-white/15 hover:text-white',
+                )}
+              >
+                <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span>{t('ai.toggleInsights')}</span>
+              </Button>
+            ) : null}
+
+            {showPeriodFilter ? (
+              <DashboardPeriodSelect value={period} onChange={setPeriod} tone="onDark" />
+            ) : null}
+
             <Button
-              type="button"
-              variant="outline"
+              asChild
               size="sm"
-              aria-expanded={aiOpen}
-              onClick={() => setAiOpen((prev) => !prev)}
-              className={cn(
-                'h-9 gap-1.5 rounded-lg border px-3.5 text-xs font-semibold shadow-xs transition-colors',
-                aiOpen
-                  ? 'border-amber-500/40 bg-amber-500/[0.12] text-amber-900'
-                  : 'border-border/80 bg-card text-foreground hover:border-amber-500/40 hover:bg-amber-500/[0.08]',
-              )}
+              className="h-9 gap-1.5 rounded-lg bg-[hsl(var(--mnu-gold))] px-3.5 text-xs font-bold text-[hsl(var(--mnu-navy))] shadow-none hover:bg-[hsl(var(--mnu-gold))]/90"
             >
-              <Sparkles className="h-3.5 w-3.5 shrink-0 text-amber-700" aria-hidden="true" />
-              <span>{t('ai.toggleInsights')}</span>
+              <Link to={portalHeader.primaryTo}>
+                <PrimaryIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="truncate">{t(portalHeader.primaryLabelKey)}</span>
+              </Link>
             </Button>
-          ) : null}
-
-          {showPeriodFilter ? (
-            <DashboardPeriodSelect value={period} onChange={setPeriod} />
-          ) : null}
-
-          <Button
-            asChild
-            size="sm"
-            className="h-9 gap-1.5 rounded-lg bg-primary px-3.5 text-xs font-semibold text-primary-foreground shadow-xs hover:bg-[hsl(var(--mnu-navy-hover))] active:bg-[hsl(var(--mnu-navy-active))]"
-          >
-            <Link to={portalHeader.primaryTo}>
-              <PrimaryIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="truncate">{t(portalHeader.primaryLabelKey)}</span>
-            </Link>
-          </Button>
+          </div>
         </div>
       </header>
 
