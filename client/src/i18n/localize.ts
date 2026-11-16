@@ -1,17 +1,12 @@
-import i18n, { getLang } from './index';
+import i18n from './index';
 
 export const KNOWN_AR_BY_EN: Record<string, string> = {
-  // MNU Demo Accounts, Technicians, Faculty & Students
+  // MNU Demo Accounts, Faculty & Students
   'Eng. Tarek El-Shenawy': 'م. طارق الشناوي',
-  'Eng. Mahmoud El-Metwally': 'م. محمود المتولي',
   'Ahmed El-Desouky': 'أ. أحمد الدسوقي',
+  'Mostafa Kamal': 'مصطفى كمال',
   'Dr. Noha El-Gayar': 'د. نهى الجيار',
   'Youssef El-Ashry': 'يوسف العشري',
-  'Karim El-Tantawy': 'كريم الطنطاوي',
-  'Hassan El-Sayed': 'حسن السيد',
-  'Ibrahim Abdel-Fattah': 'إبراهيم عبد الفتاح',
-  'Mohamed El-Gohary': 'محمد الجوهري',
-  'Sameh Radwan': 'سامح رضوان',
   'Sara Mahmoud': 'سارة محمود',
   'Omar Khaled': 'عمر خالد',
   'Mariam El-Menshawy': 'مريم المنشاوي',
@@ -20,8 +15,6 @@ export const KNOWN_AR_BY_EN: Record<string, string> = {
   // MNU Departments
   'Information Technology & Digital Transformation Unit':
     'وحدة تكنولوجيا المعلومات والتحول الرقمي',
-  'Engineering Affairs & Maintenance Department':
-    'الإدارة العامة للشئون الهندسية والصيانة',
   'University Security, Safety & Lost and Found Office':
     'إدارة الأمن الجامعي والسلامة — مكتب المفقودات',
   'General Services & Facilities Management':
@@ -54,30 +47,12 @@ export const KNOWN_AR_BY_EN: Record<string, string> = {
   'Floor 3': 'الطابق الثالث',
   'Floor 4': 'الطابق الرابع',
 
-  // Technician Skills
-  'Electrical wiring': 'التمديدات الكهربائية',
-  'Distribution boards': 'لوحات التوزيع الكهربائية',
-  'Power diagnostics': 'تشخيص أعطال الطاقة',
-  'Water networks': 'شبكات المياه',
-  'Sanitation maintenance': 'صيانة الصرف الصحي',
-  'Leak detection': 'كشف التسريبات',
-  'Lab PC maintenance': 'صيانة حواسيب المعامل',
-  'Fiber & LAN cabling': 'كابلات الألياف والشبكات المحلية',
-  'Access point configuration': 'إعداد نقاط الوصول اللاسلكية',
-  'Central HVAC servicing': 'صيانة التكييف المركزي',
-  'Chiller maintenance': 'صيانة المبردات المركزية (Chillers)',
-  'Air handling units': 'وحدات مناولة الهواء',
-  'Lecture hall seating repair': 'إصلاح مقاعد المدرجات',
-  Carpentry: 'أعمال النجارة والأثاث',
-  'Door & lock hardware': 'صيانة الأبواب والأقفال',
 };
 
 export function pickLang(en?: string | null, ar?: string | null): string {
-  if (getLang() === 'ar') {
-    if (ar?.trim()) return ar;
-    if (en?.trim() && KNOWN_AR_BY_EN[en.trim()]) {
-      return KNOWN_AR_BY_EN[en.trim()]!;
-    }
+  if (ar?.trim()) return ar;
+  if (en?.trim() && KNOWN_AR_BY_EN[en.trim()]) {
+    return KNOWN_AR_BY_EN[en.trim()]!;
   }
   return en ?? '';
 }
@@ -123,8 +98,7 @@ export function formatLocation(loc?: FormattableLocation | null): string {
   const floor = pickLang(loc.floor, loc.floorAr);
   const room = pickLang(loc.room, loc.roomAr);
   if (!BARE_ROOM_CODE_RE.test(room.trim())) {
-    const sep = getLang() === 'ar' ? '، ' : ', ';
-    return [building, floor, room].filter(Boolean).join(sep);
+    return [building, floor, room].filter(Boolean).join('، ');
   }
   return i18n.t('locations.format', { building, floor, room });
 }

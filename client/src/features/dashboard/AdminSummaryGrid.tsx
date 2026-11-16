@@ -1,4 +1,4 @@
-import { PackageSearch, Shield, Wrench, type LucideIcon } from 'lucide-react';
+import { PackageSearch, Shield, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { cn, formatNumber } from '@/lib/utils';
@@ -116,8 +116,8 @@ function DomainMonitorCard({ domain }: { domain: DomainMonitorItem }) {
 }
 
 /**
- * Three executive subsystem domain monitors for the Super Admin command board:
- * Identity & Campus Infrastructure, Maintenance Operations Pipeline, and Lost & Found Pipeline.
+ * Two executive domain monitors for the Super Admin command board:
+ * Identity & Campus Infrastructure, and the Lost & Found Pipeline.
  */
 export function AdminSummaryGrid({ totals }: AdminSummaryGridProps) {
   const { t } = useTranslation();
@@ -125,10 +125,6 @@ export function AdminSummaryGrid({ totals }: AdminSummaryGridProps) {
   const inactiveUsers = Math.max(0, totals.users - totals.activeUsers);
   const activeRatioPct =
     totals.users > 0 ? Math.round((totals.activeUsers / totals.users) * 100) : 0;
-  const dispatchRatePct =
-    totals.maintenanceRequests > 0
-      ? Math.min(100, Math.round((totals.workOrders / totals.maintenanceRequests) * 100))
-      : 0;
   const totalLostFound = totals.lostItems + totals.foundItems;
   const pendingTriage = totals.pendingMatches + totals.pendingClaims;
 
@@ -162,36 +158,6 @@ export function AdminSummaryGrid({ totals }: AdminSummaryGridProps) {
       actions: [
         { label: t('dashboard.manageUsers'), to: '/users' },
         { label: t('dashboard.adminLocationsAction'), to: '/locations' },
-      ],
-    },
-    {
-      key: 'maintenance-pipeline',
-      title: t('dashboard.adminDomainMaintenanceTitle'),
-      icon: Wrench,
-      accent: 'emerald',
-      statusBadge: t('dashboard.adminDispatchRatePill', {
-        rate: formatNumber(dispatchRatePct),
-      }),
-      statusTone: 'navy',
-      metrics: [
-        {
-          label: t('dashboard.adminTotalRequestsLabel'),
-          value: totals.maintenanceRequests,
-          sub: t('dashboard.adminDispatchRatePill', {
-            rate: formatNumber(dispatchRatePct),
-          }),
-        },
-        {
-          label: t('dashboard.adminWorkOrdersIssuedLabel'),
-          value: totals.workOrders,
-          sub: t('dashboard.adminFieldTechniciansHint', {
-            count: formatNumber(totals.technicians),
-          }),
-        },
-      ],
-      actions: [
-        { label: t('dashboard.adminViewRequestsAction'), to: '/maintenance/requests' },
-        { label: t('nav.workOrders'), to: '/work-orders' },
       ],
     },
     {
@@ -232,7 +198,7 @@ export function AdminSummaryGrid({ totals }: AdminSummaryGridProps) {
   ];
 
   return (
-    <section aria-label={t('nav.groupOverview')} className="grid gap-5 lg:grid-cols-3">
+    <section aria-label={t('nav.groupOverview')} className="grid gap-5 lg:grid-cols-2">
       {domains.map((domain) => (
         <DomainMonitorCard key={domain.key} domain={domain} />
       ))}

@@ -12,7 +12,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BrandMark } from '@/components/shared/BrandMark';
-import { LanguageToggle } from '@/components/shared/LanguageToggle';
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import {
   getNavigation,
@@ -49,13 +48,6 @@ const ROUTE_KEYS: Record<string, string> = {
   '/users': 'nav.users',
   '/locations': 'nav.locations',
   '/activity-logs': 'nav.activityLogs',
-  '/technicians': 'nav.technicians',
-  '/maintenance/requests': 'nav.requests',
-  '/maintenance/requests/new': 'nav.reportIssue',
-  '/maintenance/request-queue': 'nav.requestQueue',
-  '/maintenance/calendar': 'nav.calendar',
-  '/maintenance/feedback': 'nav.feedback',
-  '/maintenance/preventive': 'nav.preventive',
   '/lost-found': 'nav.lostFound',
   '/lost-found/report': 'nav.reportLostFound',
   '/lost-found/my-reports': 'nav.myReports',
@@ -65,17 +57,14 @@ const ROUTE_KEYS: Record<string, string> = {
   '/lost-found/claims': 'nav.claims',
   '/lost-found/claims/new': 'claims.submitClaim',
   '/lost-found/handovers': 'nav.handovers',
-  '/work-orders': 'nav.workOrders',
 };
 
 function getPageTitle(pathname: string, t: (key: string) => string): string {
   const key = ROUTE_KEYS[pathname];
   if (key) return t(key);
-  if (/^\/maintenance\/requests\/[^/]+$/.test(pathname)) return t('common.details');
-  if (/^\/work-orders\/[^/]+$/.test(pathname)) return t('common.details');
   if (/^\/lost-found\/items\/[^/]+$/.test(pathname)) return t('lostFound.itemDetails');
   if (/^\/lost-found\/claims\/[^/]+$/.test(pathname)) return t('claims.title');
-  return 'CampusCare';
+  return 'CampusCare Lost & Found';
 }
 
 function UserMenu({ compact = false }: { compact?: boolean }) {
@@ -240,7 +229,7 @@ export function AppShell() {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
       >
-        CampusCare
+        CampusCare Lost & Found
       </a>
 
       {!sidebarCollapsed ? (
@@ -259,7 +248,7 @@ export function AppShell() {
         >
           <DialogTitle className="sr-only">{t('nav.groupOverview')}</DialogTitle>
           <DialogDescription className="sr-only">
-            CampusCare
+            CampusCare Lost & Found
           </DialogDescription>
           <DialogClose
             className={cn(
@@ -301,10 +290,6 @@ export function AppShell() {
             <BrandMark portal={isMnuPortal} compactOnMobile className="min-w-0" />
           </div>
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            <LanguageToggle
-              compactOnMobile
-              className="gap-1 px-1.5 text-xs sm:gap-1.5 sm:px-2.5 sm:text-sm"
-            />
             <NotificationBell poll={false} />
             <UserMenu />
           </div>
@@ -340,7 +325,7 @@ export function AppShell() {
               <DesktopFastNav items={fastNavItems} />
             ) : (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">CampusCare</span>
+                <span className="text-muted-foreground">CampusCare Lost &amp; Found</span>
                 <span className="text-border" aria-hidden="true">
                   /
                 </span>
@@ -366,7 +351,6 @@ export function AppShell() {
                 {headerDate}
               </span>
             ) : null}
-            <LanguageToggle />
             <NotificationBell />
             <UserMenu compact={sidebarCollapsed} />
           </div>

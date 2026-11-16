@@ -1,4 +1,4 @@
-import type { ImageAsset } from '@/types/maintenance';
+import type { ImageAsset } from '@/types/lostFound';
 import type { Role } from '@/types/auth';
 import type { LostFoundItem } from '@/types/lostFound';
 
@@ -12,7 +12,7 @@ export const CLAIM_STATUSES = [
 export type ClaimStatus = (typeof CLAIM_STATUSES)[number];
 
 export interface ClaimItem extends LostFoundItem {
-  /** Only returned to Lost & Found Officers. */
+  /** Only returned to Lost & Found Managers. */
   privateIdentificationDetails?: string;
 }
 

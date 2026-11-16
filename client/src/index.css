@@ -79,17 +79,11 @@
 
   body {
     @apply bg-background font-sans text-foreground antialiased;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
 
-  html[lang='ar'] body {
-    font-family: 'IBM Plex Sans Arabic', 'Inter', sans-serif;
-    font-feature-settings: normal;
-  }
-
-  html[lang='ar'] .font-display {
-    font-family: 'IBM Plex Sans Arabic', serif;
-    font-weight: 700;
+  .font-display {
+    font-family: 'Cairo', sans-serif;
+    font-weight: 800;
   }
 
   ::selection {
@@ -158,13 +152,8 @@
   }
 
   .mnu-portal-surface .font-display {
-    font-family: 'Inter', 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, sans-serif;
-    font-weight: 700;
-  }
-
-  html[lang='ar'] .mnu-portal-surface .font-display {
-    font-family: 'IBM Plex Sans Arabic', 'Inter', sans-serif;
-    font-weight: 700;
+    font-family: 'Cairo', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 800;
   }
 
   .mnu-portal-surface a {

@@ -1,8 +1,8 @@
 import {
-  Inbox,
-  Timer,
-  TriangleAlert,
-  Wrench,
+  GitCompareArrows,
+  Handshake,
+  PackageSearch,
+  ShieldCheck,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -10,107 +10,82 @@ import {
   type PortalSummaryMetric,
 } from '@/features/dashboard/PortalSummaryGrid';
 import { formatNumber } from '@/lib/utils';
-import type { ManagerMetrics } from '@/types/dashboard';
+import type { ManagerDashboard as ManagerDashboardData } from '@/types/dashboard';
 
 interface ManagerSummaryGridProps {
-  metrics: ManagerMetrics;
+  counts: ManagerDashboardData['counts'];
+}
+
+function toPercent(value: number, total: number): number {
+  if (total <= 0) return value > 0 ? 100 : 0;
+  return Math.min(100, Math.round((value / total) * 100));
 }
 
 /**
- * Four-column clickable KPI summary row for the Maintenance Manager dashboard.
+ * Four-column clickable KPI summary row for the Lost & Found Manager dashboard.
  */
-export function ManagerSummaryGrid({ metrics }: ManagerSummaryGridProps) {
+export function ManagerSummaryGrid({ counts }: ManagerSummaryGridProps) {
   const { t } = useTranslation();
 
-  const pendingReviewCount =
-    metrics.requestsByStatus.SUBMITTED +
-    metrics.requestsByStatus.UNDER_REVIEW +
-    metrics.requestsByStatus.REOPENED;
-
-  const avgHours = metrics.averageResolutionHours;
-  const resolutionValue =
-    avgHours === null || (avgHours === 0 && metrics.completedWorkOrders === 0)
-      ? '—'
-      : avgHours < 0.1
-        ? t('dashboard.underTenthHour')
-        : t('dashboard.hoursShort', {
-            hours: formatNumber(avgHours, {
-              minimumFractionDigits: 1,
-              maximumFractionDigits: 1,
-            }),
-          });
-
-  const qualityHint =
-    metrics.feedback.averageRating !== null
-      ? t('dashboard.managerQualityHint', {
-          rating: formatNumber(metrics.feedback.averageRating, {
-            minimumFractionDigits: 1,
-            maximumFractionDigits: 1,
-          }),
-          count: formatNumber(metrics.feedback.total),
-        })
-      : t('dashboard.noRatingYet');
-
-  const totalOrders = metrics.activeWorkOrders + metrics.completedWorkOrders;
+  const claimsInReview = counts.pendingClaims + counts.underVerificationClaims;
+  const totalClaims = claimsInReview + counts.claimsAwaitingHandover + counts.completedHandovers;
+  const openReports = counts.openLostItems + counts.openFoundItems;
+  const totalReports = counts.totalLostItems + counts.totalFoundItems;
 
   const items: PortalSummaryMetric[] = [
     {
-      key: 'pending-review',
-      label: t('dashboard.managerPendingReview'),
-      value: pendingReviewCount,
-      hint: t('dashboard.managerTotalRequestsHint', {
-        total: formatNumber(metrics.totalRequests),
+      key: 'pending-claims',
+      label: t('dashboard.pendingClaims'),
+      value: claimsInReview,
+      hint: t('dashboard.claimsTriageSummary', {
+        pending: formatNumber(counts.pendingClaims),
+        verifying: formatNumber(counts.underVerificationClaims),
       }),
-      to: '/maintenance/request-queue',
-      icon: Inbox,
-      accent: pendingReviewCount > 0 ? 'gold' : 'navy',
-      progress:
-        metrics.totalRequests > 0
-          ? Math.round((pendingReviewCount / metrics.totalRequests) * 100)
-          : 0,
+      to: '/lost-found/claims',
+      icon: ShieldCheck,
+      accent: 'gold',
+      progress: toPercent(claimsInReview, totalClaims),
     },
     {
-      key: 'active-work-orders',
-      label: t('dashboard.activeWorkOrders'),
-      value: metrics.activeWorkOrders,
-      hint: t('dashboard.managerCompletedOrdersHint', {
-        count: formatNumber(metrics.completedWorkOrders),
-      }),
-      to: '/work-orders',
-      icon: Wrench,
-      accent: 'navy',
-      progress: totalOrders > 0 ? Math.round((metrics.activeWorkOrders / totalOrders) * 100) : 0,
-    },
-    {
-      key: 'overdue-work-orders',
-      label: t('dashboard.overdue'),
-      value: metrics.overdueWorkOrders,
+      key: 'suggested-matches',
+      label: t('dashboard.managerSuggestedMatchesLabel'),
+      value: counts.pendingMatches,
       hint:
-        metrics.overdueWorkOrders > 0
-          ? t('dashboard.managerOverdueHint')
-          : t('dashboard.technicianOnTrackHint'),
-      to: '/work-orders',
-      icon: TriangleAlert,
-      accent: metrics.overdueWorkOrders > 0 ? 'danger' : 'emerald',
-      progress:
-        metrics.activeWorkOrders > 0
-          ? Math.min(100, Math.round((metrics.overdueWorkOrders / metrics.activeWorkOrders) * 100))
-          : 0,
-    },
-    {
-      key: 'avg-resolution',
-      label: t('dashboard.avgResolution'),
-      value: resolutionValue,
-      hint: qualityHint,
-      to: '/maintenance/feedback',
-      icon: Timer,
+        counts.pendingMatches > 0
+          ? t('dashboard.pendingReview')
+          : t('dashboard.noPendingMatchesHint'),
+      to: '/lost-found/matches',
+      icon: GitCompareArrows,
       accent: 'emerald',
       progress:
-        metrics.feedback.averageRating !== null
-          ? Math.round((metrics.feedback.averageRating / 5) * 100)
-          : totalOrders > 0
-            ? Math.round((metrics.completedWorkOrders / totalOrders) * 100)
-            : 0,
+        counts.pendingMatches > 0
+          ? toPercent(counts.pendingMatches, Math.max(openReports, counts.pendingMatches))
+          : 0,
+    },
+    {
+      key: 'open-reports',
+      label: t('dashboard.managerOpenReportsLabel'),
+      value: openReports,
+      hint: t('dashboard.managerOpenReportsHint', {
+        lost: formatNumber(counts.openLostItems),
+        found: formatNumber(counts.openFoundItems),
+      }),
+      to: '/lost-found/items',
+      icon: PackageSearch,
+      accent: 'navy',
+      progress: toPercent(openReports, totalReports),
+    },
+    {
+      key: 'returned-items',
+      label: t('dashboard.managerReturnedItemsLabel'),
+      value: counts.completedHandovers,
+      hint: t('dashboard.managerReturnedItemsHint', {
+        awaiting: formatNumber(counts.claimsAwaitingHandover),
+      }),
+      to: '/lost-found/handovers',
+      icon: Handshake,
+      accent: 'emerald',
+      progress: toPercent(counts.completedHandovers, totalClaims),
     },
   ];
 

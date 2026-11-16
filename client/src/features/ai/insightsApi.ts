@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import type { MaintenanceInsightsResponse } from '@/types/insights';
+import type { LostFoundInsightsResponse } from '@/types/insights';
 
 export type InsightsPeriod = '7d' | '30d';
 
@@ -9,10 +9,10 @@ export interface GenerateInsightsInput {
 }
 
 export const insightsApi = {
-  generate(input: GenerateInsightsInput): Promise<MaintenanceInsightsResponse> {
-    return api.post<MaintenanceInsightsResponse>('/ai/maintenance-insights', input);
+  generate(input: GenerateInsightsInput): Promise<LostFoundInsightsResponse> {
+    return api.post<LostFoundInsightsResponse>('/ai/lost-found-insights', input);
   },
-  generateAdmin(input: GenerateInsightsInput): Promise<MaintenanceInsightsResponse> {
-    return api.post<MaintenanceInsightsResponse>('/ai/admin-insights', input);
+  generateAdmin(input: GenerateInsightsInput): Promise<LostFoundInsightsResponse> {
+    return api.post<LostFoundInsightsResponse>('/ai/admin-insights', input);
   },
 };

@@ -83,7 +83,7 @@ export function ItemDetailPage() {
   }
 
   const canClaim =
-    user?.role === 'STUDENT_EMPLOYEE' &&
+    user?.role === 'STUDENT' &&
     item.reportType === 'FOUND' &&
     (item.status === 'OPEN' ||
       item.status === 'MATCH_CONFIRMED' ||

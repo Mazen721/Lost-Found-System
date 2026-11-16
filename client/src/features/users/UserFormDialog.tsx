@@ -23,11 +23,6 @@ import { usersApi } from '@/features/users/usersApi';
 import { getErrorMessage } from '@/lib/api';
 import { enumLabel } from '@/lib/labels';
 import { ROLES, type Role } from '@/types/auth';
-import {
-  MAINTENANCE_CATEGORIES,
-  TECHNICIAN_AVAILABILITIES,
-  type MaintenanceCategory,
-} from '@/types/meta';
 import type { UserRecord } from '@/types/users';
 
 export function createUserFormSchema(t: TFunction, isEditing: boolean) {
@@ -61,12 +56,6 @@ export function createUserFormSchema(t: TFunction, isEditing: boolean) {
         .trim()
         .max(40, t('validation.maxChars', { field: t('auth.contactPhone'), max: 40 }))
         .optional(),
-      specializations: z.array(z.enum(MAINTENANCE_CATEGORIES)),
-      skillsText: z
-        .string()
-        .max(2000, t('validation.maxChars', { field: t('technicians.skills'), max: 2000 }))
-        .optional(),
-      availability: z.enum(TECHNICIAN_AVAILABILITIES),
     })
     .superRefine((values, context) => {
       if (isEditing) return;
@@ -93,13 +82,10 @@ const EMPTY_VALUES: UserFormValues = {
   name: '',
   email: '',
   password: '',
-  role: 'STUDENT_EMPLOYEE',
+  role: 'STUDENT',
   department: '',
   departmentAr: '',
   contactPhone: '',
-  specializations: [],
-  skillsText: '',
-  availability: 'AVAILABLE',
 };
 
 interface UserFormDialogProps {
@@ -120,7 +106,6 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm<UserFormValues>({
     resolver: zodResolver(schema),
@@ -140,9 +125,6 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
             department: user.department ?? '',
             departmentAr: user.departmentAr ?? '',
             contactPhone: user.contactPhone ?? '',
-            specializations: (user.specializations ?? []) as MaintenanceCategory[],
-            skillsText: (user.skills ?? []).join(', '),
-            availability: user.availability ?? 'AVAILABLE',
           }
         : EMPTY_VALUES,
     );
@@ -150,7 +132,6 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
 
   const saveUser = useMutation({
     mutationFn: (values: UserFormValues) => {
-      const isTech = values.role === 'TECHNICIAN';
       const shared = {
         name: values.name,
         email: values.email,
@@ -158,14 +139,6 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
         department: values.department?.trim() || undefined,
         departmentAr: values.departmentAr?.trim() || undefined,
         contactPhone: values.contactPhone?.trim() || undefined,
-        specializations: isTech ? values.specializations : [],
-        skills: isTech
-          ? (values.skillsText ?? '')
-              .split(',')
-              .map((skill) => skill.trim())
-              .filter(Boolean)
-          : [],
-        availability: isTech ? values.availability : undefined,
       };
 
       return user
@@ -185,9 +158,6 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
       setServerError(getErrorMessage(error));
     }
   };
-
-  const selectedRole = watch('role');
-  const isTechnician = selectedRole === 'TECHNICIAN';
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !isSubmitting && onOpenChange(nextOpen)}>
@@ -300,76 +270,6 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
               />
             </FormField>
           </div>
-
-          {isTechnician ? (
-            <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
-              <div>
-                <p className="text-sm font-semibold text-foreground">{t('users.technicianProfile')}</p>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  {t('technicians.subtitle')}
-                </p>
-              </div>
-
-              <fieldset>
-                <legend className="mb-2 text-sm font-medium text-foreground">
-                  {t('technicians.specializations')}
-                </legend>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {MAINTENANCE_CATEGORIES.map((category) => (
-                    <label
-                      key={category}
-                      className="flex cursor-pointer items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm transition-colors hover:bg-accent/60"
-                    >
-                      <input
-                        type="checkbox"
-                        value={category}
-                        className="h-4 w-4 rounded border-input text-primary focus:ring-ring"
-                        {...register('specializations')}
-                      />
-                      <span>{enumLabel('maintenanceCategory', category)}</span>
-                    </label>
-                  ))}
-                </div>
-                {errors.specializations ? (
-                  <p className="mt-2 text-xs font-medium text-destructive" role="alert">
-                    {errors.specializations.message}
-                  </p>
-                ) : null}
-              </fieldset>
-
-              <FormField
-                id="user-skills"
-                label={t('technicians.skills')}
-                error={errors.skillsText?.message}
-                hint={t('technicians.skillsHint')}
-              >
-                <Input
-                  id="user-skills"
-                  placeholder={t('technicians.skillsPlaceholder')}
-                  aria-invalid={Boolean(errors.skillsText)}
-                  {...register('skillsText')}
-                />
-              </FormField>
-
-              <FormField
-                id="user-availability"
-                label={t('technicians.availability')}
-                error={errors.availability?.message}
-              >
-                <select
-                  id="user-availability"
-                  className="flex h-10 w-full rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  {...register('availability')}
-                >
-                  {TECHNICIAN_AVAILABILITIES.map((availability) => (
-                    <option key={availability} value={availability}>
-                      {enumLabel('availability', availability)}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-            </div>
-          ) : null}
 
           <DialogFooter>
             <Button

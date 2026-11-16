@@ -1,4 +1,4 @@
-import { Building2, CalendarDays, Mail, Phone, Sparkles, type LucideIcon } from 'lucide-react';
+import { Building2, CalendarDays, Mail, Phone, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -85,29 +85,8 @@ export function AccountSummaryCard({ user }: AccountSummaryCardProps) {
             label={t('auth.memberSince')}
             value={formatDate(user.createdAt)}
           />
-          {user.role === 'TECHNICIAN' ? (
-            <DetailRow
-              icon={Sparkles}
-              label={t('technicians.availability')}
-              value={user.availability ? enumLabel('availability', user.availability) : t('auth.notSet')}
-            />
-          ) : null}
         </dl>
 
-        {user.role === 'TECHNICIAN' && user.specializations.length > 0 ? (
-          <div className="mt-4">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              {t('technicians.specializations')}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {user.specializations.map((specialization) => (
-                <Badge key={specialization} variant="secondary" className="font-normal">
-                  {enumLabel('maintenanceCategory', specialization)}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        ) : null}
       </CardContent>
     </Card>
   );

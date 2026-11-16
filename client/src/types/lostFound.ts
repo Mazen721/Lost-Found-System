@@ -1,4 +1,7 @@
-import type { ImageAsset } from '@/types/maintenance';
+export interface ImageAsset {
+  url: string;
+  publicId: string;
+}
 import type { Role } from '@/types/auth';
 
 export const LOST_FOUND_CATEGORIES = [

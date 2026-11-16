@@ -16,26 +16,22 @@ const BUILDING_AR_FALLBACK: Record<string, string> = {
 };
 
 const MODULE_LABEL_KEYS: Record<string, string> = {
-  Requests: 'dashboard.requests',
-  'Work Orders': 'nav.workOrders',
   'Lost Items': 'dashboard.lostItemsLabel',
   'Found Items': 'dashboard.foundItemsLabel',
   Claims: 'dashboard.claims',
-  Maintenance: 'dashboard.maintenance',
+  Matches: 'nav.matches',
   'Lost & Found': 'dashboard.lostFound',
 };
 
 const ROLE_DOT_CLASSES: Record<Role, string> = {
-  STUDENT_EMPLOYEE: 'bg-primary',
-  TECHNICIAN: 'bg-emerald-600',
-  MAINTENANCE_MANAGER: 'bg-[hsl(var(--mnu-gold))]',
-  LOST_FOUND_OFFICER: 'bg-[hsl(var(--mnu-gold-ink))]',
+  STUDENT: 'bg-primary',
+  EMPLOYEE: 'bg-emerald-600',
+  LOST_FOUND_MANAGER: 'bg-[hsl(var(--mnu-gold-ink))]',
   SUPER_ADMIN: 'bg-destructive',
 };
 
 interface NormalizedBuildingRow {
   building: string;
-  maintenance: number;
   lostFound: number;
 }
 
@@ -57,16 +53,14 @@ function normalizeBuildingData(
 
     const current = merged.get(key) ?? {
       building: label,
-      maintenance: 0,
       lostFound: 0,
     };
-    current.maintenance += item.maintenance;
     current.lostFound += item.lostFound;
     merged.set(key, current);
   }
 
   return Array.from(merged.values())
-    .sort((a, b) => b.maintenance + b.lostFound - (a.maintenance + a.lostFound))
+    .sort((a, b) => b.lostFound - a.lostFound)
     .slice(0, 6);
 }
 
@@ -77,7 +71,7 @@ function BuildingLoadMatrixCard({
 }) {
   const { t } = useTranslation();
   const maxCombinedLoad = Math.max(
-    ...buildings.map((item) => item.maintenance + item.lostFound),
+    ...buildings.map((item) => item.lostFound),
     1,
   );
 
@@ -95,10 +89,6 @@ function BuildingLoadMatrixCard({
 
         <div className="flex shrink-0 items-center gap-4 text-xs font-medium text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-xs bg-primary" aria-hidden="true" />
-            <span>{t('dashboard.maintenance')}</span>
-          </span>
-          <span className="flex items-center gap-1.5">
             <span
               className="h-2.5 w-2.5 rounded-xs bg-[hsl(var(--mnu-gold))]"
               aria-hidden="true"
@@ -111,7 +101,7 @@ function BuildingLoadMatrixCard({
       {buildings.length === 0 ? (
         <div className="p-6">
           <p className="flex h-[220px] items-center justify-center rounded-lg border border-dashed border-border/80 bg-secondary/35 px-4 text-center text-sm text-muted-foreground">
-            {t('dashboard.noRequestsInPeriod')}
+            {t('dashboard.noItemsInPeriod')}
           </p>
         </div>
       ) : (
@@ -123,9 +113,6 @@ function BuildingLoadMatrixCard({
                   {t('dashboard.adminCampusBuildingCol')}
                 </th>
                 <th className="px-3 pb-2.5 text-center font-semibold">
-                  {t('dashboard.maintenance')}
-                </th>
-                <th className="px-3 pb-2.5 text-center font-semibold">
                   {t('dashboard.lostFound')}
                 </th>
                 <th className="w-44 pb-2.5 text-start font-semibold">
@@ -135,8 +122,7 @@ function BuildingLoadMatrixCard({
             </thead>
             <tbody className="divide-y divide-border/70">
               {buildings.map((building, index) => {
-                const total = building.maintenance + building.lostFound;
-                const maintPct = (building.maintenance / maxCombinedLoad) * 100;
+                const total = building.lostFound;
                 const lfPct = (building.lostFound / maxCombinedLoad) * 100;
                 const isTopLoad = index === 0 && total > 0;
 
@@ -154,21 +140,12 @@ function BuildingLoadMatrixCard({
                         ) : null}
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-center font-semibold tabular-nums text-foreground">
-                      {formatNumber(building.maintenance)}
-                    </td>
                     <td className="px-3 py-3 text-center font-semibold tabular-nums text-[hsl(var(--mnu-gold-ink))]">
                       {formatNumber(building.lostFound)}
                     </td>
                     <td className="py-3">
                       <div className="flex items-center gap-2.5">
                         <div className="flex h-2 flex-1 overflow-hidden rounded-full bg-secondary">
-                          {maintPct > 0 ? (
-                            <div
-                              className="h-full bg-primary transition-[width] duration-200"
-                              style={{ width: `${maintPct}%` }}
-                            />
-                          ) : null}
                           {lfPct > 0 ? (
                             <div
                               className="h-full bg-[hsl(var(--mnu-gold))] transition-[width] duration-200"

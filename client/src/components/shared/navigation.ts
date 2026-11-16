@@ -1,27 +1,18 @@
 import {
   Archive,
   BadgeCheck,
-  CalendarDays,
-  ClipboardCheck,
-  ClipboardList,
   Files,
   FolderSearch,
   GitCompareArrows,
   Handshake,
-  Inbox,
   LayoutDashboard,
   MapPin,
   PackagePlus,
   PackageSearch,
-  PlusCircle,
-  Repeat2,
   ScrollText,
   Search,
   ShieldCheck,
-  Star,
   Users,
-  UsersRound,
-  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import type { Role } from '@/types/auth';
@@ -48,13 +39,6 @@ const STUDENT_NAVIGATION: NavigationGroup[] = [
     ],
   },
   {
-    titleKey: 'nav.maintenance',
-    items: [
-      { labelKey: 'nav.reportIssue', to: '/maintenance/requests/new', icon: PlusCircle },
-      { labelKey: 'nav.myRequests', to: '/maintenance/requests', icon: ClipboardList, end: true },
-    ],
-  },
-  {
     titleKey: 'nav.lostFound',
     items: [
       { labelKey: 'nav.reportItem', to: '/lost-found/report', icon: PackagePlus },
@@ -65,7 +49,7 @@ const STUDENT_NAVIGATION: NavigationGroup[] = [
   },
 ];
 
-const OFFICER_NAVIGATION: NavigationGroup[] = [
+const MANAGER_NAVIGATION: NavigationGroup[] = [
   {
     titleKey: 'nav.groupOverview',
     items: [
@@ -83,49 +67,10 @@ const OFFICER_NAVIGATION: NavigationGroup[] = [
   {
     titleKey: 'nav.groupItemRegistry',
     items: [
+      { labelKey: 'nav.reportItem', to: '/lost-found/report', icon: PackagePlus },
+      { labelKey: 'nav.browseLostFound', to: '/lost-found', icon: Search, end: true },
       { labelKey: 'nav.allReports', to: '/lost-found/items', icon: Files, end: true },
       { labelKey: 'nav.archivedItems', to: '/lost-found/archived', icon: Archive },
-    ],
-  },
-];
-
-const TECHNICIAN_NAVIGATION: NavigationGroup[] = [
-  {
-    titleKey: 'nav.groupOverview',
-    items: [
-      { labelKey: 'nav.dashboard', to: '/dashboard', icon: LayoutDashboard, end: true },
-    ],
-  },
-  {
-    titleKey: 'nav.groupFieldOperations',
-    items: [
-      { labelKey: 'nav.myWorkOrders', to: '/work-orders', icon: Wrench },
-      { labelKey: 'nav.mySchedule', to: '/maintenance/calendar', icon: CalendarDays },
-    ],
-  },
-];
-
-const MANAGER_NAVIGATION: NavigationGroup[] = [
-  {
-    titleKey: 'nav.groupOverview',
-    items: [
-      { labelKey: 'nav.dashboard', to: '/dashboard', icon: LayoutDashboard, end: true },
-    ],
-  },
-  {
-    titleKey: 'nav.groupTriageDispatch',
-    items: [
-      { labelKey: 'nav.requestQueue', to: '/maintenance/request-queue', icon: Inbox },
-      { labelKey: 'nav.workOrders', to: '/work-orders', icon: ClipboardCheck },
-      { labelKey: 'nav.technicians', to: '/technicians', icon: UsersRound },
-    ],
-  },
-  {
-    titleKey: 'nav.groupPlanningQuality',
-    items: [
-      { labelKey: 'nav.calendar', to: '/maintenance/calendar', icon: CalendarDays },
-      { labelKey: 'nav.preventive', to: '/maintenance/preventive', icon: Repeat2 },
-      { labelKey: 'nav.feedback', to: '/maintenance/feedback', icon: Star },
     ],
   },
 ];
@@ -146,19 +91,29 @@ const ADMIN_NAVIGATION: NavigationGroup[] = [
     ],
   },
   {
-    titleKey: 'nav.groupCampusOversight',
+    titleKey: 'nav.groupTriageVerification',
     items: [
-      { labelKey: 'nav.maintenanceView', to: '/maintenance/requests', icon: ClipboardList },
+      { labelKey: 'nav.matches', to: '/lost-found/matches', icon: GitCompareArrows },
+      { labelKey: 'nav.claims', to: '/lost-found/claims', icon: ShieldCheck },
+      { labelKey: 'nav.handovers', to: '/lost-found/handovers', icon: Handshake },
+    ],
+  },
+  {
+    titleKey: 'nav.groupItemRegistry',
+    items: [
+      { labelKey: 'nav.reportItem', to: '/lost-found/report', icon: PackagePlus },
+      { labelKey: 'nav.browseLostFound', to: '/lost-found', icon: Search, end: true },
+      { labelKey: 'nav.allReports', to: '/lost-found/items', icon: Files, end: true },
+      { labelKey: 'nav.archivedItems', to: '/lost-found/archived', icon: Archive },
       { labelKey: 'nav.lostFoundView', to: '/lost-found/items', icon: PackageSearch },
     ],
   },
 ];
 
 const MNU_PORTAL_NAV: Record<Role, NavigationGroup[]> = {
-  STUDENT_EMPLOYEE: STUDENT_NAVIGATION,
-  LOST_FOUND_OFFICER: OFFICER_NAVIGATION,
-  TECHNICIAN: TECHNICIAN_NAVIGATION,
-  MAINTENANCE_MANAGER: MANAGER_NAVIGATION,
+  STUDENT: STUDENT_NAVIGATION,
+  EMPLOYEE: STUDENT_NAVIGATION,
+  LOST_FOUND_MANAGER: MANAGER_NAVIGATION,
   SUPER_ADMIN: ADMIN_NAVIGATION,
 };
 

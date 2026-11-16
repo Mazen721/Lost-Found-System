@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import type { ImageAsset } from '@/types/maintenance';
+import type { ImageAsset } from '@/types/lostFound';
 
 interface LightboxProps {
   images: ImageAsset[];

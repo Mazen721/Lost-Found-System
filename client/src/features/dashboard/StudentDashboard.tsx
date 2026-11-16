@@ -1,10 +1,4 @@
-import {
-  Bell,
-  ChevronRight,
-  ClipboardList,
-  PackageSearch,
-} from 'lucide-react';
-import { useState } from 'react';
+import { Bell, ChevronRight, PackageSearch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { EmptyState } from '@/components/shared/EmptyState';
@@ -14,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { PortalViewAllLink } from '@/features/dashboard/PortalViewAllLink';
 import {
   buildLostFoundTrackerItems,
-  buildMaintenanceTrackerItems,
   type StudentTrackerItem,
   type TrackerTone,
 } from '@/features/dashboard/studentHelpers';
@@ -24,43 +17,11 @@ import { resolveParams } from '@/i18n/localize';
 import { cn, formatDate, formatNumber } from '@/lib/utils';
 import type { StudentDashboard as StudentDashboardData } from '@/types/dashboard';
 
-type StudentTrackerTab = 'requests' | 'lost-found';
-
 const PROGRESS_BAR_FILL: Record<TrackerTone, string> = {
   navy: 'bg-primary',
   emerald: 'bg-emerald-600',
   danger: 'bg-destructive',
 };
-
-function TrackerTabButton({
-  selected,
-  label,
-  count,
-  onClick,
-}: {
-  selected: boolean;
-  label: string;
-  count: number;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={selected}
-      onClick={onClick}
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-        selected ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground',
-      )}
-    >
-      <span>{label}</span>
-      <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-foreground">
-        {formatNumber(count)}
-      </span>
-    </button>
-  );
-}
 
 function StudentTrackerRow({ item }: { item: StudentTrackerItem }) {
   const { activeStep, tone, steps } = item.progress;
@@ -134,12 +95,7 @@ function StudentTrackerRow({ item }: { item: StudentTrackerItem }) {
 
 function StudentTrackerPanel({ data }: { data: StudentDashboardData }) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<StudentTrackerTab>('requests');
-
-  const maintenanceItems = buildMaintenanceTrackerItems(data.requests.recent, t);
   const lostFoundItems = buildLostFoundTrackerItems(data.claims.recent, data.reports.recent, t);
-
-  const visibleItems = activeTab === 'requests' ? maintenanceItems : lostFoundItems;
   const lostFoundTotal = data.claims.total + data.reports.total;
 
   return (
@@ -153,61 +109,27 @@ function StudentTrackerPanel({ data }: { data: StudentDashboardData }) {
             {t('dashboard.studentTrackerDesc')}
           </p>
         </div>
-
-        <div
-          role="tablist"
-          aria-label={t('dashboard.studentTrackerTitle')}
-          className="inline-flex flex-wrap rounded-lg border border-border/80 bg-secondary/50 p-1 text-xs"
-        >
-          <TrackerTabButton
-            selected={activeTab === 'requests'}
-            label={t('dashboard.studentTabRequests')}
-            count={data.requests.total}
-            onClick={() => setActiveTab('requests')}
-          />
-          <TrackerTabButton
-            selected={activeTab === 'lost-found'}
-            label={t('dashboard.studentTabLostFound')}
-            count={lostFoundTotal}
-            onClick={() => setActiveTab('lost-found')}
-          />
-        </div>
+        <span className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold tabular-nums text-foreground">
+          {formatNumber(lostFoundTotal)}
+        </span>
       </div>
 
       <div className="flex flex-1 flex-col">
-        {visibleItems.length === 0 ? (
+        {lostFoundItems.length === 0 ? (
           <EmptyState
-            icon={activeTab === 'requests' ? ClipboardList : PackageSearch}
-            title={
-              activeTab === 'requests'
-                ? t('requests.noRequestsYet')
-                : t('dashboard.studentNoLostFoundTitle')
-            }
-            description={
-              activeTab === 'requests'
-                ? t('dashboard.noRecentRequestsDesc')
-                : t('dashboard.studentNoLostFoundDesc')
-            }
+            icon={PackageSearch}
+            title={t('dashboard.studentNoLostFoundTitle')}
+            description={t('dashboard.studentNoLostFoundDesc')}
             className="min-h-[240px] flex-1 border-0 bg-transparent px-6 py-8"
             action={
               <Button asChild variant="outline" size="sm">
-                <Link
-                  to={
-                    activeTab === 'requests'
-                      ? '/maintenance/requests/new'
-                      : '/lost-found'
-                  }
-                >
-                  {activeTab === 'requests'
-                    ? t('dashboard.studentCardMaintenanceCta')
-                    : t('dashboard.studentCardClaimsCta')}
-                </Link>
+                <Link to="/lost-found">{t('dashboard.studentCardClaimsCta')}</Link>
               </Button>
             }
           />
         ) : (
           <ul className="divide-y divide-border/75 px-6">
-            {visibleItems.map((item) => (
+            {lostFoundItems.map((item) => (
               <StudentTrackerRow key={item.id} item={item} />
             ))}
           </ul>
@@ -215,19 +137,8 @@ function StudentTrackerPanel({ data }: { data: StudentDashboardData }) {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/75 px-6 py-3">
-        {activeTab === 'requests' ? (
-          <>
-            <span className="text-xs text-muted-foreground">
-              {t('dashboard.recentRequestsDesc')}
-            </span>
-            <PortalViewAllLink to="/maintenance/requests" label={t('common.viewAll')} />
-          </>
-        ) : (
-          <>
-            <PortalViewAllLink to="/lost-found/claims" label={t('nav.myClaims')} />
-            <PortalViewAllLink to="/lost-found/my-reports" label={t('nav.myReports')} />
-          </>
-        )}
+        <PortalViewAllLink to="/lost-found/claims" label={t('nav.myClaims')} />
+        <PortalViewAllLink to="/lost-found/my-reports" label={t('nav.myReports')} />
       </div>
     </article>
   );
@@ -372,9 +283,9 @@ function RecentUpdatesRail({
 }
 
 /**
- * Relaxed self-service portal for students and employees pairing:
- * - Row 1: 3 friendly self-service action cards (`StudentSummaryGrid`)
- * - Row 2: 8/4 visual 3-step request/claim tracker & recent updates rail
+ * Self-service portal for students and employees pairing:
+ * - Row 1: friendly self-service action cards (`StudentSummaryGrid`)
+ * - Row 2: 8/4 visual 3-step claim/report tracker & recent updates rail
  */
 export function StudentDashboard({ data }: { data: StudentDashboardData }) {
   const { t } = useTranslation();

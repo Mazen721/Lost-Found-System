@@ -1,10 +1,9 @@
 import {
+  FolderSearch,
   PackagePlus,
   PackageSearch,
-  Plus,
   Search,
   ShieldCheck,
-  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -12,15 +11,6 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { StudentDashboard as StudentDashboardData } from '@/types/dashboard';
-import type { RequestStatus } from '@/types/meta';
-
-const ACTIVE_STATUSES: RequestStatus[] = [
-  'SUBMITTED',
-  'UNDER_REVIEW',
-  'APPROVED',
-  'IN_PROGRESS',
-  'REOPENED',
-];
 
 type CardTone = 'navy' | 'gold' | 'emerald';
 
@@ -57,30 +47,25 @@ interface StudentSummaryGridProps {
 }
 
 /**
- * Row 1 of the Student / Employee self-service portal: three spacious action cards
- * for reporting maintenance issues, logging lost/found items, and browsing claims.
+ * Row 1 of the Student / Employee self-service portal: three spacious action
+ * cards for their reports, logging lost/found items, and browsing claims.
  */
 export function StudentSummaryGrid({ data }: StudentSummaryGridProps) {
   const { t } = useTranslation();
 
-  const activeRequests = ACTIVE_STATUSES.reduce(
-    (sum, status) => sum + (data.requests.byStatus[status] ?? 0),
-    0,
-  );
-
   const cards: SelfServiceCardSpec[] = [
     {
-      key: 'report-maintenance',
+      key: 'my-reports',
       tone: 'navy',
-      icon: Wrench,
-      statusPill: t('dashboard.studentActiveRequestsCount', {
-        count: activeRequests,
+      icon: FolderSearch,
+      statusPill: t('dashboard.studentSubmittedReportsCount', {
+        count: data.reports.total,
       }),
-      title: t('dashboard.studentCardMaintenanceTitle'),
-      description: t('dashboard.studentCardMaintenanceDesc'),
-      ctaLabel: t('dashboard.studentCardMaintenanceCta'),
-      ctaIcon: Plus,
-      to: '/maintenance/requests/new',
+      title: t('nav.myReports'),
+      description: t('dashboard.recentReportsDesc'),
+      ctaLabel: t('common.viewAll'),
+      ctaIcon: FolderSearch,
+      to: '/lost-found/my-reports',
       primaryCta: true,
     },
     {

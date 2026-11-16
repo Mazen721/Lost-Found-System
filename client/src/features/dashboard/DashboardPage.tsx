@@ -1,10 +1,8 @@
 import {
-  Inbox,
-  Plus,
+  PackagePlus,
   ShieldCheck,
   Sparkles,
   Users,
-  Wrench,
   type LucideIcon,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -18,8 +16,6 @@ import { Button } from '@/components/ui/button';
 import { InsightsPanel } from '@/features/ai/InsightsPanel';
 import { AdminDashboard } from '@/features/dashboard/AdminDashboard';
 import { ManagerDashboard } from '@/features/dashboard/ManagerDashboard';
-import { OfficerDashboard } from '@/features/dashboard/OfficerDashboard';
-import { TechnicianDashboard } from '@/features/dashboard/TechnicianDashboard';
 import { StudentDashboard } from '@/features/dashboard/StudentDashboard';
 import { DashboardPeriodSelect } from '@/features/dashboard/DashboardPeriodSelect';
 import { dashboardApi } from '@/features/dashboard/dashboardApi';
@@ -45,29 +41,23 @@ const PORTAL_HEADERS: Record<Role, PortalHeaderSpec> = {
     primaryLabelKey: 'dashboard.manageUsers',
     PrimaryIcon: Users,
   },
-  MAINTENANCE_MANAGER: {
+  LOST_FOUND_MANAGER: {
     subtitleKey: 'dashboard.managerSubtitle',
-    primaryTo: '/maintenance/request-queue',
-    primaryLabelKey: 'dashboard.reviewRequests',
-    PrimaryIcon: Inbox,
-  },
-  LOST_FOUND_OFFICER: {
-    subtitleKey: 'dashboard.officerSubtitle',
     primaryTo: '/lost-found/claims',
     primaryLabelKey: 'dashboard.reviewClaims',
     PrimaryIcon: ShieldCheck,
   },
-  TECHNICIAN: {
-    subtitleKey: 'dashboard.technicianSubtitle',
-    primaryTo: '/work-orders',
-    primaryLabelKey: 'nav.myWorkOrders',
-    PrimaryIcon: Wrench,
-  },
-  STUDENT_EMPLOYEE: {
+  STUDENT: {
     subtitleKey: 'dashboard.studentSubtitle',
-    primaryTo: '/maintenance/requests/new',
-    primaryLabelKey: 'dashboard.newMaintenanceRequest',
-    PrimaryIcon: Plus,
+    primaryTo: '/lost-found/report',
+    primaryLabelKey: 'dashboard.reportLostFoundItem',
+    PrimaryIcon: PackagePlus,
+  },
+  EMPLOYEE: {
+    subtitleKey: 'dashboard.studentSubtitle',
+    primaryTo: '/lost-found/report',
+    primaryLabelKey: 'dashboard.reportLostFoundItem',
+    PrimaryIcon: PackagePlus,
   },
 };
 
@@ -75,13 +65,10 @@ function RoleDashboard({ data }: { data: DashboardResponse }) {
   switch (data.role) {
     case 'SUPER_ADMIN':
       return <AdminDashboard data={data} />;
-    case 'MAINTENANCE_MANAGER':
+    case 'LOST_FOUND_MANAGER':
       return <ManagerDashboard data={data} />;
-    case 'TECHNICIAN':
-      return <TechnicianDashboard data={data} />;
-    case 'LOST_FOUND_OFFICER':
-      return <OfficerDashboard data={data} />;
-    case 'STUDENT_EMPLOYEE':
+    case 'STUDENT':
+    case 'EMPLOYEE':
       return <StudentDashboard data={data} />;
     default:
       return null;
@@ -89,7 +76,7 @@ function RoleDashboard({ data }: { data: DashboardResponse }) {
 }
 
 export function DashboardPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [period, setPeriod] = useState<DashboardPeriod>('7d');
   const [aiOpen, setAiOpen] = useState(false);
@@ -105,9 +92,8 @@ export function DashboardPage() {
   const portalHeader = PORTAL_HEADERS[user.role];
   const PrimaryIcon = portalHeader.PrimaryIcon;
   const showHeaderAiDrawer =
-    user.role === 'MAINTENANCE_MANAGER' || user.role === 'SUPER_ADMIN';
-  const showPeriodFilter =
-    user.role !== 'TECHNICIAN' && user.role !== 'STUDENT_EMPLOYEE';
+    user.role === 'LOST_FOUND_MANAGER' || user.role === 'SUPER_ADMIN';
+  const showPeriodFilter = user.role !== 'STUDENT' && user.role !== 'EMPLOYEE';
   const isRoleMatched = Boolean(dashboardQuery.data && dashboardQuery.data.role === user.role);
   const displayName = tr(user, 'name') || user.name;
   const firstName =
@@ -115,7 +101,7 @@ export function DashboardPage() {
       .replace(/^(?:م\.|د\.|أ\.|Eng\.|Dr\.)\s+/i, '')
       .trim()
       .split(/\s+/)[0] ?? displayName;
-  const greetingSeparator = i18n.language === 'ar' ? '، ' : ', ';
+  const greetingSeparator = '، ';
   const errorMessage = dashboardQuery.error ? getErrorMessage(dashboardQuery.error) : null;
 
   const hour = new Date().getHours();
@@ -188,7 +174,7 @@ export function DashboardPage() {
       {showHeaderAiDrawer && aiOpen ? (
         <section aria-label={t('ai.toggleInsights')}>
           <InsightsPanel
-            scope={user.role === 'SUPER_ADMIN' ? 'admin' : 'maintenance'}
+            scope={user.role === 'SUPER_ADMIN' ? 'admin' : 'lost-found'}
             defaultPeriod={period === '7d' || period === '30d' ? period : '7d'}
             onClose={() => setAiOpen(false)}
           />

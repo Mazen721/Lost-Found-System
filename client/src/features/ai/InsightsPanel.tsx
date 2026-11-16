@@ -11,7 +11,7 @@ import { ErrorState } from '@/components/shared/ErrorState';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getErrorMessage } from '@/lib/api';
 import { cn, formatDate, formatNumber } from '@/lib/utils';
-import type { InsightStats, MaintenanceInsightsResponse } from '@/types/insights';
+import type { InsightStats, LostFoundInsightsResponse } from '@/types/insights';
 
 function formatDateTime(value: string): string {
   return formatDate(value, { dateStyle: 'medium', timeStyle: 'short' });
@@ -49,47 +49,40 @@ function PulseTile({ label, value, note, tone = 'default' }: PulseTileProps) {
 
 function ExecutivePulseStrip({
   stats,
-  scope = 'maintenance',
+  scope = 'lost-found',
 }: {
   stats: InsightStats;
-  scope?: 'maintenance' | 'admin';
+  scope?: 'lost-found' | 'admin';
 }) {
   const { t } = useTranslation();
+  const lostFound = stats.lostFound;
 
-  if (scope === 'admin' && stats.users && stats.maintenance && stats.lostFound) {
-    const { users, maintenance, lostFound } = stats;
-    const duePlansCount = maintenance.duePreventivePlans?.length ?? 0;
-    const pendingTriageCount =
-      lostFound.pendingMatchesCount +
-      lostFound.pendingClaimsCount +
-      lostFound.claimsAwaitingHandover;
+  if (!lostFound) {
+    return null;
+  }
 
+  const pendingTriageCount =
+    lostFound.pendingMatchesCount +
+    lostFound.pendingClaimsCount +
+    lostFound.claimsAwaitingHandover;
+
+  if (scope === 'admin' && stats.users) {
+    const { users } = stats;
     return (
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <PulseTile
           label={t('ai.activeAccounts')}
           value={`${formatNumber(users.active)} / ${formatNumber(users.total)}`}
-          note={t('dashboard.adminFieldTechniciansHint', {
-            count: formatNumber(users.technicians),
-          })}
         />
         <PulseTile
-          label={t('ai.openBacklog')}
-          value={maintenance.openBacklog}
-          note={
-            maintenance.overdueWorkOrders > 0
-              ? t('ai.overdueCountInline', {
-                  count: formatNumber(maintenance.overdueWorkOrders),
-                })
-              : t('ai.allClear')
-          }
-          tone={maintenance.overdueWorkOrders > 0 ? 'danger' : 'default'}
+          label={t('ai.openLostItems')}
+          value={lostFound.openLostItems}
+          note={t('ai.totalLostItems', { count: formatNumber(lostFound.totalLostItems) })}
         />
         <PulseTile
-          label={t('ai.duePlansShort')}
-          value={duePlansCount}
-          note={duePlansCount > 0 ? t('dashboard.pendingReview') : t('ai.onSchedule')}
-          tone={duePlansCount > 0 ? 'gold' : 'emerald'}
+          label={t('ai.openFoundItems')}
+          value={lostFound.openFoundItems}
+          note={t('ai.totalFoundItems', { count: formatNumber(lostFound.totalFoundItems) })}
         />
         <PulseTile
           label={t('ai.pendingMatchesClaims')}
@@ -106,29 +99,33 @@ function ExecutivePulseStrip({
     );
   }
 
-  const requests = stats.requests;
-  const workOrders = stats.workOrders;
-  const change = requests?.changePercent;
-  const overdueCount = workOrders?.overdue ?? 0;
-
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <PulseTile
-        label={t('ai.requestsInPeriod')}
-        value={requests?.total ?? '—'}
-        note={
-          change === undefined
-            ? undefined
-            : `${t('ai.changeVsPrevious')}: ${change > 0 ? '+' : ''}${formatNumber(change)}%`
-        }
+        label={t('ai.openLostItems')}
+        value={lostFound.openLostItems}
+        note={t('ai.totalLostItems', { count: formatNumber(lostFound.totalLostItems) })}
       />
-      <PulseTile label={t('ai.openBacklog')} value={requests?.openBacklog ?? '—'} />
-      <PulseTile label={t('ai.activeWorkOrders')} value={workOrders?.active ?? '—'} />
       <PulseTile
-        label={t('ai.overdueWorkOrders')}
-        value={overdueCount}
-        note={overdueCount > 0 ? t('dashboard.managerOverdueHint') : t('ai.allClear')}
-        tone={overdueCount > 0 ? 'danger' : 'emerald'}
+        label={t('ai.openFoundItems')}
+        value={lostFound.openFoundItems}
+        note={t('ai.totalFoundItems', { count: formatNumber(lostFound.totalFoundItems) })}
+      />
+      <PulseTile
+        label={t('ai.pendingMatchesClaims')}
+        value={pendingTriageCount}
+        note={t('ai.matchesAndClaimsSplit', {
+          matches: formatNumber(lostFound.pendingMatchesCount),
+          claims: formatNumber(
+            lostFound.pendingClaimsCount + lostFound.claimsAwaitingHandover,
+          ),
+        })}
+        tone={pendingTriageCount > 0 ? 'gold' : 'emerald'}
+      />
+      <PulseTile
+        label={t('ai.completedHandovers')}
+        value={lostFound.completedHandovers}
+        tone="emerald"
       />
     </div>
   );
@@ -136,23 +133,22 @@ function ExecutivePulseStrip({
 
 interface InsightsPanelProps {
   defaultPeriod?: InsightsPeriod;
-  scope?: 'maintenance' | 'admin';
+  scope?: 'lost-found' | 'admin';
   onClose?: () => void;
 }
 
 export function InsightsPanel({
   defaultPeriod = '7d',
-  scope = 'maintenance',
+  scope = 'lost-found',
   onClose,
 }: InsightsPanelProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [period, setPeriod] = useState<InsightsPeriod>(defaultPeriod);
   const queryClient = useQueryClient();
-  const lang = i18n.language === 'en' ? 'en' : 'ar';
   const queryKey = [
-    scope === 'admin' ? 'admin-insights' : 'maintenance-insights',
+    scope === 'admin' ? 'admin-insights' : 'lost-found-insights',
     period,
-    lang,
+    'ar',
   ] as const;
   const runGenerate =
     scope === 'admin' ? insightsApi.generateAdmin : insightsApi.generate;
@@ -170,7 +166,7 @@ export function InsightsPanel({
 
   const regenerate = useMutation({
     mutationFn: () => runGenerate({ period, regenerate: true }),
-    onSuccess: (data: MaintenanceInsightsResponse) => {
+    onSuccess: (data: LostFoundInsightsResponse) => {
       queryClient.setQueryData(queryKey, data);
       if (data.available) {
         toast.success(t('ai.insights'));

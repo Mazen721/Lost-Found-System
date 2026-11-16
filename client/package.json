@@ -1,9 +1,9 @@
 {
-  "name": "@campuscare/client",
+  "name": "@campuscare-lost-found/client",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "CampusCare SPA — React, Vite, Tailwind, shadcn/ui",
+  "description": "CampusCare Lost & Found SPA — React, Vite, Tailwind, shadcn/ui",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit -p tsconfig.json && vite build",

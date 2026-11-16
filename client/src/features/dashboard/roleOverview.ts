@@ -6,7 +6,6 @@ import {
   ClipboardCheck,
   ClipboardList,
   Eye,
-  FileSearch,
   GitCompareArrows,
   Handshake,
   KeyRound,
@@ -16,7 +15,6 @@ import {
   ShieldCheck,
   UserCog,
   Users,
-  Wrench,
 } from 'lucide-react';
 import type { Role } from '@/types/auth';
 
@@ -59,106 +57,80 @@ export const ROLE_OVERVIEWS: Record<Role, RoleOverview> = {
       },
     ],
   },
-  MAINTENANCE_MANAGER: {
-    summaryKey: 'dashboard.roles.MAINTENANCE_MANAGER.summary',
-    scopeKey: 'dashboard.roles.MAINTENANCE_MANAGER.scope',
+  LOST_FOUND_MANAGER: {
+    summaryKey: 'dashboard.roles.LOST_FOUND_MANAGER.summary',
+    scopeKey: 'dashboard.roles.LOST_FOUND_MANAGER.scope',
     capabilities: [
       {
-        labelKey: 'dashboard.roles.MAINTENANCE_MANAGER.cap1Label',
-        descriptionKey: 'dashboard.roles.MAINTENANCE_MANAGER.cap1Desc',
-        icon: ClipboardCheck,
-      },
-      {
-        labelKey: 'dashboard.roles.MAINTENANCE_MANAGER.cap2Label',
-        descriptionKey: 'dashboard.roles.MAINTENANCE_MANAGER.cap2Desc',
-        icon: Wrench,
-      },
-      {
-        labelKey: 'dashboard.roles.MAINTENANCE_MANAGER.cap3Label',
-        descriptionKey: 'dashboard.roles.MAINTENANCE_MANAGER.cap3Desc',
-        icon: CalendarDays,
-      },
-      {
-        labelKey: 'dashboard.roles.MAINTENANCE_MANAGER.cap4Label',
-        descriptionKey: 'dashboard.roles.MAINTENANCE_MANAGER.cap4Desc',
-        icon: BadgeCheck,
-      },
-    ],
-  },
-  TECHNICIAN: {
-    summaryKey: 'dashboard.roles.TECHNICIAN.summary',
-    scopeKey: 'dashboard.roles.TECHNICIAN.scope',
-    capabilities: [
-      {
-        labelKey: 'dashboard.roles.TECHNICIAN.cap1Label',
-        descriptionKey: 'dashboard.roles.TECHNICIAN.cap1Desc',
-        icon: Wrench,
-      },
-      {
-        labelKey: 'dashboard.roles.TECHNICIAN.cap2Label',
-        descriptionKey: 'dashboard.roles.TECHNICIAN.cap2Desc',
-        icon: ClipboardList,
-      },
-      {
-        labelKey: 'dashboard.roles.TECHNICIAN.cap3Label',
-        descriptionKey: 'dashboard.roles.TECHNICIAN.cap3Desc',
-        icon: CalendarDays,
-      },
-      {
-        labelKey: 'dashboard.roles.TECHNICIAN.cap4Label',
-        descriptionKey: 'dashboard.roles.TECHNICIAN.cap4Desc',
-        icon: FileSearch,
-      },
-    ],
-  },
-  LOST_FOUND_OFFICER: {
-    summaryKey: 'dashboard.roles.LOST_FOUND_OFFICER.summary',
-    scopeKey: 'dashboard.roles.LOST_FOUND_OFFICER.scope',
-    capabilities: [
-      {
-        labelKey: 'dashboard.roles.LOST_FOUND_OFFICER.cap1Label',
-        descriptionKey: 'dashboard.roles.LOST_FOUND_OFFICER.cap1Desc',
+        labelKey: 'dashboard.roles.LOST_FOUND_MANAGER.cap1Label',
+        descriptionKey: 'dashboard.roles.LOST_FOUND_MANAGER.cap1Desc',
         icon: PackageSearch,
       },
       {
-        labelKey: 'dashboard.roles.LOST_FOUND_OFFICER.cap2Label',
-        descriptionKey: 'dashboard.roles.LOST_FOUND_OFFICER.cap2Desc',
+        labelKey: 'dashboard.roles.LOST_FOUND_MANAGER.cap2Label',
+        descriptionKey: 'dashboard.roles.LOST_FOUND_MANAGER.cap2Desc',
         icon: GitCompareArrows,
       },
       {
-        labelKey: 'dashboard.roles.LOST_FOUND_OFFICER.cap3Label',
-        descriptionKey: 'dashboard.roles.LOST_FOUND_OFFICER.cap3Desc',
+        labelKey: 'dashboard.roles.LOST_FOUND_MANAGER.cap3Label',
+        descriptionKey: 'dashboard.roles.LOST_FOUND_MANAGER.cap3Desc',
         icon: ShieldCheck,
       },
       {
-        labelKey: 'dashboard.roles.LOST_FOUND_OFFICER.cap4Label',
-        descriptionKey: 'dashboard.roles.LOST_FOUND_OFFICER.cap4Desc',
+        labelKey: 'dashboard.roles.LOST_FOUND_MANAGER.cap4Label',
+        descriptionKey: 'dashboard.roles.LOST_FOUND_MANAGER.cap4Desc',
         icon: Handshake,
       },
     ],
   },
-  STUDENT_EMPLOYEE: {
-    summaryKey: 'dashboard.roles.STUDENT_EMPLOYEE.summary',
-    scopeKey: 'dashboard.roles.STUDENT_EMPLOYEE.scope',
+  STUDENT: {
+    summaryKey: 'dashboard.roles.STUDENT.summary',
+    scopeKey: 'dashboard.roles.STUDENT.scope',
     capabilities: [
       {
-        labelKey: 'dashboard.roles.STUDENT_EMPLOYEE.cap1Label',
-        descriptionKey: 'dashboard.roles.STUDENT_EMPLOYEE.cap1Desc',
+        labelKey: 'dashboard.roles.STUDENT.cap1Label',
+        descriptionKey: 'dashboard.roles.STUDENT.cap1Desc',
         icon: ClipboardList,
       },
       {
-        labelKey: 'dashboard.roles.STUDENT_EMPLOYEE.cap2Label',
-        descriptionKey: 'dashboard.roles.STUDENT_EMPLOYEE.cap2Desc',
+        labelKey: 'dashboard.roles.STUDENT.cap2Label',
+        descriptionKey: 'dashboard.roles.STUDENT.cap2Desc',
         icon: ClipboardCheck,
       },
       {
-        labelKey: 'dashboard.roles.STUDENT_EMPLOYEE.cap3Label',
-        descriptionKey: 'dashboard.roles.STUDENT_EMPLOYEE.cap3Desc',
+        labelKey: 'dashboard.roles.STUDENT.cap3Label',
+        descriptionKey: 'dashboard.roles.STUDENT.cap3Desc',
         icon: PackageSearch,
       },
       {
-        labelKey: 'dashboard.roles.STUDENT_EMPLOYEE.cap4Label',
-        descriptionKey: 'dashboard.roles.STUDENT_EMPLOYEE.cap4Desc',
+        labelKey: 'dashboard.roles.STUDENT.cap4Label',
+        descriptionKey: 'dashboard.roles.STUDENT.cap4Desc',
+        icon: BadgeCheck,
+      },
+    ],
+  },
+  EMPLOYEE: {
+    summaryKey: 'dashboard.roles.EMPLOYEE.summary',
+    scopeKey: 'dashboard.roles.EMPLOYEE.scope',
+    capabilities: [
+      {
+        labelKey: 'dashboard.roles.EMPLOYEE.cap1Label',
+        descriptionKey: 'dashboard.roles.EMPLOYEE.cap1Desc',
+        icon: ClipboardList,
+      },
+      {
+        labelKey: 'dashboard.roles.EMPLOYEE.cap2Label',
+        descriptionKey: 'dashboard.roles.EMPLOYEE.cap2Desc',
+        icon: ClipboardCheck,
+      },
+      {
+        labelKey: 'dashboard.roles.EMPLOYEE.cap3Label',
+        descriptionKey: 'dashboard.roles.EMPLOYEE.cap3Desc',
+        icon: PackageSearch,
+      },
+      {
+        labelKey: 'dashboard.roles.EMPLOYEE.cap4Label',
+        descriptionKey: 'dashboard.roles.EMPLOYEE.cap4Desc',
         icon: BadgeCheck,
       },
     ],

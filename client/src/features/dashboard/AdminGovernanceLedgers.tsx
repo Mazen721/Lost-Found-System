@@ -21,15 +21,9 @@ import type { ActivityLogRecord } from '@/types/activityLogs';
 import type { AdminDashboard as AdminDashboardData } from '@/types/dashboard';
 import type { UserRecord } from '@/types/users';
 
-type AuditModuleFilter = 'ALL' | 'MAINTENANCE' | 'LOST_FOUND' | 'GOVERNANCE';
+type AuditModuleFilter = 'ALL' | 'LOST_FOUND' | 'GOVERNANCE';
 
 const AUDIT_MODULE_ENTITIES: Record<Exclude<AuditModuleFilter, 'ALL'>, ReadonlySet<string>> = {
-  MAINTENANCE: new Set([
-    'MaintenanceRequest',
-    'WorkOrder',
-    'PreventivePlan',
-    'ServiceFeedback',
-  ]),
   LOST_FOUND: new Set(['LostFoundItem', 'ItemMatch', 'ClaimRequest']),
   GOVERNANCE: new Set(['User', 'Location']),
 };
@@ -79,7 +73,6 @@ function AuditTrailCard() {
 
   const filterTabs: Array<{ id: AuditModuleFilter; label: string }> = [
     { id: 'ALL', label: t('dashboard.adminAuditFilterAll') },
-    { id: 'MAINTENANCE', label: t('dashboard.adminAuditFilterMaintenance') },
     { id: 'LOST_FOUND', label: t('dashboard.adminAuditFilterLostFound') },
     { id: 'GOVERNANCE', label: t('dashboard.adminAuditFilterGovernance') },
   ];

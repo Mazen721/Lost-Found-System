@@ -51,7 +51,7 @@ export function ClaimDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const isOfficer = user?.role === 'LOST_FOUND_OFFICER';
+  const isManager = user?.role === 'LOST_FOUND_MANAGER';
   const [reviewAction, setReviewAction] = useState<ClaimReviewAction | null>(null);
   const [handoverOpen, setHandoverOpen] = useState(false);
 
@@ -91,13 +91,13 @@ export function ClaimDetailPage() {
     );
   }
 
-  const officerActions =
-    isOfficer && claim.status === 'PENDING_REVIEW' ? (
+  const managerActions =
+    isManager && claim.status === 'PENDING_REVIEW' ? (
       <Button variant="outline" onClick={() => setReviewAction('START_VERIFICATION')}>
         <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
         {t('claims.startVerificationAction')}
       </Button>
-    ) : isOfficer && claim.status === 'UNDER_VERIFICATION' ? (
+    ) : isManager && claim.status === 'UNDER_VERIFICATION' ? (
       <>
         <Button variant="outline" onClick={() => setReviewAction('REJECT')}>
           <XCircle className="h-4 w-4" aria-hidden="true" />
@@ -108,7 +108,7 @@ export function ClaimDetailPage() {
           {t('claims.approveAction')}
         </Button>
       </>
-    ) : isOfficer && claim.status === 'APPROVED' ? (
+    ) : isManager && claim.status === 'APPROVED' ? (
       <Button onClick={() => setHandoverOpen(true)}>
         <Handshake className="h-4 w-4" aria-hidden="true" />
         {t('claims.recordHandoverAction')}
@@ -129,7 +129,7 @@ export function ClaimDetailPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={claim.status} />
-            {officerActions}
+            {managerActions}
           </div>
         }
       />
@@ -216,7 +216,7 @@ export function ClaimDetailPage() {
             </Card>
           ) : null}
 
-          {isOfficer && claim.item?.privateIdentificationDetails ? (
+          {isManager && claim.item?.privateIdentificationDetails ? (
             <Card className="border-amber-300/70 bg-amber-50/60">
               <CardHeader className="border-b border-amber-200/70">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -291,7 +291,7 @@ export function ClaimDetailPage() {
               <CardContent className="space-y-3 pt-5 text-sm">
                 {claim.reviewedBy ? (
                   <p className="text-xs text-muted-foreground">
-                    {t('requests.reviewedBy')} <span className="font-medium text-foreground"><bdi>{claim.reviewedBy.name}</bdi></span>
+                    {t('claims.reviewedBy')} <span className="font-medium text-foreground"><bdi>{claim.reviewedBy.name}</bdi></span>
                     {claim.reviewedAt
                       ? ` · ${formatDate(claim.reviewedAt, {
                           dateStyle: 'medium',

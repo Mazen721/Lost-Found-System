@@ -1,5 +1,4 @@
-import type { AuthUser, TechnicianAvailability } from '@/types/auth';
-import type { MaintenanceCategory } from '@/types/meta';
+import type { AuthUser } from '@/types/auth';
 
 export type UserRecord = AuthUser;
 
@@ -12,10 +11,6 @@ export interface CreateUserInput {
   department?: string;
   departmentAr?: string;
   contactPhone?: string;
-  specializations?: MaintenanceCategory[];
-  skills?: string[];
-  skillsAr?: string[];
-  availability?: TechnicianAvailability;
 }
 
 export type UpdateUserInput = Partial<Omit<CreateUserInput, 'password'>>;

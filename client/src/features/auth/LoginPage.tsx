@@ -2,12 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AlertCircle,
   ArrowRight,
-  ClipboardList,
+  Briefcase,
   GraduationCap,
   Loader2,
   PackageSearch,
   ShieldCheck,
-  Wrench,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -17,7 +16,6 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import type { TFunction } from 'i18next';
 import { FormField } from '@/components/shared/FormField';
-import { LanguageToggle } from '@/components/shared/LanguageToggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
@@ -41,10 +39,9 @@ export type LoginValues = z.infer<LoginSchema>;
 
 const DEMO_ROLES: Array<{ role: Role; icon: typeof ShieldCheck }> = [
   { role: 'SUPER_ADMIN', icon: ShieldCheck },
-  { role: 'MAINTENANCE_MANAGER', icon: ClipboardList },
-  { role: 'TECHNICIAN', icon: Wrench },
-  { role: 'LOST_FOUND_OFFICER', icon: PackageSearch },
-  { role: 'STUDENT_EMPLOYEE', icon: GraduationCap },
+  { role: 'LOST_FOUND_MANAGER', icon: PackageSearch },
+  { role: 'STUDENT', icon: GraduationCap },
+  { role: 'EMPLOYEE', icon: Briefcase },
 ];
 
 interface DemoRoleStripProps {
@@ -99,9 +96,6 @@ function PortalBackdrop() {
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 bg-gradient-to-b from-[hsl(var(--mnu-navy)/0.36)] via-[hsl(var(--mnu-navy)/0.44)] to-[hsl(var(--mnu-navy)/0.60)]"
       />
-      <div className="fixed end-4 top-4 z-20 sm:end-6 sm:top-6">
-        <LanguageToggle className="rounded-full border border-white/25 bg-[hsl(var(--mnu-navy)/0.78)] px-3.5 text-white shadow-sm backdrop-blur-md hover:border-[hsl(var(--mnu-gold)/0.85)] hover:bg-[hsl(var(--mnu-navy)/0.92)] hover:text-white focus-visible:ring-[hsl(var(--mnu-gold))] focus-visible:ring-offset-0" />
-      </div>
     </>
   );
 }

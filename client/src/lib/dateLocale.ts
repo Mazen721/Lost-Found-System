@@ -1,8 +1,7 @@
 import { format, formatDistanceToNow } from 'date-fns';
-import { arEG, enUS } from 'date-fns/locale';
-import { getLang } from '@/i18n';
+import { arEG } from 'date-fns/locale';
 
-export const dateFnsLocale = () => (getLang() === 'ar' ? arEG : enUS);
+export const dateFnsLocale = () => arEG;
 
 const EASTERN_DIGITS = '٠١٢٣٤٥٦٧٨٩';
 

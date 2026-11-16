@@ -3,10 +3,6 @@ import type { Role } from '@/types/auth';
 export const ACTIVITY_ENTITY_TYPES = [
   'User',
   'Location',
-  'MaintenanceRequest',
-  'WorkOrder',
-  'PreventivePlan',
-  'ServiceFeedback',
   'LostFoundItem',
   'ItemMatch',
   'ClaimRequest',

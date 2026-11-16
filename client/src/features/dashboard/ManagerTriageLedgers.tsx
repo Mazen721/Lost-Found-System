@@ -1,199 +1,126 @@
 import { useQuery } from '@tanstack/react-query';
 import type { TFunction } from 'i18next';
-import { CheckCircle2, Inbox, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { GitCompareArrows, Handshake, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { LoadingState } from '@/components/shared/LoadingState';
-import { PriorityBadge } from '@/components/shared/PriorityBadge';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { Badge } from '@/components/ui/badge';
 import { PortalViewAllLink } from '@/features/dashboard/PortalViewAllLink';
-import { requestsApi } from '@/features/maintenance/requests/requestsApi';
-import { workOrdersApi } from '@/features/maintenance/work-orders/workOrdersApi';
-import { pickLang, tr } from '@/i18n/localize';
+import { claimsApi } from '@/features/lost-found/claims/claimsApi';
+import { matchesApi } from '@/features/lost-found/matches/matchesApi';
+import { formatLocation, tr } from '@/i18n/localize';
 import { getErrorMessage } from '@/lib/api';
 import { cn, formatDate, formatNumber } from '@/lib/utils';
-import type { ManagerMetrics } from '@/types/dashboard';
-import type { MaintenanceRequestRecord } from '@/types/maintenance';
-import type { Priority } from '@/types/meta';
-import type { WorkOrderRecord } from '@/types/workOrders';
+import type { ClaimRecord } from '@/types/claims';
+import type { ManagerDashboard as ManagerDashboardData } from '@/types/dashboard';
+import type { ItemMatch } from '@/types/matches';
 
-const PRIORITY_RANK: Record<Priority, number> = {
-  CRITICAL: 0,
-  HIGH: 1,
-  MEDIUM: 2,
-  LOW: 3,
-};
+type ManagerTriageTab = 'claims' | 'matches';
 
-type TriageTab = 'unassigned' | 'overdue';
-
-interface TriageRowItem {
+interface TriageRowData {
   id: string;
   to: string;
   title: string;
   code: string;
-  building: string;
+  location: string;
   date: string;
-  priority: Priority;
-  status: string;
   actionLabel: string;
-  usePriorityBadge: boolean;
+  badge:
+    | { kind: 'status'; status: string }
+    | { kind: 'match'; score: number; level: ItemMatch['level'] };
 }
 
-interface HealthMetricItem {
+interface PipelineStage {
   key: string;
   label: string;
-  value: string;
+  count: number;
   pct: number;
   barClass: string;
 }
 
-function isWorkOrderOverdue(workOrder: WorkOrderRecord): boolean {
-  if (workOrder.status === 'COMPLETED' || workOrder.status === 'CANCELLED') {
-    return false;
-  }
-  if (!workOrder.expectedCompletion) {
-    return false;
-  }
-  return new Date(workOrder.expectedCompletion).getTime() < Date.now();
+function buildClaimRows(claims: ClaimRecord[], t: TFunction): TriageRowData[] {
+  const fallbackLocation = t('common.none');
+
+  return claims.map((claim) => {
+    const title = claim.item ? tr(claim.item, 'itemTitle') : t('dashboard.unknownItem');
+    const itemLocation = claim.item?.location ? formatLocation(claim.item.location) : '';
+    const claimantName = claim.claimant ? tr(claim.claimant, 'name') : '';
+    const location = itemLocation || claimantName || fallbackLocation;
+
+    return {
+      id: `claim-${claim.id}`,
+      to: `/lost-found/claims/${claim.id}`,
+      title,
+      code: claim.claimNumber,
+      location,
+      date: claim.createdAt,
+      actionLabel:
+        claim.status === 'APPROVED' ? t('dashboard.actionHandover') : t('dashboard.actionVerify'),
+      badge: { kind: 'status', status: claim.status },
+    };
+  });
 }
 
-function getBuildingLabel(
-  location: { buildingName: string; buildingNameAr?: string } | null | undefined,
-  fallback: string,
-): string {
-  if (!location) return fallback;
-  return pickLang(location.buildingName, location.buildingNameAr) || fallback;
+function buildMatchRows(matches: ItemMatch[], t: TFunction): TriageRowData[] {
+  const fallbackLocation = t('common.none');
+
+  return matches.map((match) => {
+    const lostTitle = match.lostItem ? tr(match.lostItem, 'itemTitle') : t('dashboard.unknownItem');
+    const foundTitle = match.foundItem
+      ? tr(match.foundItem, 'itemTitle')
+      : t('dashboard.unknownItem');
+    const lostCode = match.lostItem?.reportNumber ?? '—';
+    const foundCode = match.foundItem?.reportNumber ?? '—';
+    const location =
+      (match.foundItem?.location ? formatLocation(match.foundItem.location) : '') ||
+      (match.lostItem?.location ? formatLocation(match.lostItem.location) : '') ||
+      fallbackLocation;
+
+    return {
+      id: `match-${match.id}`,
+      to: '/lost-found/matches',
+      title: `${lostTitle} ↔ ${foundTitle}`,
+      code: `${lostCode} ↔ ${foundCode}`,
+      location,
+      date: match.createdAt,
+      actionLabel: t('dashboard.actionCompare'),
+      badge: { kind: 'match', score: Math.round(match.score), level: match.level },
+    };
+  });
 }
 
-function comparePriorityAsc(a: Priority, b: Priority): number {
-  return (PRIORITY_RANK[a] ?? 4) - (PRIORITY_RANK[b] ?? 4);
-}
-
-function buildUnassignedRows(
-  workOrders: WorkOrderRecord[],
-  requests: MaintenanceRequestRecord[],
+function buildPipelineStages(
+  counts: ManagerDashboardData['counts'],
   t: TFunction,
-): TriageRowItem[] {
-  const fallbackBuilding = t('common.none');
-
-  const workOrderRows: TriageRowItem[] = workOrders.map((wo) => ({
-    id: `wo-${wo.id}`,
-    to: `/work-orders/${wo.id}`,
-    title: tr(wo, 'title'),
-    code: wo.workOrderNumber,
-    building: getBuildingLabel(wo.location, fallbackBuilding),
-    date: wo.expectedCompletion ?? wo.createdAt,
-    priority: wo.priority,
-    status: wo.status,
-    actionLabel: t('dashboard.actionAssign'),
-    usePriorityBadge: wo.priority === 'CRITICAL' || wo.priority === 'HIGH',
-  }));
-
-  const requestRows: TriageRowItem[] = requests.map((req) => ({
-    id: `req-${req.id}`,
-    to: `/maintenance/requests/${req.id}`,
-    title: tr(req, 'title'),
-    code: req.requestNumber,
-    building: getBuildingLabel(req.location, fallbackBuilding),
-    date: req.createdAt,
-    priority: req.priority,
-    status: req.status,
-    actionLabel: t('dashboard.actionReview'),
-    usePriorityBadge: req.priority === 'CRITICAL' || req.priority === 'HIGH',
-  }));
-
-  return [...workOrderRows, ...requestRows]
-    .sort((a, b) => {
-      const priorityDiff = comparePriorityAsc(a.priority, b.priority);
-      if (priorityDiff !== 0) return priorityDiff;
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    })
-    .slice(0, 5);
-}
-
-function buildOverdueRows(workOrders: WorkOrderRecord[], t: TFunction): TriageRowItem[] {
-  const fallbackBuilding = t('common.none');
-
-  return workOrders.slice(0, 5).map((wo) => ({
-    id: `overdue-${wo.id}`,
-    to: `/work-orders/${wo.id}`,
-    title: tr(wo, 'title'),
-    code: wo.workOrderNumber,
-    building: getBuildingLabel(wo.location, fallbackBuilding),
-    date: wo.expectedCompletion ?? wo.createdAt,
-    priority: wo.priority,
-    status: 'OVERDUE',
-    actionLabel: t('dashboard.actionInspect'),
-    usePriorityBadge: false,
-  }));
-}
-
-function buildHealthBreakdown(metrics: ManagerMetrics, t: TFunction): HealthMetricItem[] {
-  const totalWorkOrders = metrics.activeWorkOrders + metrics.completedWorkOrders;
-  const openAndCompleted = Math.max(totalWorkOrders, metrics.overdueWorkOrders);
-  const onTimeSlaPct =
-    openAndCompleted > 0
-      ? Math.max(
-          0,
-          Math.round(((openAndCompleted - metrics.overdueWorkOrders) / openAndCompleted) * 100),
-        )
-      : 0;
-
-  const resolvedRequests =
-    metrics.requestsByStatus.COMPLETED + metrics.requestsByStatus.CLOSED;
-  const resolutionRatePct =
-    metrics.totalRequests > 0 ? Math.round((resolvedRequests / metrics.totalRequests) * 100) : 0;
-  const woCompletionPct =
-    totalWorkOrders > 0 ? Math.round((metrics.completedWorkOrders / totalWorkOrders) * 100) : 0;
-  const serviceRatingPct =
-    metrics.feedback.averageRating !== null
-      ? Math.round((metrics.feedback.averageRating / 5) * 100)
-      : 0;
-
-  const slaBarTone =
-    onTimeSlaPct >= 85
-      ? 'bg-emerald-600'
-      : onTimeSlaPct >= 60
-        ? 'bg-amber-600'
-        : 'bg-destructive';
+): PipelineStage[] {
+  const total = counts.openLostItems + counts.openFoundItems + counts.completedHandovers;
+  const pctFor = (value: number) => (total > 0 ? Math.round((value / total) * 100) : 0);
 
   return [
     {
-      key: 'sla',
-      label: t('dashboard.onTimeSlaRate'),
-      value: `${formatNumber(onTimeSlaPct)}%`,
-      pct: onTimeSlaPct,
-      barClass: slaBarTone,
-    },
-    {
-      key: 'resolution',
-      label: t('dashboard.resolutionRate'),
-      value: `${formatNumber(resolutionRatePct)}%`,
-      pct: resolutionRatePct,
+      key: 'unmatched-lost',
+      label: t('dashboard.unmatchedLostReports'),
+      count: counts.openLostItems,
+      pct: pctFor(counts.openLostItems),
       barClass: 'bg-primary',
     },
     {
-      key: 'completion',
-      label: t('dashboard.workOrderCompletionRate'),
-      value: `${formatNumber(woCompletionPct)}%`,
-      pct: woCompletionPct,
-      barClass: 'bg-emerald-600',
+      key: 'verified-inventory',
+      label: t('dashboard.verifiedInventory'),
+      count: counts.openFoundItems,
+      pct: pctFor(counts.openFoundItems),
+      barClass: 'bg-amber-600',
     },
     {
-      key: 'quality',
-      label: t('dashboard.serviceQuality'),
-      value:
-        metrics.feedback.averageRating !== null
-          ? `${formatNumber(metrics.feedback.averageRating, {
-              minimumFractionDigits: 1,
-              maximumFractionDigits: 1,
-            })} / 5`
-          : t('dashboard.noRatingYet'),
-      pct: serviceRatingPct,
-      barClass: 'bg-amber-600',
+      key: 'returned-items',
+      label: t('dashboard.returnedItemsPipeline'),
+      count: counts.completedHandovers,
+      pct: pctFor(counts.completedHandovers),
+      barClass: 'bg-emerald-600',
     },
   ];
 }
@@ -202,13 +129,11 @@ function TriageTabButton({
   selected,
   label,
   count,
-  alertTone = false,
   onClick,
 }: {
   selected: boolean;
   label: string;
   count: number;
-  alertTone?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -223,19 +148,16 @@ function TriageTabButton({
       )}
     >
       <span>{label}</span>
-      <span
-        className={cn(
-          'rounded-full px-1.5 py-0.5 text-[11px] font-semibold tabular-nums',
-          alertTone ? 'bg-destructive/10 text-destructive' : 'bg-secondary text-foreground',
-        )}
-      >
+      <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-foreground">
         {formatNumber(count)}
       </span>
     </button>
   );
 }
 
-function TriageLedgerRow({ item }: { item: TriageRowItem }) {
+function ManagerTriageRow({ item }: { item: TriageRowData }) {
+  const { t } = useTranslation();
+
   return (
     <li className="flex flex-col gap-3 px-6 py-4 transition-colors hover:bg-secondary/35 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 flex-1 space-y-1">
@@ -247,18 +169,36 @@ function TriageLedgerRow({ item }: { item: TriageRowItem }) {
             {item.code}
           </span>
           <span aria-hidden="true">•</span>
-          <bdi className="truncate">{item.building}</bdi>
+          <bdi className="truncate">{item.location}</bdi>
           <span aria-hidden="true">•</span>
           <span className="tabular-nums">{formatDate(item.date)}</span>
         </p>
       </div>
 
       <div className="flex shrink-0 items-center gap-2.5">
-        {item.usePriorityBadge ? (
-          <PriorityBadge priority={item.priority} />
+        {item.badge.kind === 'status' ? (
+          <StatusBadge status={item.badge.status} />
         ) : (
-          <StatusBadge status={item.status} />
+          <Badge
+            variant="outline"
+            className={cn(
+              'shrink-0 tabular-nums',
+              item.badge.level === 'STRONG'
+                ? 'border-emerald-500/25 bg-emerald-500/10 font-semibold text-emerald-700'
+                : 'border-amber-500/30 bg-amber-500/[0.12] font-medium text-amber-800',
+            )}
+          >
+            <span
+              className={cn(
+                'h-1.5 w-1.5 rounded-full',
+                item.badge.level === 'STRONG' ? 'bg-emerald-600' : 'bg-amber-600',
+              )}
+              aria-hidden="true"
+            />
+            {t('dashboard.matchScorePill', { score: formatNumber(item.badge.score) })}
+          </Badge>
         )}
+
         <Link
           to={item.to}
           className="inline-flex h-8 items-center rounded-lg border border-border/80 bg-card px-3 text-xs font-semibold text-foreground transition-colors hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -270,141 +210,36 @@ function TriageLedgerRow({ item }: { item: TriageRowItem }) {
   );
 }
 
-function TriageQueuePanel({
-  activeTab,
-  onTabChange,
-  unassignedTotal,
-  overdueTotal,
-  rows,
-  isLoading,
-  activeError,
-  onRetry,
-}: {
-  activeTab: TriageTab;
-  onTabChange: (tab: TriageTab) => void;
-  unassignedTotal: number;
-  overdueTotal: number;
-  rows: TriageRowItem[];
-  isLoading: boolean;
-  activeError: string | null;
-  onRetry: () => void;
-}) {
+function RecoveryPipelinePanel({ counts }: { counts: ManagerDashboardData['counts'] }) {
   const { t } = useTranslation();
-
-  return (
-    <div className="flex min-w-0 flex-col rounded-xl border border-border/80 bg-card shadow-xs lg:col-span-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/75 px-6 py-4">
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold tracking-[-0.01em] text-foreground">
-            {t('dashboard.triageQueueTitle')}
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {t('dashboard.triageQueueDesc')}
-          </p>
-        </div>
-
-        <div
-          role="tablist"
-          aria-label={t('dashboard.triageQueueTitle')}
-          className="inline-flex rounded-lg border border-border/80 bg-secondary/50 p-1 text-xs"
-        >
-          <TriageTabButton
-            selected={activeTab === 'unassigned'}
-            label={t('dashboard.unassignedQueueTab')}
-            count={unassignedTotal}
-            onClick={() => onTabChange('unassigned')}
-          />
-          <TriageTabButton
-            selected={activeTab === 'overdue'}
-            label={t('dashboard.overdueEscalationsTab')}
-            count={overdueTotal}
-            alertTone={overdueTotal > 0}
-            onClick={() => onTabChange('overdue')}
-          />
-        </div>
-      </div>
-
-      <div className="flex flex-1 flex-col">
-        {isLoading ? (
-          <LoadingState
-            label={t('common.loading')}
-            className="min-h-[240px] flex-1 border-0 bg-transparent px-6 py-8"
-          />
-        ) : activeError ? (
-          <ErrorState
-            message={activeError}
-            onRetry={onRetry}
-            className="min-h-[240px] flex-1 border-0 bg-transparent px-6 py-8"
-          />
-        ) : rows.length === 0 ? (
-          <EmptyState
-            title={
-              activeTab === 'unassigned'
-                ? t('dashboard.noUnassignedQueueTitle')
-                : t('dashboard.noOverdueEscalationsTitle')
-            }
-            description={
-              activeTab === 'unassigned'
-                ? t('dashboard.noUnassignedQueueDesc')
-                : t('dashboard.noOverdueEscalationsDesc')
-            }
-            icon={activeTab === 'unassigned' ? Inbox : CheckCircle2}
-            className="min-h-[240px] flex-1 border-0 bg-transparent px-6 py-8"
-          />
-        ) : (
-          <ul className="divide-y divide-border/75">
-            {rows.map((item) => (
-              <TriageLedgerRow key={item.id} item={item} />
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between border-t border-border/75 px-6 py-3">
-        <span className="text-xs text-muted-foreground tabular-nums">
-          {activeTab === 'unassigned'
-            ? t('dashboard.awaitingReviewCount', { count: formatNumber(unassignedTotal) })
-            : t('dashboard.overdueCountPill', { count: formatNumber(overdueTotal) })}
-        </span>
-        <PortalViewAllLink
-          to={activeTab === 'unassigned' ? '/maintenance/request-queue' : '/work-orders'}
-          label={t('common.viewAll')}
-        />
-      </div>
-    </div>
-  );
-}
-
-function SlaHealthPanel({ metrics }: { metrics: ManagerMetrics }) {
-  const { t } = useTranslation();
-  const healthBreakdown = buildHealthBreakdown(metrics, t);
+  const stages = buildPipelineStages(counts, t);
 
   return (
     <div className="flex min-w-0 flex-col justify-between rounded-xl border border-border/80 bg-card p-6 shadow-xs lg:col-span-4">
       <div className="space-y-5">
         <div className="border-b border-border/75 pb-4">
           <h2 className="flex items-center gap-2 text-base font-semibold tracking-[-0.01em] text-foreground">
-            <ShieldCheck className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-            <span>{t('dashboard.slaHealthTitle')}</span>
+            <Handshake className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+            <span>{t('dashboard.recoveryPipelineTitle')}</span>
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            {t('dashboard.slaHealthDesc')}
+            {t('dashboard.recoveryPipelineDesc')}
           </p>
         </div>
 
         <div className="space-y-4">
-          {healthBreakdown.map((metric) => (
-            <div key={metric.key} className="space-y-1.5">
+          {stages.map((stage) => (
+            <div key={stage.key} className="space-y-1.5">
               <div className="flex items-center justify-between gap-2 text-xs">
-                <span className="font-medium text-foreground">{metric.label}</span>
+                <span className="truncate font-medium text-foreground">{stage.label}</span>
                 <span className="shrink-0 font-semibold tabular-nums text-muted-foreground">
-                  {metric.value}
+                  {formatNumber(stage.count)}
                 </span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
                 <div
-                  className={cn('h-full rounded-full transition-[width] duration-200', metric.barClass)}
-                  style={{ width: `${Math.max(0, Math.min(100, metric.pct))}%` }}
+                  className={cn('h-full rounded-full transition-[width] duration-200', stage.barClass)}
+                  style={{ width: `${Math.max(0, Math.min(100, stage.pct))}%` }}
                 />
               </div>
             </div>
@@ -412,135 +247,180 @@ function SlaHealthPanel({ metrics }: { metrics: ManagerMetrics }) {
         </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/45 px-4 py-3 text-xs">
+      <Link
+        to="/lost-found/handovers"
+        className="mt-6 flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-secondary/45 px-4 py-3 text-xs transition-colors hover:bg-secondary/75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
         <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
-          <TriangleAlert
+          <ShieldCheck
             className={cn(
               'h-3.5 w-3.5 shrink-0',
-              metrics.overdueWorkOrders > 0 ? 'text-destructive' : 'text-emerald-600',
+              counts.claimsAwaitingHandover > 0 ? 'text-emerald-600' : 'text-muted-foreground',
             )}
             aria-hidden="true"
           />
-          <span>{t('dashboard.overdue')}</span>
+          <span>{t('dashboard.awaitingHandover')}</span>
         </span>
         <span
           className={cn(
             'font-bold tabular-nums',
-            metrics.overdueWorkOrders > 0 ? 'text-destructive' : 'text-emerald-700',
+            counts.claimsAwaitingHandover > 0 ? 'text-emerald-700' : 'text-foreground',
           )}
         >
-          {formatNumber(metrics.overdueWorkOrders)}
+          {formatNumber(counts.claimsAwaitingHandover)}
         </span>
-      </div>
+      </Link>
     </div>
   );
 }
 
+interface ManagerTriageLedgersProps {
+  counts: ManagerDashboardData['counts'];
+}
+
 /**
- * Spacious 12-column Bento workspace pairing a tabbed triage/escalation ledger (8 cols)
- * with an SLA Health & Resolution Rate breakdown card (4 cols).
+ * Spacious 12-column Bento workspace pairing a tabbed Claims & AI Matches
+ * triage queue (8 cols) with a Recovery Pipeline secondary rail (4 cols).
  */
-export function ManagerTriageLedgers({ metrics }: { metrics: ManagerMetrics }) {
+export function ManagerTriageLedgers({ counts }: ManagerTriageLedgersProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<TriageTab>('unassigned');
+  const [activeTab, setActiveTab] = useState<ManagerTriageTab>('claims');
 
-  const requestsQuery = useQuery({
-    queryKey: ['maintenance-requests', 'manager-dashboard-triage'],
+  const claimsQuery = useQuery({
+    queryKey: ['lost-found-claims', 'manager-dashboard-triage'],
     queryFn: async () => {
-      const [submitted, reopened, underReview] = await Promise.all([
-        requestsApi.list({ status: 'SUBMITTED', limit: 6 }),
-        requestsApi.list({ status: 'REOPENED', limit: 6 }),
-        requestsApi.list({ status: 'UNDER_REVIEW', limit: 6 }),
+      const [verifying, pending, approved] = await Promise.all([
+        claimsApi.list({ status: 'UNDER_VERIFICATION', limit: 5 }),
+        claimsApi.list({ status: 'PENDING_REVIEW', limit: 5 }),
+        claimsApi.list({ status: 'APPROVED', limit: 5 }),
       ]);
-
-      const merged = new Map<string, (typeof submitted.data)[number]>();
-      [...reopened.data, ...submitted.data, ...underReview.data].forEach((request) => {
-        merged.set(request.id, request);
-      });
-
+      const items = [...verifying.data, ...pending.data, ...approved.data]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5);
       return {
-        items: [...merged.values()],
-        total: submitted.total + reopened.total + underReview.total,
+        items,
+        total: verifying.total + pending.total + approved.total,
       };
     },
   });
 
-  const workOrdersQuery = useQuery({
-    queryKey: ['work-orders', 'manager-dashboard-dispatch'],
-    queryFn: async () => {
-      const [pendingAssignment, assigned, inProgress] = await Promise.all([
-        workOrdersApi.list({ status: 'PENDING_ASSIGNMENT', limit: 10 }),
-        workOrdersApi.list({ status: 'ASSIGNED', limit: 15 }),
-        workOrdersApi.list({ status: 'IN_PROGRESS', limit: 15 }),
-      ]);
-
-      const allOpen = new Map<string, WorkOrderRecord>();
-      [...pendingAssignment.data, ...assigned.data, ...inProgress.data].forEach((wo) => {
-        allOpen.set(wo.id, wo);
-      });
-
-      const overdue = [...allOpen.values()]
-        .filter(isWorkOrderOverdue)
-        .sort((a, b) => {
-          const priorityDiff = comparePriorityAsc(a.priority, b.priority);
-          if (priorityDiff !== 0) return priorityDiff;
-          return (
-            new Date(a.expectedCompletion ?? a.createdAt).getTime() -
-            new Date(b.expectedCompletion ?? b.createdAt).getTime()
-          );
-        });
-
-      return {
-        unassigned: pendingAssignment.data,
-        unassignedTotal: pendingAssignment.total,
-        overdue,
-      };
-    },
+  const matchesQuery = useQuery({
+    queryKey: ['lost-found-matches', 'manager-dashboard-triage'],
+    queryFn: () => matchesApi.list({ status: 'SUGGESTED', limit: 5 }),
   });
 
-  const unassignedRows = buildUnassignedRows(
-    workOrdersQuery.data?.unassigned ?? [],
-    requestsQuery.data?.items ?? [],
-    t,
-  );
-  const overdueRows = buildOverdueRows(workOrdersQuery.data?.overdue ?? [], t);
+  const claimRows = buildClaimRows(claimsQuery.data?.items ?? [], t);
+  const matchRows = buildMatchRows(matchesQuery.data?.data ?? [], t);
 
-  const unassignedTotal =
-    (requestsQuery.data?.total ?? 0) + (workOrdersQuery.data?.unassignedTotal ?? 0);
-  const overdueTotal = Math.max(
-    metrics.overdueWorkOrders,
-    workOrdersQuery.data?.overdue.length ?? 0,
-  );
+  const claimsTotal =
+    claimsQuery.data?.total ??
+    counts.pendingClaims + counts.underVerificationClaims + counts.claimsAwaitingHandover;
+  const matchesTotal = matchesQuery.data?.total ?? counts.pendingMatches;
 
   const isLoading =
-    activeTab === 'unassigned'
-      ? requestsQuery.isLoading || workOrdersQuery.isLoading
-      : workOrdersQuery.isLoading;
-
-  const requestsError = requestsQuery.error ? getErrorMessage(requestsQuery.error) : null;
-  const workOrdersError = workOrdersQuery.error ? getErrorMessage(workOrdersQuery.error) : null;
+    activeTab === 'claims' ? claimsQuery.isLoading : matchesQuery.isLoading;
   const activeError =
-    activeTab === 'unassigned' ? (requestsError ?? workOrdersError) : workOrdersError;
+    activeTab === 'claims'
+      ? claimsQuery.error
+        ? getErrorMessage(claimsQuery.error)
+        : null
+      : matchesQuery.error
+        ? getErrorMessage(matchesQuery.error)
+        : null;
+  const rows = activeTab === 'claims' ? claimRows : matchRows;
 
   return (
     <section
-      aria-label={t('dashboard.triageQueueTitle')}
+      aria-label={t('dashboard.managerTriageTitle')}
       className="grid gap-6 lg:grid-cols-12"
     >
-      <TriageQueuePanel
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        unassignedTotal={unassignedTotal}
-        overdueTotal={overdueTotal}
-        rows={activeTab === 'unassigned' ? unassignedRows : overdueRows}
-        isLoading={isLoading}
-        activeError={activeError}
-        onRetry={() => {
-          void requestsQuery.refetch();
-          void workOrdersQuery.refetch();
-        }}
-      />
-      <SlaHealthPanel metrics={metrics} />
+      <div className="flex min-w-0 flex-col rounded-xl border border-border/80 bg-card shadow-xs lg:col-span-8">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/75 px-6 py-4">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold tracking-[-0.01em] text-foreground">
+              {t('dashboard.managerTriageTitle')}
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t('dashboard.managerTriageDesc')}
+            </p>
+          </div>
+
+          <div
+            role="tablist"
+            aria-label={t('dashboard.managerTriageTitle')}
+            className="inline-flex rounded-lg border border-border/80 bg-secondary/50 p-1 text-xs"
+          >
+            <TriageTabButton
+              selected={activeTab === 'claims'}
+              label={t('dashboard.activeClaimsQueueTab')}
+              count={claimsTotal}
+              onClick={() => setActiveTab('claims')}
+            />
+            <TriageTabButton
+              selected={activeTab === 'matches'}
+              label={t('dashboard.aiSuggestedMatchesTab')}
+              count={matchesTotal}
+              onClick={() => setActiveTab('matches')}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-1 flex-col">
+          {isLoading ? (
+            <LoadingState
+              label={t('common.loading')}
+              className="min-h-[240px] flex-1 border-0 bg-transparent px-6 py-8"
+            />
+          ) : activeError ? (
+            <ErrorState
+              message={activeError}
+              onRetry={() => {
+                if (activeTab === 'claims') {
+                  void claimsQuery.refetch();
+                } else {
+                  void matchesQuery.refetch();
+                }
+              }}
+              className="min-h-[240px] flex-1 border-0 bg-transparent px-6 py-8"
+            />
+          ) : rows.length === 0 ? (
+            <EmptyState
+              title={
+                activeTab === 'claims'
+                  ? t('claims.noClaimsFound')
+                  : t('matches.noMatchesFound')
+              }
+              description={
+                activeTab === 'claims'
+                  ? t('dashboard.noActiveClaimsDesc')
+                  : t('dashboard.noSuggestedMatchesDesc')
+              }
+              icon={activeTab === 'claims' ? ShieldCheck : GitCompareArrows}
+              className="min-h-[240px] flex-1 border-0 bg-transparent px-6 py-8"
+            />
+          ) : (
+            <ul className="divide-y divide-border/75">
+              {rows.map((item) => (
+                <ManagerTriageRow key={item.id} item={item} />
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between border-t border-border/75 px-6 py-3">
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {activeTab === 'claims'
+              ? `${formatNumber(counts.claimsAwaitingHandover)} ${t('dashboard.awaitingHandover')}`
+              : `${formatNumber(matchesTotal)} ${t('dashboard.pendingMatchesLabel')}`}
+          </span>
+          <PortalViewAllLink
+            to={activeTab === 'claims' ? '/lost-found/claims' : '/lost-found/matches'}
+            label={t('common.viewAll')}
+          />
+        </div>
+      </div>
+
+      <RecoveryPipelinePanel counts={counts} />
     </section>
   );
 }

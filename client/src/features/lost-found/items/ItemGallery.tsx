@@ -2,7 +2,7 @@ import { ImageOff } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Lightbox } from '@/components/shared/Lightbox';
-import type { ImageAsset } from '@/types/maintenance';
+import type { ImageAsset } from '@/types/lostFound';
 
 interface ItemGalleryProps {
   images: ImageAsset[];
@@ -38,7 +38,7 @@ export function ItemGallery({ images, itemTitle }: ItemGalleryProps) {
                 setOpen(true);
               }}
               className="group relative block aspect-[4/3] w-full overflow-hidden rounded-md border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              aria-label={t('requests.openPhotoAria', { index: index + 1, total: images.length })}
+              aria-label={t('lostFound.openPhotoAria', { index: index + 1, total: images.length })}
             >
               <img
                 src={image.url}

@@ -1,30 +1,25 @@
 export const ROLES = [
   'SUPER_ADMIN',
-  'MAINTENANCE_MANAGER',
-  'TECHNICIAN',
-  'LOST_FOUND_OFFICER',
-  'STUDENT_EMPLOYEE',
+  'LOST_FOUND_MANAGER',
+  'STUDENT',
+  'EMPLOYEE',
 ] as const;
 
 export type Role = (typeof ROLES)[number];
 
 export const ROLE_LABELS: Record<Role, string> = {
   SUPER_ADMIN: 'Super Admin',
-  MAINTENANCE_MANAGER: 'Maintenance Manager',
-  TECHNICIAN: 'Technician',
-  LOST_FOUND_OFFICER: 'Lost & Found Officer',
-  STUDENT_EMPLOYEE: 'Student / Employee',
+  LOST_FOUND_MANAGER: 'Lost & Found Manager',
+  STUDENT: 'Student',
+  EMPLOYEE: 'Employee',
 };
 
 export const ROLE_SHORT_LABELS: Record<Role, string> = {
   SUPER_ADMIN: 'Admin',
-  MAINTENANCE_MANAGER: 'Manager',
-  TECHNICIAN: 'Technician',
-  LOST_FOUND_OFFICER: 'Officer',
-  STUDENT_EMPLOYEE: 'Student',
+  LOST_FOUND_MANAGER: 'Manager',
+  STUDENT: 'Student',
+  EMPLOYEE: 'Employee',
 };
-
-export type TechnicianAvailability = 'AVAILABLE' | 'BUSY' | 'OFF_DUTY';
 
 export interface AuthUser {
   id: string;
@@ -36,10 +31,6 @@ export interface AuthUser {
   departmentAr?: string;
   contactPhone?: string;
   isActive: boolean;
-  specializations: string[];
-  skills: string[];
-  skillsAr?: string[];
-  availability?: TechnicianAvailability;
   createdAt: string;
 }
 

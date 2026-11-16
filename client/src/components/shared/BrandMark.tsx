@@ -53,7 +53,7 @@ export function BrandMark({
             inverted ? 'text-sidebar-foreground' : 'text-foreground',
           )}
         >
-          CampusCare
+          CampusCare Lost &amp; Found
         </p>
         <p
           className={cn(

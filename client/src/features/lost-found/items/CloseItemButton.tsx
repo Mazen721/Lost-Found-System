@@ -21,11 +21,11 @@ export function CloseItemButton({ item }: CloseItemButtonProps) {
   const [open, setOpen] = useState(false);
 
   const isReporter = item.reporter?.id === user?.id;
-  const isOfficer = user?.role === 'LOST_FOUND_OFFICER';
+  const isManager = user?.role === 'LOST_FOUND_MANAGER';
   const isFinalStatus = item.status === 'RETURNED' || item.status === 'CLOSED';
   const reporterCanClose =
     isReporter && item.reportType === 'LOST' && item.status === 'OPEN';
-  const canClose = !isFinalStatus && (isOfficer || reporterCanClose);
+  const canClose = !isFinalStatus && (isManager || reporterCanClose);
 
   const closeMutation = useMutation({
     mutationFn: () => itemsApi.close(item.id),
@@ -51,7 +51,7 @@ export function CloseItemButton({ item }: CloseItemButtonProps) {
         onClick={() => setOpen(true)}
       >
         <ArchiveX className="h-4 w-4" aria-hidden="true" />
-        {isOfficer ? t('lostFound.closeItem') : t('lostFound.closeReport')}
+        {isManager ? t('lostFound.closeItem') : t('lostFound.closeReport')}
       </Button>
 
       <ConfirmDialog
@@ -59,8 +59,8 @@ export function CloseItemButton({ item }: CloseItemButtonProps) {
         onOpenChange={setOpen}
         title={t('lostFound.closeConfirmTitle')}
         description={
-          isOfficer
-            ? t('lostFound.closeConfirmOfficer')
+          isManager
+            ? t('lostFound.closeConfirmManager')
             : t('lostFound.closeConfirmReporter')
         }
         confirmLabel={t('lostFound.closeReport')}
