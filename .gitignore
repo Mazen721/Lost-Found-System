@@ -49,3 +49,4 @@ dist/
 # Local previews & generated docs
 /CampusCare_User_Guide.pdf
 /dashboard-concept-preview.html
+test-artifacts/
