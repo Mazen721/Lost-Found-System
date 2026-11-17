@@ -1,9 +1,12 @@
 import type { Request, Response } from 'express';
 import { ApiError } from '../../shared/utils/ApiError';
 import { asyncHandler } from '../../shared/utils/asyncHandler';
-import { getDashboard as getDashboardService } from './dashboard.service';
+import {
+  getActivitySeries as getActivitySeriesService,
+  getDashboard as getDashboardService,
+} from './dashboard.service';
 import type { DashboardActor } from './dashboard.service';
-import type { DashboardQuery } from './dashboard.validation';
+import type { ActivitySeriesQuery, DashboardQuery } from './dashboard.validation';
 
 function requireActor(req: Request): DashboardActor {
   if (!req.user) {
@@ -19,3 +22,12 @@ export const getDashboard = asyncHandler(async (req: Request, res: Response) => 
   const result = await getDashboardService(actor, period);
   res.status(200).json(result);
 });
+
+export const getActivitySeries = asyncHandler(
+  async (req: Request, res: Response) => {
+    requireActor(req);
+    const { range } = req.query as unknown as ActivitySeriesQuery;
+    const result = await getActivitySeriesService(range);
+    res.status(200).json(result);
+  },
+);

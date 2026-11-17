@@ -1,10 +1,19 @@
-import { subDays } from 'date-fns';
+import {
+  addDays,
+  addMonths,
+  format,
+  startOfDay,
+  startOfMonth,
+  subDays,
+  subMonths,
+} from 'date-fns';
 import { Types } from 'mongoose';
 import {
   CLAIM_STATUSES,
   ITEM_STATUSES,
   ROLES,
   type ClaimStatus,
+  type ReportType,
   type Role,
 } from '../../config/constants';
 import { ActivityLog } from '../../shared/models/ActivityLog.model';
@@ -16,7 +25,7 @@ import { Location } from '../locations/location.model';
 import { ClaimRequest } from '../lost-found/claims/claimRequest.model';
 import { LostFoundItem } from '../lost-found/items/lostFoundItem.model';
 import { ItemMatch } from '../lost-found/matches/itemMatch.model';
-import type { DashboardPeriod } from './dashboard.validation';
+import type { ActivityRange, DashboardPeriod } from './dashboard.validation';
 
 export interface DashboardActor {
   id: string;
@@ -687,6 +696,168 @@ export async function getDashboard(
       throw new Error(`Unsupported dashboard role: ${String(exhaustive)}`);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Activity time series (spec 005)
+// ---------------------------------------------------------------------------
+
+export interface ActivityBucket {
+  /** ISO day label of the bucket's first day (`yyyy-MM-dd`). */
+  date: string;
+  lost: number;
+  found: number;
+  returned: number;
+}
+
+export interface ActivitySeries {
+  range: ActivityRange;
+  granularity: 'day' | 'month';
+  buckets: ActivityBucket[];
+  totals: { lost: number; found: number; returned: number };
+}
+
+export interface ActivityBucketWindow {
+  /** Lookup key: `yyyy-MM-dd` for day buckets, `yyyy-MM` for month buckets. */
+  key: string;
+  /** ISO day label of the bucket's first day (`yyyy-MM-dd`). */
+  date: string;
+  start: Date;
+  /** Exclusive end boundary. */
+  end: Date;
+}
+
+/**
+ * Ordered, contiguous bucket windows for a range, always ending with the
+ * bucket that contains `now`: 7 daily buckets for `week`, 30 for `month`,
+ * 12 monthly buckets for `year`. Boundaries are server-local (date-fns),
+ * matching how the seed and the rest of the dashboard treat days.
+ */
+export function buildActivityBuckets(
+  range: ActivityRange,
+  now: Date = new Date(),
+): { granularity: 'day' | 'month'; buckets: ActivityBucketWindow[] } {
+  if (range === 'year') {
+    const first = startOfMonth(subMonths(now, 11));
+    return {
+      granularity: 'month',
+      buckets: Array.from({ length: 12 }, (_, index) => {
+        const start = addMonths(first, index);
+        return {
+          key: format(start, 'yyyy-MM'),
+          date: format(start, 'yyyy-MM-dd'),
+          start,
+          end: addMonths(start, 1),
+        };
+      }),
+    };
+  }
+
+  const days = range === 'week' ? 7 : 30;
+  const first = startOfDay(subDays(now, days - 1));
+  return {
+    granularity: 'day',
+    buckets: Array.from({ length: days }, (_, index) => {
+      const start = addDays(first, index);
+      return {
+        key: format(start, 'yyyy-MM-dd'),
+        date: format(start, 'yyyy-MM-dd'),
+        start,
+        end: addDays(start, 1),
+      };
+    }),
+  };
+}
+
+/** Counts dates into buckets; dates outside every window are ignored. */
+export function bucketizeDates(
+  buckets: ActivityBucketWindow[],
+  dates: Date[],
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const date of dates) {
+    const bucket = buckets.find(
+      (entry) => date >= entry.start && date < entry.end,
+    );
+    if (bucket) {
+      counts.set(bucket.key, (counts.get(bucket.key) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+/** Zero-fills tallies into an ordered series and sums the range totals. */
+export function assembleActivitySeries(
+  range: ActivityRange,
+  granularity: 'day' | 'month',
+  windows: ActivityBucketWindow[],
+  tallies: {
+    lost: Map<string, number>;
+    found: Map<string, number>;
+    returned: Map<string, number>;
+  },
+): ActivitySeries {
+  const buckets = windows.map((window) => ({
+    date: window.date,
+    lost: tallies.lost.get(window.key) ?? 0,
+    found: tallies.found.get(window.key) ?? 0,
+    returned: tallies.returned.get(window.key) ?? 0,
+  }));
+
+  return {
+    range,
+    granularity,
+    buckets,
+    totals: {
+      lost: buckets.reduce((sum, bucket) => sum + bucket.lost, 0),
+      found: buckets.reduce((sum, bucket) => sum + bucket.found, 0),
+      returned: buckets.reduce((sum, bucket) => sum + bucket.returned, 0),
+    },
+  };
+}
+
+/**
+ * Campus-wide Lost & Found activity series for the Admin and Manager
+ * dashboards. Counting semantics:
+ * - lost / found: items bucketed by `createdAt`, the same date semantic
+ *   every other dashboard aggregation in this module uses.
+ * - returned: completed handovers (`ClaimRequest` status COMPLETED),
+ *   bucketed by `handover.handedOverAt` — the moment the item physically
+ *   changed hands — falling back to the claim's `updatedAt` for legacy
+ *   completed claims with no handover timestamp. One completed handover
+ *   is one item returned to its owner.
+ * Tallies are computed in JS so bucket boundaries and counts share a
+ * single definition of a day, with no database timezone mismatch.
+ */
+export async function getActivitySeries(
+  range: ActivityRange,
+  now: Date = new Date(),
+): Promise<ActivitySeries> {
+  const { granularity, buckets } = buildActivityBuckets(range, now);
+  const windowStart = buckets[0]!.start;
+
+  const [items, completedClaims] = await Promise.all([
+    LostFoundItem.find({ createdAt: { $gte: windowStart } })
+      .select('reportType createdAt')
+      .lean(),
+    ClaimRequest.find({ status: 'COMPLETED' })
+      .select('handover updatedAt')
+      .lean(),
+  ]);
+
+  const itemDates = (reportType: ReportType): Date[] =>
+    items
+      .filter((item) => item.reportType === reportType)
+      .map((item) => item.createdAt);
+  const handoverDates = completedClaims.map(
+    (claim) => claim.handover?.handedOverAt ?? claim.updatedAt,
+  );
+
+  return assembleActivitySeries(range, granularity, buckets, {
+    lost: bucketizeDates(buckets, itemDates('LOST')),
+    found: bucketizeDates(buckets, itemDates('FOUND')),
+    returned: bucketizeDates(buckets, handoverDates),
+  });
 }
 
 interface InsightClaimDetail {

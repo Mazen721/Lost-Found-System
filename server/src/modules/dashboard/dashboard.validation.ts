@@ -8,3 +8,12 @@ export const dashboardQuerySchema = z.object({
 });
 
 export type DashboardQuery = z.infer<typeof dashboardQuerySchema>;
+
+export const ACTIVITY_RANGES = ['week', 'month', 'year'] as const;
+export type ActivityRange = (typeof ACTIVITY_RANGES)[number];
+
+export const activitySeriesQuerySchema = z.object({
+  range: z.enum(ACTIVITY_RANGES).default('month'),
+});
+
+export type ActivitySeriesQuery = z.infer<typeof activitySeriesQuerySchema>;
