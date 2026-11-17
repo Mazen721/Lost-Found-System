@@ -71,6 +71,23 @@ describe('toPublicItem projection', () => {
     expect(JSON.stringify(result)).not.toContain('SN-998877');
   });
 
+  it('never carries the staff-only value fields (spec 008)', () => {
+    const item = buildItem({
+      estimatedValueEGP: 28_000,
+      valueSource: 'ADJUSTED',
+      valueAdjustedBy: new Types.ObjectId(),
+      valueAdjustedAt: new Date('2026-11-10T10:00:00.000Z'),
+    });
+
+    const result = toPublicItem(item);
+
+    expect(Object.keys(result).sort()).toEqual(PUBLIC_FIELDS);
+    expect(result).not.toHaveProperty('estimatedValueEGP');
+    expect(result).not.toHaveProperty('valueSource');
+    expect(result).not.toHaveProperty('valueAdjustedBy');
+    expect(result).not.toHaveProperty('valueAdjustedAt');
+  });
+
   it('serializes a populated location and copies image fields only', () => {
     const item = buildItem();
     const result = toPublicItem(item);
