@@ -54,6 +54,7 @@ describe('Lost & Found deterministic matching', () => {
     expect(result?.level).toBe('STRONG');
     expect(result?.breakdown).toEqual({
       category: 1,
+      title: 1,
       location: 1,
       date: 1,
       color: 1,
@@ -166,6 +167,7 @@ describe('Lost & Found deterministic matching', () => {
     const categoryOnly = {
       weights: {
         category: 100,
+        title: 0,
         location: 0,
         date: 0,
         color: 0,

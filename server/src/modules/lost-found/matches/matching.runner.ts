@@ -30,6 +30,8 @@ interface LeanItem {
   brand?: string;
   itemTitle: string;
   description: string;
+  itemTitleAr?: string;
+  descriptionAr?: string;
   status: ItemStatus;
   reporterId: Types.ObjectId;
 }
@@ -89,6 +91,8 @@ function toMatchableItem(item: LeanItem): MatchableItem {
     brand: item.brand,
     itemTitle: item.itemTitle,
     description: item.description,
+    itemTitleAr: item.itemTitleAr,
+    descriptionAr: item.descriptionAr,
   };
 }
 

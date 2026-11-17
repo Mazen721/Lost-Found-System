@@ -9,6 +9,7 @@ export type MatchStatus = (typeof MATCH_STATUSES)[number];
 
 export interface MatchBreakdown {
   category: number;
+  title: number;
   location: number;
   date: number;
   color: number;

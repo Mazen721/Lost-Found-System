@@ -8,6 +8,7 @@ import {
 
 export interface MatchBreakdown {
   category: number;
+  title: number;
   location: number;
   date: number;
   color: number;
@@ -31,6 +32,7 @@ export interface IItemMatch {
 const breakdownSchema = new Schema<MatchBreakdown>(
   {
     category: { type: Number, required: true, min: 0, max: 1 },
+    title: { type: Number, required: true, min: 0, max: 1 },
     location: { type: Number, required: true, min: 0, max: 1 },
     date: { type: Number, required: true, min: 0, max: 1 },
     color: { type: Number, required: true, min: 0, max: 1 },
