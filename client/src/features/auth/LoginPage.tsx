@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import type { TFunction } from 'i18next';
 import { FormField } from '@/components/shared/FormField';
+import { landingPathForRole } from '@/components/shared/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
@@ -121,18 +122,21 @@ export function LoginPage() {
   });
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={landingPathForRole(user.role)} replace />;
   }
 
-  const destination = (location.state as { from?: string } | null)?.from ?? '/dashboard';
+  // Spec 007: an explicit pre-login destination wins; otherwise each role
+  // lands on its own home (students/employees → the home page).
+  const from = (location.state as { from?: string } | null)?.from;
+  const requestedDestination = from && from !== '/login' ? from : null;
   const isBusy = isSubmitting || activeDemoRole !== null;
 
   const onSubmit = async (values: LoginValues) => {
     setServerError(null);
     try {
-      await login(values);
+      const signedIn = await login(values);
       toast.success(t('auth.signedIn'));
-      navigate(destination === '/login' ? '/dashboard' : destination, { replace: true });
+      navigate(requestedDestination ?? landingPathForRole(signedIn.role), { replace: true });
     } catch (error) {
       setServerError(getErrorMessage(error));
     }
@@ -142,9 +146,9 @@ export function LoginPage() {
     setServerError(null);
     setActiveDemoRole(role);
     try {
-      await demoLogin(role);
+      const signedIn = await demoLogin(role);
       toast.success(enumLabel('role', role));
-      navigate('/dashboard', { replace: true });
+      navigate(requestedDestination ?? landingPathForRole(signedIn.role), { replace: true });
     } catch (error) {
       setServerError(getErrorMessage(error));
     } finally {

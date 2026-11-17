@@ -1,9 +1,12 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { ActivityLogsPage } from '@/features/activity-logs/ActivityLogsPage';
 import { AppShell } from '@/components/shared/AppShell';
+import { landingPathForRole } from '@/components/shared/navigation';
+import { useAuth } from '@/features/auth/AuthContext';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { ProfilePage } from '@/features/auth/ProfilePage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { HomePage } from '@/features/home/HomePage';
 import { LocationsPage } from '@/features/locations/LocationsPage';
 import { AllReportsPage } from '@/features/lost-found/items/AllReportsPage';
 import { ArchivedReportsPage } from '@/features/lost-found/items/ArchivedReportsPage';
@@ -21,6 +24,13 @@ import { ForbiddenPage } from '@/routes/ForbiddenPage';
 import { NotFoundPage } from '@/routes/NotFoundPage';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
 
+/** Spec 007: the index route lands each role on its own home. */
+function LandingRedirect() {
+  const { user } = useAuth();
+  if (!user) return null;
+  return <Navigate to={landingPathForRole(user.role)} replace />;
+}
+
 export function AppRouter() {
   return (
     <Routes>
@@ -28,7 +38,17 @@ export function AppRouter() {
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route index element={<LandingRedirect />} />
+          <Route
+            element={
+              <ProtectedRoute
+                allowedRoles={['STUDENT', 'EMPLOYEE']}
+                redirectTo="/dashboard"
+              />
+            }
+          >
+            <Route path="home" element={<HomePage />} />
+          </Route>
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="forbidden" element={<ForbiddenPage />} />
