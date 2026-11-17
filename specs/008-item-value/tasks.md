@@ -46,5 +46,5 @@
       manager item value + real adjustment, Admin/Manager dashboard
       cards vs API, student DOM contains no value, 0 console errors.)
 - [x] T5. clean-code-guard + test-guard over the diff.
-- [ ] T6. Commits, bundle regeneration (HEAD + branch), clone-verify.
+- [x] T6. Commits, bundle regeneration (HEAD + branch), clone-verify.
       Flag: SEED CHANGED — user must run `npm run seed`.
