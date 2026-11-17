@@ -21,7 +21,7 @@ import type { AppNotification } from '@/types/notifications';
 
 const NOTIFICATIONS_QUERY_KEY = ['notifications', 'bell'] as const;
 
-function iconForType(type?: string): LucideIcon {
+export function iconForType(type?: string): LucideIcon {
   if (!type) {
     return Bell;
   }

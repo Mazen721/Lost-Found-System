@@ -12,6 +12,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { BrandMark } from '@/components/shared/BrandMark';
+import { MobileBottomNav } from '@/components/shared/MobileBottomNav';
+import { MobileNotificationsSheet } from '@/components/shared/MobileNotificationsSheet';
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import {
   getNavigation,
@@ -128,6 +130,60 @@ function UserMenu({ compact = false }: { compact?: boolean }) {
   );
 }
 
+const FORM_CONTROL_SELECTOR = 'input, textarea, select, [contenteditable="true"]';
+
+/**
+ * Tracks whether the on-screen keyboard is likely open (spec 003): focus
+ * inside a form control is the primary signal; a visual-viewport shrink
+ * beyond 120px is the secondary one. Used to slide the mobile bottom bar
+ * (and its content spacer) away while the user is typing.
+ */
+function useMobileKeyboardOpen(): boolean {
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    let focusInForm = false;
+    let viewportShrunk = false;
+    const update = () => setKeyboardOpen(focusInForm || viewportShrunk);
+
+    const onFocusIn = (event: FocusEvent) => {
+      if ((event.target as HTMLElement | null)?.matches?.(FORM_CONTROL_SELECTOR)) {
+        focusInForm = true;
+        update();
+      }
+    };
+    const onFocusOut = (event: FocusEvent) => {
+      const next = event.relatedTarget as HTMLElement | null;
+      if (!next?.matches?.(FORM_CONTROL_SELECTOR)) {
+        focusInForm = false;
+        update();
+      }
+    };
+
+    let resizeTimer: number | undefined;
+    const onViewportResize = () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        const viewport = window.visualViewport;
+        viewportShrunk = viewport ? window.innerHeight - viewport.height > 120 : false;
+        update();
+      }, 100);
+    };
+
+    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('focusout', onFocusOut);
+    window.visualViewport?.addEventListener('resize', onViewportResize);
+    return () => {
+      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('focusout', onFocusOut);
+      window.visualViewport?.removeEventListener('resize', onViewportResize);
+      window.clearTimeout(resizeTimer);
+    };
+  }, []);
+
+  return keyboardOpen;
+}
+
 const SIDEBAR_COLLAPSED_STORAGE_KEY = 'cc-sidebar-collapsed';
 
 function readSidebarCollapsedPreference(): boolean {
@@ -189,6 +245,8 @@ export function AppShell() {
   const { user } = useAuth();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const keyboardOpen = useMobileKeyboardOpen();
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readSidebarCollapsedPreference);
 
   const isMnuPortal = isMnuPortalRole(user?.role);
@@ -281,7 +339,7 @@ export function AppShell() {
             <Button
               variant="outline"
               size="icon"
-              className="shrink-0"
+              className="h-11 w-11 shrink-0"
               onClick={() => setMobileOpen(true)}
               aria-label={t('common.actions')}
             >
@@ -362,7 +420,24 @@ export function AppShell() {
         >
           <Outlet />
         </main>
+
+        {/* Clearance for the fixed mobile bottom bar (spec 003); collapses
+            while the keyboard is open, together with the bar itself. */}
+        <div
+          aria-hidden="true"
+          className={cn(
+            'shrink-0 transition-[height] duration-200 lg:hidden',
+            keyboardOpen ? 'h-0' : 'h-[calc(5.25rem+env(safe-area-inset-bottom))]',
+          )}
+        />
       </div>
+
+      <MobileBottomNav
+        hidden={keyboardOpen}
+        onNotifications={() => setNotificationsOpen(true)}
+        onMore={() => setMobileOpen(true)}
+      />
+      <MobileNotificationsSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} />
     </div>
   );
 }
