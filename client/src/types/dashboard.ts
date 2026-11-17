@@ -155,3 +155,21 @@ export interface StudentDashboard extends DashboardBase {
 }
 
 export type DashboardResponse = AdminDashboard | ManagerDashboard | StudentDashboard;
+
+export const ACTIVITY_RANGES = ['week', 'month', 'year'] as const;
+export type ActivityRange = (typeof ACTIVITY_RANGES)[number];
+
+export interface ActivityBucket {
+  /** ISO day label of the bucket's first day (`yyyy-MM-dd`). */
+  date: string;
+  lost: number;
+  found: number;
+  returned: number;
+}
+
+export interface ActivitySeries {
+  range: ActivityRange;
+  granularity: 'day' | 'month';
+  buckets: ActivityBucket[];
+  totals: { lost: number; found: number; returned: number };
+}

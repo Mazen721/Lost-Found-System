@@ -1,3 +1,4 @@
+import { ActivityChart } from '@/features/dashboard/ActivityChart';
 import { ManagerCharts } from '@/features/dashboard/ManagerCharts';
 import { ManagerSummaryGrid } from '@/features/dashboard/ManagerSummaryGrid';
 import { ManagerTriageLedgers } from '@/features/dashboard/ManagerTriageLedgers';
@@ -16,6 +17,7 @@ export function ManagerDashboard({ data }: { data: ManagerDashboardData }) {
       <ManagerSummaryGrid counts={data.counts} />
       <UrgentQueuePanel queue={data.urgentQueue} />
       <RecentItemsStrip items={data.recentItems} />
+      <ActivityChart />
       <ManagerTriageLedgers counts={data.counts} />
       {data.analytics ? <ManagerCharts analytics={data.analytics} /> : null}
     </div>

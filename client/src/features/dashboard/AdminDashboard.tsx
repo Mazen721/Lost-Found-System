@@ -1,3 +1,4 @@
+import { ActivityChart } from '@/features/dashboard/ActivityChart';
 import { AdminCharts } from '@/features/dashboard/AdminCharts';
 import { AdminGovernanceLedgers } from '@/features/dashboard/AdminGovernanceLedgers';
 import { AdminSummaryGrid } from '@/features/dashboard/AdminSummaryGrid';
@@ -18,6 +19,7 @@ export function AdminDashboard({ data }: { data: AdminDashboardData }) {
       <AdminSummaryGrid totals={totals} />
       <UrgentQueuePanel queue={data.urgentQueue} />
       <RecentItemsStrip items={data.recentItems} />
+      <ActivityChart />
       {analytics ? <AdminCharts analytics={analytics} /> : null}
       <AdminGovernanceLedgers totals={totals} />
     </div>
