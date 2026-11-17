@@ -41,6 +41,10 @@
       incl. month boundary + adjusted value.
 - [x] T3. Root typecheck, full server suite, client suite, client build.
 - [ ] T4. Live browser pass + `design008-*.png` screenshots.
+      (Deferred to the parent agent's live-browser session — API-level
+      behaviour is fully covered by T2; the UI pass must confirm:
+      manager item value + real adjustment, Admin/Manager dashboard
+      cards vs API, student DOM contains no value, 0 console errors.)
 - [x] T5. clean-code-guard + test-guard over the diff.
 - [ ] T6. Commits, bundle regeneration (HEAD + branch), clone-verify.
       Flag: SEED CHANGED — user must run `npm run seed`.
