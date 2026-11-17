@@ -50,4 +50,11 @@ export const itemsApi = {
       status: 'CLOSED',
     });
   },
+
+  /** Staff-only (spec 008): manually adjust an item's estimated value. */
+  adjustValue(id: string, valueEGP: number): Promise<{ item: LostFoundItem }> {
+    return api.patch<{ item: LostFoundItem }>(`/lost-found/items/${id}/value`, {
+      valueEGP,
+    });
+  },
 };

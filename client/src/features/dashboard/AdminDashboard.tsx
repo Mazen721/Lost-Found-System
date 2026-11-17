@@ -4,6 +4,7 @@ import { AdminGovernanceLedgers } from '@/features/dashboard/AdminGovernanceLedg
 import { AdminSummaryGrid } from '@/features/dashboard/AdminSummaryGrid';
 import { RecentItemsStrip } from '@/features/dashboard/RecentItemsStrip';
 import { UrgentQueuePanel } from '@/features/dashboard/UrgentQueuePanel';
+import { ValueStatsCards } from '@/features/dashboard/ValueStatsCards';
 import type { AdminDashboard as AdminDashboardData } from '@/types/dashboard';
 
 /**
@@ -17,6 +18,7 @@ export function AdminDashboard({ data }: { data: AdminDashboardData }) {
   return (
     <div className="space-y-7">
       <AdminSummaryGrid totals={totals} />
+      <ValueStatsCards stats={data.valueStats} />
       <UrgentQueuePanel queue={data.urgentQueue} />
       <RecentItemsStrip items={data.recentItems} />
       <ActivityChart />

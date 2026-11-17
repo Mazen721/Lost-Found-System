@@ -29,6 +29,7 @@ import {
 } from '@/features/lost-found/items/claimEligibility';
 import { CloseItemButton } from '@/features/lost-found/items/CloseItemButton';
 import { ItemGallery } from '@/features/lost-found/items/ItemGallery';
+import { ItemValueCard } from '@/features/lost-found/items/ItemValueCard';
 import { ReportTypeBadge } from '@/features/lost-found/items/ReportTypeBadge';
 import { itemsApi } from '@/features/lost-found/items/itemsApi';
 import { formatLocation, tr } from '@/i18n/localize';
@@ -286,6 +287,8 @@ export function ItemDetailPage() {
               ) : null}
             </CardContent>
           </Card>
+
+          <ItemValueCard item={item} />
 
           {item.privateIdentificationDetails ? (
             <Card className="border-amber-300/70 bg-amber-50/60">

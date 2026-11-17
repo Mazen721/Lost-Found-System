@@ -50,6 +50,18 @@ interface DashboardBase {
   rangeEnd: string;
 }
 
+/**
+ * Staff-only value aggregates (spec 008). Present only on the Admin and
+ * Manager dashboard payloads; the student/employee payload never
+ * carries this block.
+ */
+export interface ValueStats {
+  lostValueThisMonthEGP: number;
+  returnedValueThisMonthEGP: number;
+  totalLostValueEGP: number;
+  totalReturnedValueEGP: number;
+}
+
 export interface AdminDashboard extends DashboardBase {
   role: 'SUPER_ADMIN';
   totals: {
@@ -83,6 +95,7 @@ export interface AdminDashboard extends DashboardBase {
   };
   recentItems: DashboardItemCard[];
   urgentQueue: UrgentQueue;
+  valueStats: ValueStats;
 }
 
 export interface ManagerDashboard extends DashboardBase {
@@ -105,6 +118,7 @@ export interface ManagerDashboard extends DashboardBase {
   };
   recentItems: DashboardItemCard[];
   urgentQueue: UrgentQueue;
+  valueStats: ValueStats;
 }
 
 export interface StudentDashboard extends DashboardBase {

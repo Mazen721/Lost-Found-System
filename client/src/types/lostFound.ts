@@ -89,6 +89,16 @@ export interface LostFoundItem {
   reporter?: LostFoundReporter | null;
   createdAt?: string;
   updatedAt?: string;
+  /**
+   * Staff-only value estimate (spec 008). The server includes these
+   * fields ONLY in LOST_FOUND_MANAGER / SUPER_ADMIN payloads — they are
+   * absent (not null) for students/employees, so render value UI only
+   * when `estimatedValueEGP` is a number.
+   */
+  estimatedValueEGP?: number;
+  valueSource?: 'AUTO' | 'ADJUSTED';
+  valueAdjustedBy?: string | null;
+  valueAdjustedAt?: string | null;
 }
 
 export interface CreateLostFoundItemInput {

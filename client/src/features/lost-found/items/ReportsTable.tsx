@@ -5,10 +5,11 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { useAuth } from '@/features/auth/AuthContext';
 import { ReportTypeBadge } from '@/features/lost-found/items/ReportTypeBadge';
 import { formatLocation, tr } from '@/i18n/localize';
 import { enumLabel } from '@/lib/labels';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatNumber } from '@/lib/utils';
 import {
   ITEM_STATUSES,
   REPORT_TYPES,
@@ -59,6 +60,13 @@ export function ReportsTable({
   allowedStatuses = ITEM_STATUSES,
 }: ReportsTableProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
+
+  // Spec 008: the value column exists only for staff viewers (gated on
+  // the viewer's role, never on row data) — student/employee payloads
+  // do not carry the field at all.
+  const isStaffViewer =
+    user?.role === 'LOST_FOUND_MANAGER' || user?.role === 'SUPER_ADMIN';
 
   const columns: Array<DataTableColumn<LostFoundItem>> = [
     {
@@ -111,6 +119,21 @@ export function ReportsTable({
       header: t('common.status'),
       cell: (item) => <StatusBadge status={item.status} />,
     },
+    ...(isStaffViewer
+      ? [
+          {
+            id: 'value',
+            header: t('lostFound.estimatedValue'),
+            cell: (item: LostFoundItem) => (
+              <span className="whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+                {typeof item.estimatedValueEGP === 'number'
+                  ? `~${formatNumber(item.estimatedValueEGP)} ${t('lostFound.egpSuffix')}`
+                  : '—'}
+              </span>
+            ),
+          } satisfies DataTableColumn<LostFoundItem>,
+        ]
+      : []),
     {
       id: 'actions',
       header: t('common.actions'),

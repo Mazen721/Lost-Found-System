@@ -4,6 +4,7 @@ import { ManagerSummaryGrid } from '@/features/dashboard/ManagerSummaryGrid';
 import { ManagerTriageLedgers } from '@/features/dashboard/ManagerTriageLedgers';
 import { RecentItemsStrip } from '@/features/dashboard/RecentItemsStrip';
 import { UrgentQueuePanel } from '@/features/dashboard/UrgentQueuePanel';
+import { ValueStatsCards } from '@/features/dashboard/ValueStatsCards';
 import type { ManagerDashboard as ManagerDashboardData } from '@/types/dashboard';
 
 /**
@@ -15,6 +16,7 @@ export function ManagerDashboard({ data }: { data: ManagerDashboardData }) {
   return (
     <div className="space-y-7">
       <ManagerSummaryGrid counts={data.counts} />
+      <ValueStatsCards stats={data.valueStats} />
       <UrgentQueuePanel queue={data.urgentQueue} />
       <RecentItemsStrip items={data.recentItems} />
       <ActivityChart />
