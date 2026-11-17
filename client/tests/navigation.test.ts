@@ -2,15 +2,19 @@ import { describe, expect, it } from 'vitest';
 import {
   getMobileTabs,
   getNavigation,
+  getTopLinks,
   isMobileTabActive,
+  isTopLinkActive,
+  landingPathForRole,
   type MobileTabItem,
+  type TopLinkItem,
 } from '../src/components/shared/navigation';
 import type { Role } from '../src/types/auth';
 
 const ALL_ROLES: Role[] = ['STUDENT', 'EMPLOYEE', 'LOST_FOUND_MANAGER', 'SUPER_ADMIN'];
 const REPORT_ROUTE = '/lost-found/report';
 
-function sidebarRoutes(role: Role): string[] {
+function fullMenuRoutes(role: Role): string[] {
   return getNavigation(role).flatMap((group) => group.items.map((item) => item.to));
 }
 
@@ -18,16 +22,134 @@ function linkTabs(role: Role): MobileTabItem[] {
   return getMobileTabs(role).filter((tab) => tab.to);
 }
 
-describe('sidebar report visibility (spec 003)', () => {
+describe('full-menu report visibility (spec 003, drawer since spec 007)', () => {
   it.each(['STUDENT', 'EMPLOYEE', 'LOST_FOUND_MANAGER'] as Role[])(
-    '%s keeps the report item in the sidebar navigation',
+    '%s keeps the report item in the full navigation',
     (role) => {
-      expect(sidebarRoutes(role)).toContain(REPORT_ROUTE);
+      expect(fullMenuRoutes(role)).toContain(REPORT_ROUTE);
     },
   );
 
-  it('SUPER_ADMIN has no report item in the sidebar navigation', () => {
-    expect(sidebarRoutes('SUPER_ADMIN')).not.toContain(REPORT_ROUTE);
+  it('SUPER_ADMIN has no report item in the full navigation', () => {
+    expect(fullMenuRoutes('SUPER_ADMIN')).not.toContain(REPORT_ROUTE);
+  });
+});
+
+describe('drawer navigation (spec 007)', () => {
+  it.each(['STUDENT', 'EMPLOYEE'] as Role[])(
+    '%s drawer carries the home page, the everyday pages and the حسامي group',
+    (role) => {
+      const groups = getNavigation(role);
+      expect(groups.flatMap((group) => group.items.map((item) => item.to))).toEqual([
+        '/home',
+        '/lost-found',
+        REPORT_ROUTE,
+        '/lost-found/my-reports',
+        '/lost-found/claims',
+        '/dashboard',
+      ]);
+      expect(groups[1]?.titleKey).toBe('nav.groupMyAccount');
+    },
+  );
+
+  it.each(['LOST_FOUND_MANAGER', 'SUPER_ADMIN'] as Role[])(
+    '%s drawer keeps the pre-007 menu arrangement (dashboard first, no home page)',
+    (role) => {
+      const routes = fullMenuRoutes(role);
+      expect(routes[0]).toBe('/dashboard');
+      expect(routes).not.toContain('/home');
+    },
+  );
+});
+
+describe('top-navbar links (spec 007)', () => {
+  it.each(['STUDENT', 'EMPLOYEE'] as Role[])('%s top links are the mockup set', (role) => {
+    expect(getTopLinks(role).map((link) => link.to)).toEqual([
+      '/home',
+      '/lost-found',
+      REPORT_ROUTE,
+      '/lost-found/my-reports',
+      '/lost-found/claims',
+      '/dashboard',
+    ]);
+  });
+
+  it('LOST_FOUND_MANAGER top links are its working set', () => {
+    expect(getTopLinks('LOST_FOUND_MANAGER').map((link) => link.to)).toEqual([
+      '/dashboard',
+      '/lost-found/matches',
+      '/lost-found/claims',
+      '/lost-found/items',
+      '/lost-found',
+    ]);
+  });
+
+  it('SUPER_ADMIN top links lead with the dashboard and users, with no report link', () => {
+    const links = getTopLinks('SUPER_ADMIN');
+    expect(links.map((link) => link.to)).toEqual([
+      '/dashboard',
+      '/users',
+      '/lost-found/items',
+      '/lost-found/matches',
+      '/lost-found/claims',
+      '/lost-found',
+    ]);
+    expect(links.map((link) => link.to)).not.toContain(REPORT_ROUTE);
+  });
+
+  it.each(ALL_ROLES)('%s top links stay within the full menu routes (parity)', (role) => {
+    const routes = fullMenuRoutes(role);
+    for (const link of getTopLinks(role)) {
+      expect(routes).toContain(link.to);
+    }
+  });
+
+  it('SUPER_ADMIN has no report entry on any navigation surface', () => {
+    expect(fullMenuRoutes('SUPER_ADMIN')).not.toContain(REPORT_ROUTE);
+    expect(getTopLinks('SUPER_ADMIN').map((link) => link.to)).not.toContain(REPORT_ROUTE);
+    expect(getMobileTabs('SUPER_ADMIN').map((tab) => tab.to)).not.toContain(REPORT_ROUTE);
+  });
+});
+
+describe('isTopLinkActive route mapping (spec 007)', () => {
+  const linkFor = (role: Role, to: string) =>
+    getTopLinks(role).find((link) => link.to === to) as TopLinkItem;
+
+  it('the student home link lights only on /home, not on the dashboard', () => {
+    expect(isTopLinkActive(linkFor('STUDENT', '/home'), '/home')).toBe(true);
+    expect(isTopLinkActive(linkFor('STUDENT', '/home'), '/dashboard')).toBe(false);
+    expect(isTopLinkActive(linkFor('STUDENT', '/dashboard'), '/dashboard')).toBe(true);
+  });
+
+  it('item detail lights browse for students and the registry for staff', () => {
+    const detail = '/lost-found/items/abc123';
+    expect(isTopLinkActive(linkFor('STUDENT', '/lost-found'), detail)).toBe(true);
+    expect(isTopLinkActive(linkFor('LOST_FOUND_MANAGER', '/lost-found/items'), detail)).toBe(
+      true,
+    );
+    expect(isTopLinkActive(linkFor('LOST_FOUND_MANAGER', '/lost-found'), detail)).toBe(false);
+  });
+
+  it('claim detail lights the claims link; archived lights the staff registry', () => {
+    expect(
+      isTopLinkActive(linkFor('EMPLOYEE', '/lost-found/claims'), '/lost-found/claims/xyz'),
+    ).toBe(true);
+    expect(
+      isTopLinkActive(linkFor('SUPER_ADMIN', '/lost-found/items'), '/lost-found/archived'),
+    ).toBe(true);
+    expect(
+      isTopLinkActive(linkFor('LOST_FOUND_MANAGER', '/lost-found/claims'), '/lost-found/handovers'),
+    ).toBe(true);
+  });
+});
+
+describe('landingPathForRole (spec 007)', () => {
+  it.each(['STUDENT', 'EMPLOYEE'] as Role[])('%s lands on the home page', (role) => {
+    expect(landingPathForRole(role)).toBe('/home');
+  });
+
+  it.each(['LOST_FOUND_MANAGER', 'SUPER_ADMIN'] as Role[])('%s lands on the dashboard', (role) => {
+    expect(landingPathForRole(role)).toBe('/dashboard');
   });
 });
 
@@ -43,7 +165,7 @@ describe('mobile bottom-bar tabs (spec 003)', () => {
 
   it.each(['STUDENT', 'EMPLOYEE'] as Role[])('%s tab routes are the expected set', (role) => {
     expect(linkTabs(role).map((tab) => tab.to)).toEqual([
-      '/dashboard',
+      '/home',
       '/lost-found',
       REPORT_ROUTE,
       '/lost-found/my-reports',
@@ -70,9 +192,9 @@ describe('mobile bottom-bar tabs (spec 003)', () => {
   });
 
   it.each(ALL_ROLES)(
-    '%s mobile link tabs stay within the sidebar routes (parity)',
+    '%s mobile link tabs stay within the full menu routes (parity)',
     (role) => {
-      const routes = sidebarRoutes(role);
+      const routes = fullMenuRoutes(role);
       for (const tab of linkTabs(role)) {
         expect(routes).toContain(tab.to);
       }
@@ -90,7 +212,15 @@ describe('isMobileTabActive route mapping (spec 003)', () => {
     expect(isMobileTabActive(tabFor('LOST_FOUND_MANAGER', '/lost-found/items'), detail)).toBe(
       true,
     );
-    expect(isMobileTabActive(tabFor('STUDENT', '/dashboard'), detail)).toBe(false);
+    expect(isMobileTabActive(tabFor('STUDENT', '/home'), detail)).toBe(false);
+  });
+
+  it('the student home tab lights on /home only (spec 007)', () => {
+    expect(isMobileTabActive(tabFor('STUDENT', '/home'), '/home')).toBe(true);
+    expect(isMobileTabActive(tabFor('STUDENT', '/home'), '/dashboard')).toBe(false);
+    expect(isMobileTabActive(tabFor('LOST_FOUND_MANAGER', '/dashboard'), '/dashboard')).toBe(
+      true,
+    );
   });
 
   it('claim detail lights the claims tab', () => {
