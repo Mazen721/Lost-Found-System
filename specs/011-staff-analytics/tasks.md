@@ -55,4 +55,4 @@
 - [x] T6. Live browser pass + design011-*.png screenshots (throwaway
       backdated item for the stale surfaces).
 - [x] T7. clean-code-guard + test-guard over the diff.
-- [ ] T8. Commit on lost-found-only; bundle regenerated + clone-verified.
+- [x] T8. Commit on lost-found-only; bundle regenerated + clone-verified.
