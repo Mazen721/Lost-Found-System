@@ -120,15 +120,14 @@ npm run dev
 
 ## Demo accounts
 
-The seed creates the five role accounts below. The password for all of them is `CampusCare#2026`.
+The seed creates the four role accounts below. The password for all of them is `Campus@2025`.
 
 | Role | Email |
 | --- | --- |
 | SUPER_ADMIN | `t.elshenawy@mansnu.edu.eg` |
-| MAINTENANCE_MANAGER | `m.elmetwally@mansnu.edu.eg` |
-| TECHNICIAN | `h.elsayed@mansnu.edu.eg` |
-| LOST_FOUND_OFFICER | `a.eldesouky@mansnu.edu.eg` |
-| STUDENT_EMPLOYEE | `youssef.elashry@std.mansnu.edu.eg` |
+| LOST_FOUND_MANAGER | `a.eldesouky@mansnu.edu.eg` |
+| STUDENT | `youssef.elashry@std.mansnu.edu.eg` |
+| EMPLOYEE | `m.kamal@mansnu.edu.eg` |
 
 When both `DEMO_MODE=true` on the server and `VITE_DEMO_MODE=true` on the client, the login page also
 offers one-click demo access to each role.
