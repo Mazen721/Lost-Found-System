@@ -1,4 +1,4 @@
-import { MapPin } from 'lucide-react';
+import { ChevronLeft, Clock, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { CategoryChip } from '@/components/shared/CategoryChip';
@@ -15,9 +15,12 @@ interface ItemCardProps {
 }
 
 /**
- * Photo-first browse card: large item photo with the report-type and
- * status badges overlaid, a colored category chip with icon, location,
- * and the relative time since the item was reported.
+ * Photo-first browse card in the Concept 1 layout (spec 006): large item
+ * photo with the report-type and status badges overlaid, then title,
+ * location and relative-time meta rows, and a footer carrying the
+ * category chip and a «التفاصيل» affordance. The report number stays
+ * above the title — staff and students reference items by it, which the
+ * concept mockup did not need to show.
  */
 export function ItemCard({ item }: ItemCardProps) {
   const { t } = useTranslation();
@@ -28,7 +31,7 @@ export function ItemCard({ item }: ItemCardProps) {
   return (
     <Link
       to={`/lost-found/items/${item.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl bg-card shadow-card transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="group flex flex-col overflow-hidden rounded-2xl bg-card shadow-item transition-all hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         {image ? (
@@ -57,26 +60,32 @@ export function ItemCard({ item }: ItemCardProps) {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <div className="space-y-1.5">
-          <p className="font-mono text-[11px] font-semibold text-primary">
-            <span dir="ltr">{item.reportNumber}</span>
-          </p>
-          <h2 className="line-clamp-2 font-display text-lg font-bold leading-snug text-foreground group-hover:text-primary">
-            {tr(item, 'itemTitle')}
-          </h2>
-          <CategoryChip category={item.category} />
-        </div>
+      <div className="flex flex-1 flex-col p-4">
+        <p className="font-mono text-[11px] font-semibold text-primary">
+          <span dir="ltr">{item.reportNumber}</span>
+        </p>
+        <h2 className="mt-1.5 line-clamp-2 font-display text-[17px] font-bold leading-snug text-foreground group-hover:text-primary">
+          {tr(item, 'itemTitle')}
+        </h2>
 
-        <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
-          <span className="inline-flex min-w-0 items-start gap-1.5">
-            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
+        <div className="mb-3 mt-2.5 space-y-1.5 text-[13.5px] font-semibold text-muted-foreground">
+          <p className="flex items-start gap-1.5">
+            <MapPin className="mt-0.5 h-[15px] w-[15px] shrink-0 text-[#9AA9BF]" aria-hidden="true" />
             <span className="line-clamp-2">
               {item.location ? formatLocation(item.location) : tr(item, 'locationDetails')}
             </span>
-          </span>
-          <span className="ms-auto shrink-0 font-medium">
-            {fmtDistanceToNow(item.occurrenceDate, { addSuffix: true })}
+          </p>
+          <p className="flex items-center gap-1.5">
+            <Clock className="h-[15px] w-[15px] shrink-0 text-[#9AA9BF]" aria-hidden="true" />
+            <span>{fmtDistanceToNow(item.occurrenceDate, { addSuffix: true })}</span>
+          </p>
+        </div>
+
+        <div className="mt-auto flex items-center justify-between gap-2 border-t border-border/60 pt-3">
+          <CategoryChip category={item.category} />
+          <span className="inline-flex shrink-0 items-center gap-0.5 text-[13.5px] font-extrabold text-[hsl(var(--mnu-gold-ink))]">
+            {t('common.details')}
+            <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden="true" />
           </span>
         </div>
       </div>

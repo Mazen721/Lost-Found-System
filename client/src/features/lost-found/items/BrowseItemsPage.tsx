@@ -1,20 +1,23 @@
-import { PackagePlus, SearchX } from 'lucide-react';
+import { SearchX } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { BigSearchPill } from '@/components/shared/BigSearchPill';
+import { HeroReportLink } from '@/components/shared/HeroReportLink';
+import { SearchHero } from '@/components/shared/SearchHero';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { LoadingState } from '@/components/shared/LoadingState';
-import { PageHeader } from '@/components/shared/PageHeader';
 import { ItemCard } from '@/features/lost-found/items/ItemCard';
 import { ItemPagination } from '@/features/lost-found/items/ItemPagination';
 import {
   EMPTY_ITEM_FILTERS,
-  ItemFilters,
+  initialBrowseFilters,
   type ItemFilterState,
-} from '@/features/lost-found/items/ItemFilters';
+} from '@/features/lost-found/items/browseFilters';
+import { ItemFilters } from '@/features/lost-found/items/ItemFilters';
 import { useAuth } from '@/features/auth/AuthContext';
 import { itemsApi } from '@/features/lost-found/items/itemsApi';
 import { getErrorMessage } from '@/lib/api';
@@ -27,7 +30,11 @@ export function BrowseItemsPage() {
   const { user } = useAuth();
   // Spec 003: SUPER_ADMIN does not get the report option anywhere.
   const canReport = user?.role !== 'SUPER_ADMIN';
-  const [filters, setFilters] = useState<ItemFilterState>({ ...EMPTY_ITEM_FILTERS });
+  const [searchParams] = useSearchParams();
+  // Spec 006: the home hero lands here with ?q= / ?category= applied.
+  const [filters, setFilters] = useState<ItemFilterState>(() =>
+    initialBrowseFilters(searchParams),
+  );
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebouncedValue(filters.q);
 
@@ -77,23 +84,41 @@ export function BrowseItemsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        eyebrow={t('lostFound.title')}
-        title={t('lostFound.browseTitle')}
-        description={t('lostFound.browseSubtitle')}
-        actions={
-          canReport ? (
-            <Button asChild>
-              <Link to="/lost-found/report">
-                <PackagePlus className="h-4 w-4" aria-hidden="true" />
-                {t('lostFound.reportAnItem')}
-              </Link>
-            </Button>
-          ) : undefined
-        }
+      {/* Spec 006: search-first hero — the pill is bound live to the same
+          search state the filters below used to own. */}
+      <SearchHero
+        subtitle={t('lostFound.browseSubtitle')}
+        chipsValue={filters.category}
+        onChipSelect={(category) => updateFilters({ category })}
+      >
+        <div className="mt-7">
+          <BigSearchPill
+            inputId="browse-hero-search"
+            value={filters.q}
+            onValueChange={(q) => updateFilters({ q })}
+          />
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          {canReport ? <HeroReportLink /> : null}
+          <a
+            href="#browse-results"
+            className="inline-flex items-center rounded-full border-[1.5px] border-white/40 px-6 py-3 text-[15px] font-bold text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--mnu-navy))]"
+          >
+            {t('lostFound.heroBrowseCta')}
+          </a>
+        </div>
+      </SearchHero>
+
+      <ItemFilters
+        values={filters}
+        onChange={updateFilters}
+        onReset={resetFilters}
+        hideSearch
+        hideCategory
       />
 
-      <ItemFilters values={filters} onChange={updateFilters} onReset={resetFilters} />
+      <div id="browse-results" className="scroll-mt-24 space-y-6">
 
       {itemsQuery.isLoading ? (
         <LoadingState label={t('common.loading')} />
@@ -149,6 +174,7 @@ export function BrowseItemsPage() {
           />
         </>
       )}
+      </div>
     </div>
   );
 }

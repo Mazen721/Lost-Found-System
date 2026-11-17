@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { InsightsPanel } from '@/features/ai/InsightsPanel';
 import { AdminDashboard } from '@/features/dashboard/AdminDashboard';
 import { ManagerDashboard } from '@/features/dashboard/ManagerDashboard';
+import { SearchFirstHero } from '@/features/dashboard/SearchFirstHero';
 import { StudentDashboard } from '@/features/dashboard/StudentDashboard';
 import { DashboardPeriodSelect } from '@/features/dashboard/DashboardPeriodSelect';
 import { dashboardApi } from '@/features/dashboard/dashboardApi';
@@ -94,6 +95,9 @@ export function DashboardPage() {
   const showHeaderAiDrawer =
     user.role === 'LOST_FOUND_MANAGER' || user.role === 'SUPER_ADMIN';
   const showPeriodFilter = user.role !== 'STUDENT' && user.role !== 'EMPLOYEE';
+  // Spec 006: students and employees get the search-first hero instead of
+  // the greeting header; Admin/Manager keep the existing header as-is.
+  const isSearchFirstRole = user.role === 'STUDENT' || user.role === 'EMPLOYEE';
   const isRoleMatched = Boolean(dashboardQuery.data && dashboardQuery.data.role === user.role);
   const displayName = tr(user, 'name') || user.name;
   const firstName =
@@ -114,6 +118,9 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-7">
+      {isSearchFirstRole ? (
+        <SearchFirstHero />
+      ) : (
       <header className="bg-hero-navy overflow-hidden rounded-3xl px-6 py-7 text-white shadow-hero sm:px-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 space-y-2.5">
@@ -172,6 +179,7 @@ export function DashboardPage() {
           </div>
         </div>
       </header>
+      )}
 
       {showHeaderAiDrawer && aiOpen ? (
         <section aria-label={t('ai.toggleInsights')}>
