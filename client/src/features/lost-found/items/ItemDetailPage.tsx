@@ -1,9 +1,12 @@
 import {
   ArrowLeft,
   CalendarDays,
+  CheckCircle2,
   ClipboardCheck,
+  Clock3,
   EyeOff,
   MapPin,
+  PackageSearch,
   Palette,
   ShieldCheck,
   Tag,
@@ -19,6 +22,11 @@ import { LoadingState } from '@/components/shared/LoadingState';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useAuth } from '@/features/auth/AuthContext';
+import { claimsApi } from '@/features/lost-found/claims/claimsApi';
+import {
+  canClaimItem,
+  findActiveClaim,
+} from '@/features/lost-found/items/claimEligibility';
 import { CloseItemButton } from '@/features/lost-found/items/CloseItemButton';
 import { ItemGallery } from '@/features/lost-found/items/ItemGallery';
 import { ReportTypeBadge } from '@/features/lost-found/items/ReportTypeBadge';
@@ -26,7 +34,7 @@ import { itemsApi } from '@/features/lost-found/items/itemsApi';
 import { formatLocation, tr } from '@/i18n/localize';
 import { ApiError, getErrorMessage } from '@/lib/api';
 import { enumLabel } from '@/lib/labels';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 
 export function ItemDetailPage() {
   const { t } = useTranslation();
@@ -43,6 +51,19 @@ export function ItemDetailPage() {
   });
 
   const item = itemQuery.data?.item;
+
+  // The claims list is scoped to the caller server-side, so for a
+  // student/employee this returns only their own claims on this item —
+  // used to swap the claim CTA for an "already claimed" state.
+  const isClaimantRole = user?.role === 'STUDENT' || user?.role === 'EMPLOYEE';
+  const myItemClaimsQuery = useQuery({
+    queryKey: ['lost-found-claims', 'mine', 'item', item?.id],
+    enabled: Boolean(item && isClaimantRole && item.reportType === 'FOUND'),
+    queryFn: () => {
+      if (!item) throw new Error('Missing item');
+      return claimsApi.list({ itemId: item.id, limit: 10 });
+    },
+  });
 
   if (itemQuery.isLoading) {
     return (
@@ -82,12 +103,15 @@ export function ItemDetailPage() {
     );
   }
 
-  const canClaim =
-    user?.role === 'STUDENT' &&
-    item.reportType === 'FOUND' &&
-    (item.status === 'OPEN' ||
-      item.status === 'MATCH_CONFIRMED' ||
-      item.status === 'CLAIM_UNDER_REVIEW');
+  const activeClaim = findActiveClaim(myItemClaimsQuery.data?.data ?? []);
+  const claimEligible = canClaimItem(user, item);
+  const canClaim = claimEligible && !activeClaim;
+  // Hold the big CTA card until the my-claims check settles, so a viewer
+  // who already claimed never sees a flash of the claim button.
+  const showClaimCta = canClaim && !myItemClaimsQuery.isLoading;
+  const showActiveClaimInfo = claimEligible && Boolean(activeClaim);
+  const activeClaimApproved = activeClaim?.status === 'APPROVED';
+  const ActiveClaimIcon = activeClaimApproved ? CheckCircle2 : Clock3;
 
   return (
     <div className="space-y-6">
@@ -119,6 +143,73 @@ export function ItemDetailPage() {
           </div>
         }
       />
+
+      {showClaimCta ? (
+        <Card className="border-primary/25 bg-primary/[0.05]">
+          <CardContent className="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <PackageSearch className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1 space-y-1">
+              <h2 className="font-display text-lg font-bold text-foreground">
+                {t('lostFound.claimCtaTitle')}
+              </h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {t('lostFound.claimCtaDescription')}
+              </p>
+            </div>
+            <Button asChild size="lg" className="w-full shrink-0 sm:w-auto">
+              <Link to={`/lost-found/claims/new?itemId=${item.id}`}>
+                <ClipboardCheck className="h-5 w-5" aria-hidden="true" />
+                {t('lostFound.submitClaim')}
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {showActiveClaimInfo && activeClaim ? (
+        <Card
+          className={
+            activeClaimApproved
+              ? 'border-emerald-300/70 bg-emerald-50/60'
+              : 'border-amber-300/70 bg-amber-50/60'
+          }
+        >
+          <CardContent className="flex flex-col gap-4 pt-5 sm:flex-row sm:items-center">
+            <span
+              className={cn(
+                'flex h-12 w-12 shrink-0 items-center justify-center rounded-full',
+                activeClaimApproved
+                  ? 'bg-emerald-500/10 text-emerald-700'
+                  : 'bg-amber-500/10 text-amber-700',
+              )}
+            >
+              <ActiveClaimIcon className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1 space-y-1">
+              <h2 className="font-display text-lg font-bold text-foreground">
+                {t(activeClaimApproved ? 'lostFound.claimApprovedTitle' : 'lostFound.claimActiveTitle')}
+              </h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {t(
+                  activeClaimApproved
+                    ? 'lostFound.claimApprovedDescription'
+                    : 'lostFound.claimActiveDescription',
+                )}
+              </p>
+            </div>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="w-full shrink-0 bg-card sm:w-auto"
+            >
+              <Link to="/lost-found/claims">{t('lostFound.claimViewMine')}</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <div className="space-y-6">
