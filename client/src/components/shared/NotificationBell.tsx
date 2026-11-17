@@ -100,7 +100,13 @@ function NotificationRow({ notification, onOpen }: NotificationRowProps) {
   );
 }
 
-export function NotificationBell({ poll = true }: { poll?: boolean }) {
+interface NotificationBellProps {
+  poll?: boolean;
+  /** `onDark` restyles the trigger for the navy navbar (spec 007). */
+  tone?: 'light' | 'onDark';
+}
+
+export function NotificationBell({ poll = true, tone = 'light' }: NotificationBellProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
 
@@ -140,7 +146,11 @@ export function NotificationBell({ poll = true }: { poll?: boolean }) {
         <Button
           variant="ghost"
           size="icon"
-          className="relative"
+          className={
+            tone === 'onDark'
+              ? 'relative h-[41px] w-[41px] rounded-full border-[1.5px] border-white/35 text-white hover:bg-white/10 hover:text-white focus-visible:ring-[hsl(var(--mnu-gold))]'
+              : 'relative'
+          }
           aria-label={t('notifications.title')}
         >
           {unreadCount > 0 ? (
@@ -149,7 +159,13 @@ export function NotificationBell({ poll = true }: { poll?: boolean }) {
             <Bell className="h-5 w-5" aria-hidden="true" />
           )}
           {unreadCount > 0 ? (
-            <span className="absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground ring-2 ring-card">
+            <span
+              className={
+                tone === 'onDark'
+                  ? 'absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[hsl(var(--mnu-gold))] px-1 text-[10px] font-bold text-[hsl(var(--mnu-navy))] ring-2 ring-[hsl(var(--mnu-navy))]'
+                  : 'absolute -end-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground ring-2 ring-card'
+              }
+            >
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           ) : null}

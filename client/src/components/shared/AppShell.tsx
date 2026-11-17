@@ -1,134 +1,13 @@
-import {
-  CalendarDays,
-  ChevronDown,
-  LogOut,
-  Menu,
-  PanelLeftClose,
-  PanelLeftOpen,
-  UserRound,
-  X,
-} from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { BrandMark } from '@/components/shared/BrandMark';
+import { Outlet, useLocation } from 'react-router-dom';
+import { HomeHero } from '@/components/shared/HomeHero';
 import { MobileBottomNav } from '@/components/shared/MobileBottomNav';
 import { MobileNotificationsSheet } from '@/components/shared/MobileNotificationsSheet';
-import { NotificationBell } from '@/components/shared/NotificationBell';
-import {
-  getNavigation,
-  isMnuPortalRole,
-  type NavigationItem,
-} from '@/components/shared/navigation';
-import { SidebarContent } from '@/components/shared/Sidebar';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { NavDrawer } from '@/components/shared/NavDrawer';
+import { TopNavbar } from '@/components/shared/TopNavbar';
+import { isMnuPortalRole } from '@/components/shared/navigation';
 import { useAuth } from '@/features/auth/AuthContext';
-import { tr } from '@/i18n/localize';
-import { enumLabel } from '@/lib/labels';
-import { cn, formatDate, getInitials } from '@/lib/utils';
-
-const ROUTE_KEYS: Record<string, string> = {
-  '/dashboard': 'nav.dashboard',
-  '/profile': 'nav.profile',
-  '/forbidden': 'errors.forbiddenTitle',
-  '/users': 'nav.users',
-  '/locations': 'nav.locations',
-  '/activity-logs': 'nav.activityLogs',
-  '/lost-found': 'nav.lostFound',
-  '/lost-found/report': 'nav.reportLostFound',
-  '/lost-found/my-reports': 'nav.myReports',
-  '/lost-found/items': 'nav.allReports',
-  '/lost-found/archived': 'nav.archivedItems',
-  '/lost-found/matches': 'nav.matches',
-  '/lost-found/claims': 'nav.claims',
-  '/lost-found/claims/new': 'claims.submitClaim',
-  '/lost-found/handovers': 'nav.handovers',
-};
-
-function getPageTitle(pathname: string, t: (key: string) => string): string {
-  const key = ROUTE_KEYS[pathname];
-  if (key) return t(key);
-  if (/^\/lost-found\/items\/[^/]+$/.test(pathname)) return t('lostFound.itemDetails');
-  if (/^\/lost-found\/claims\/[^/]+$/.test(pathname)) return t('claims.title');
-  return 'CampusCare Lost & Found';
-}
-
-function UserMenu({ compact = false }: { compact?: boolean }) {
-  const { t } = useTranslation();
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  if (!user) return null;
-
-  const displayName = tr(user, 'name') || user.name;
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="flex items-center gap-1 rounded-full border border-border bg-card py-1 ps-1 pe-1.5 text-start shadow-sm transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:gap-2 sm:pe-2"
-          aria-label={t('auth.profileTitle')}
-        >
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs">{getInitials(displayName)}</AvatarFallback>
-          </Avatar>
-          <span className={cn('hidden min-w-0', compact ? '2xl:block' : 'sm:block')}>
-            <bdi className="block max-w-[140px] truncate text-xs font-semibold leading-tight text-foreground">
-              {displayName}
-            </bdi>
-            <span className="block text-[11.5px] leading-tight text-muted-foreground">
-              {enumLabel('role', user.role)}
-            </span>
-          </span>
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel className="normal-case tracking-normal">
-          <bdi className="block truncate text-sm font-semibold text-foreground">{displayName}</bdi>
-          <span dir="ltr" className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">
-            {user.email}
-          </span>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link to="/profile" className="cursor-pointer">
-            <UserRound className="h-4 w-4" aria-hidden="true" />
-            {t('nav.profile')}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="cursor-pointer text-destructive focus:text-destructive"
-          onSelect={() => {
-            logout();
-            navigate('/login', { replace: true });
-          }}
-        >
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-          {t('auth.signOut')}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
+import { cn } from '@/lib/utils';
 
 const FORM_CONTROL_SELECTOR = 'input, textarea, select, [contenteditable="true"]';
 
@@ -184,80 +63,24 @@ function useMobileKeyboardOpen(): boolean {
   return keyboardOpen;
 }
 
-const SIDEBAR_COLLAPSED_STORAGE_KEY = 'cc-sidebar-collapsed';
-
-function readSidebarCollapsedPreference(): boolean {
-  try {
-    return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Horizontal pill navigation displayed in the top bar when the desktop sidebar is collapsed.
+ * Website shell (spec 007): a navy top navbar for every role — no
+ * persistent sidebar. The full menu lives in a drawer that is closed by
+ * default. On the home route the navbar sits inside the navy zone that
+ * continues into the hero, so the page top is one continuous navy block;
+ * everywhere else the navbar is a sticky bar and the page content runs
+ * full-width under it (≈1280px container). The spec 003 mobile bottom
+ * bar and notifications sheet are unchanged.
  */
-function DesktopFastNav({ items }: { items: NavigationItem[] }) {
-  const { t } = useTranslation();
-
-  return (
-    <nav
-      aria-label={t('nav.groupOverview')}
-      className="flex min-w-0 flex-wrap items-center gap-1"
-    >
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) =>
-              cn(
-                'inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                isActive
-                  ? 'bg-primary text-primary-foreground shadow-xs'
-                  : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground',
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <Icon
-                  className={cn(
-                    'h-3.5 w-3.5 shrink-0',
-                    isActive ? 'text-[hsl(var(--mnu-gold))]' : 'text-muted-foreground',
-                  )}
-                  aria-hidden="true"
-                />
-                <span>{t(item.labelKey)}</span>
-              </>
-            )}
-          </NavLink>
-        );
-      })}
-    </nav>
-  );
-}
-
 export function AppShell() {
-  const { t } = useTranslation();
   const { user } = useAuth();
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const keyboardOpen = useMobileKeyboardOpen();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(readSidebarCollapsedPreference);
 
   const isMnuPortal = isMnuPortalRole(user?.role);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(sidebarCollapsed));
-    } catch {
-      // Ignore storage errors in restricted environments
-    }
-  }, [sidebarCollapsed]);
+  const isHome = location.pathname === '/home';
 
   useEffect(() => {
     document.body.classList.toggle('mnu-portal-surface', isMnuPortal);
@@ -273,169 +96,52 @@ export function AppShell() {
 
   if (!user) return null;
 
-  const title = getPageTitle(location.pathname, t);
-  const headerDate = isMnuPortal
-    ? formatDate(new Date(), { day: 'numeric', month: 'short', year: 'numeric' })
-    : null;
-  const fastNavItems = getNavigation(user.role).flatMap((group) =>
-    group.items.filter((item) => !item.soon),
-  );
+  const openDrawer = () => setDrawerOpen(true);
 
   return (
-    <div className={cn('min-h-screen bg-background', isMnuPortal && 'mnu-portal-surface')}>
+    <div className={cn('flex min-h-screen flex-col bg-background', isMnuPortal && 'mnu-portal-surface')}>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:start-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
       >
-        CampusCare Lost & Found
+        CampusCare Lost &amp; Found
       </a>
 
-      {!sidebarCollapsed ? (
-        <aside className="fixed inset-y-0 start-0 z-40 hidden w-72 lg:block">
-          <SidebarContent onCollapse={() => setSidebarCollapsed(true)} />
-        </aside>
-      ) : null}
+      {isHome ? (
+        <div className="bg-hero-concept">
+          <TopNavbar flush onMenu={openDrawer} />
+          <HomeHero />
+        </div>
+      ) : (
+        <TopNavbar onMenu={openDrawer} />
+      )}
 
-      <Dialog open={mobileOpen} onOpenChange={setMobileOpen}>
-        <DialogContent
-          showClose={false}
-          className={cn(
-            'fixed inset-y-0 start-0 left-auto top-0 flex h-full w-[86%] max-w-xs translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 border-e border-sidebar-border bg-sidebar p-0 text-sidebar-foreground sm:rounded-none',
-            isMnuPortal && 'mnu-portal-surface',
-          )}
-        >
-          <DialogTitle className="sr-only">{t('nav.groupOverview')}</DialogTitle>
-          <DialogDescription className="sr-only">
-            CampusCare Lost & Found
-          </DialogDescription>
-          <DialogClose
-            className={cn(
-              'absolute end-3 top-4 z-10 rounded-md p-1.5 text-sidebar-muted transition-colors hover:bg-sidebar-active hover:text-sidebar-foreground',
-              isMnuPortal
-                ? 'focus-visible:ring-2 focus-visible:ring-[hsl(var(--mnu-gold))] focus-visible:ring-offset-0'
-                : 'focus-visible:ring-sidebar-foreground',
-            )}
-            aria-label={t('common.close')}
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </DialogClose>
-          <SidebarContent onNavigate={() => setMobileOpen(false)} />
-        </DialogContent>
-      </Dialog>
-
-      <div
-        className={cn(
-          'flex min-h-screen flex-col transition-[padding] duration-200',
-          sidebarCollapsed ? 'lg:ps-0' : 'lg:ps-72',
-        )}
+      <main
+        id="main-content"
+        className={
+          isHome
+            ? 'w-full flex-1'
+            : 'mx-auto w-full max-w-[1280px] flex-1 px-4 py-6 sm:px-6 lg:py-8'
+        }
       >
-        <header
-          className={cn(
-            'sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b border-border px-3 backdrop-blur sm:gap-3 sm:px-6 lg:hidden',
-            isMnuPortal ? 'bg-card/95' : 'bg-background/95',
-          )}
-        >
-          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-11 w-11 shrink-0"
-              onClick={() => setMobileOpen(true)}
-              aria-label={t('common.actions')}
-            >
-              <Menu className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            <BrandMark portal={isMnuPortal} compactOnMobile className="min-w-0" />
-          </div>
-          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            <NotificationBell poll={false} />
-            <UserMenu />
-          </div>
-        </header>
+        <Outlet />
+      </main>
 
-        <header
-          className={cn(
-            'sticky top-0 z-30 hidden min-h-16 shrink-0 items-center justify-between gap-4 border-b border-border px-6 py-2 backdrop-blur lg:flex 2xl:px-8',
-            isMnuPortal ? 'bg-card/95' : 'bg-background/90',
-          )}
-        >
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setSidebarCollapsed((prev) => !prev)}
-              aria-label={sidebarCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
-              aria-expanded={!sidebarCollapsed}
-              className="h-9 shrink-0 gap-1.5 rounded-lg border-border bg-card px-2.5 text-xs font-semibold text-foreground shadow-xs hover:bg-secondary/60"
-            >
-              {sidebarCollapsed ? (
-                <PanelLeftOpen className="h-4 w-4 text-primary rtl:rotate-180" aria-hidden="true" />
-              ) : (
-                <PanelLeftClose className="h-4 w-4 text-primary rtl:rotate-180" aria-hidden="true" />
-              )}
-              <span className={cn('hidden', sidebarCollapsed ? '2xl:inline' : 'xl:inline')}>
-                {t('nav.menu')}
-              </span>
-            </Button>
+      {/* Clearance for the fixed mobile bottom bar (spec 003); collapses
+          while the keyboard is open, together with the bar itself. */}
+      <div
+        aria-hidden="true"
+        className={cn(
+          'shrink-0 transition-[height] duration-200 lg:hidden',
+          keyboardOpen ? 'h-0' : 'h-[calc(5.25rem+env(safe-area-inset-bottom))]',
+        )}
+      />
 
-            {sidebarCollapsed ? (
-              <DesktopFastNav items={fastNavItems} />
-            ) : (
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">CampusCare Lost &amp; Found</span>
-                <span className="text-border" aria-hidden="true">
-                  /
-                </span>
-                <span className={cn('text-foreground', isMnuPortal ? 'font-semibold' : 'font-medium')}>
-                  {title}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            {headerDate ? (
-              <span
-                className={cn(
-                  'hidden items-center gap-1.5 rounded-full border border-border bg-secondary/60 px-3 py-1.5 text-xs font-medium text-muted-foreground',
-                  sidebarCollapsed ? '2xl:inline-flex' : 'xl:inline-flex',
-                )}
-              >
-                <CalendarDays
-                  className="h-3.5 w-3.5 text-[hsl(var(--mnu-gold-ink))]"
-                  aria-hidden="true"
-                />
-                {headerDate}
-              </span>
-            ) : null}
-            <NotificationBell />
-            <UserMenu compact={sidebarCollapsed} />
-          </div>
-        </header>
-
-        <main
-          id="main-content"
-          className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
-        >
-          <Outlet />
-        </main>
-
-        {/* Clearance for the fixed mobile bottom bar (spec 003); collapses
-            while the keyboard is open, together with the bar itself. */}
-        <div
-          aria-hidden="true"
-          className={cn(
-            'shrink-0 transition-[height] duration-200 lg:hidden',
-            keyboardOpen ? 'h-0' : 'h-[calc(5.25rem+env(safe-area-inset-bottom))]',
-          )}
-        />
-      </div>
-
+      <NavDrawer open={drawerOpen} onOpenChange={setDrawerOpen} />
       <MobileBottomNav
         hidden={keyboardOpen}
         onNotifications={() => setNotificationsOpen(true)}
-        onMore={() => setMobileOpen(true)}
+        onMore={openDrawer}
       />
       <MobileNotificationsSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} />
     </div>
