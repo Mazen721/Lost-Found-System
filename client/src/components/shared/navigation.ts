@@ -1,6 +1,7 @@
 import {
   Archive,
   BadgeCheck,
+  BarChart3,
   Bell,
   Ellipsis,
   Files,
@@ -64,6 +65,7 @@ const MANAGER_NAVIGATION: NavigationGroup[] = [
     titleKey: 'nav.groupOverview',
     items: [
       { labelKey: 'nav.dashboard', to: '/dashboard', icon: LayoutDashboard, end: true },
+      { labelKey: 'nav.statistics', to: '/statistics', icon: BarChart3, end: true },
     ],
   },
   {
@@ -90,6 +92,7 @@ const ADMIN_NAVIGATION: NavigationGroup[] = [
     titleKey: 'nav.groupOverview',
     items: [
       { labelKey: 'nav.dashboard', to: '/dashboard', icon: LayoutDashboard, end: true },
+      { labelKey: 'nav.statistics', to: '/statistics', icon: BarChart3, end: true },
     ],
   },
   {
@@ -196,6 +199,7 @@ const STUDENT_TOP_LINKS: TopLinkItem[] = [
 
 const MANAGER_TOP_LINKS: TopLinkItem[] = [
   { labelKey: 'nav.dashboard', to: '/dashboard', end: true },
+  { labelKey: 'nav.statistics', to: '/statistics', end: true },
   { labelKey: 'nav.matches', to: '/lost-found/matches' },
   {
     labelKey: 'nav.claims',
@@ -214,6 +218,7 @@ const MANAGER_TOP_LINKS: TopLinkItem[] = [
 
 const ADMIN_TOP_LINKS: TopLinkItem[] = [
   { labelKey: 'nav.dashboard', to: '/dashboard', end: true },
+  { labelKey: 'nav.statistics', to: '/statistics', end: true },
   { labelKey: 'nav.users', to: '/users' },
   {
     labelKey: 'nav.allReports',

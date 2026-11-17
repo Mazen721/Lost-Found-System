@@ -11,6 +11,7 @@ import { Types } from 'mongoose';
 import {
   CLAIM_STATUSES,
   ITEM_STATUSES,
+  LOST_FOUND_CATEGORIES,
   ROLES,
   type ClaimStatus,
   type ReportType,
@@ -91,12 +92,35 @@ export interface ValueStats {
   totalReturnedValueEGP: number;
 }
 
+/**
+ * Staff-only distribution breakdowns (spec 009) for the Statistics page:
+ * all-time item counts by category and status, plus the five busiest
+ * locations. Like `valueStats`, they ignore the dashboard period and
+ * never appear on the student/employee payload.
+ */
+export interface DashboardBreakdowns {
+  itemsByCategory: Array<{
+    category: string;
+    lost: number;
+    found: number;
+    total: number;
+  }>;
+  itemsByStatus: Array<{ status: string; count: number }>;
+  locationsTop: Array<{
+    locationId: string;
+    name: string;
+    nameAr?: string;
+    count: number;
+  }>;
+}
+
 export interface AdminDashboard {
   role: 'SUPER_ADMIN';
   period: DashboardPeriod;
   rangeStart: Date | null;
   rangeEnd: Date;
   valueStats: ValueStats;
+  breakdowns: DashboardBreakdowns;
   totals: {
     users: number;
     activeUsers: number;
@@ -136,6 +160,7 @@ export interface ManagerDashboard {
   rangeStart: Date | null;
   rangeEnd: Date;
   valueStats: ValueStats;
+  breakdowns: DashboardBreakdowns;
   counts: {
     totalLostItems: number;
     totalFoundItems: number;
@@ -440,6 +465,92 @@ export async function getValueStats(now: Date = new Date()): Promise<ValueStats>
   };
 }
 
+/**
+ * All-time distribution breakdowns for the Statistics page (spec 009).
+ * Categories and statuses are zero-filled over their full enum lists so
+ * the page renders a stable shape; locations are the five busiest by
+ * item count, hydrated with their building + room names.
+ */
+export async function getBreakdowns(): Promise<DashboardBreakdowns> {
+  const [categoryRows, statusRows, locationRows] = await Promise.all([
+    LostFoundItem.aggregate<{
+      _id: { category: string; reportType: string };
+      count: number;
+    }>([
+      {
+        $group: {
+          _id: { category: '$category', reportType: '$reportType' },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    LostFoundItem.aggregate<CountRow>([
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]),
+    LostFoundItem.aggregate<{ _id: Types.ObjectId; count: number }>([
+      { $group: { _id: '$locationId', count: { $sum: 1 } } },
+      // _id tiebreak: equal counts must rank identically on every call,
+      // otherwise the top-5 membership flickers between requests.
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: 5 },
+    ]),
+  ]);
+
+  const categoryMap = new Map<string, { lost: number; found: number }>();
+  for (const row of categoryRows) {
+    if (!row._id?.category) continue;
+    const current = categoryMap.get(row._id.category) ?? { lost: 0, found: 0 };
+    if (row._id.reportType === 'LOST') current.lost += row.count;
+    if (row._id.reportType === 'FOUND') current.found += row.count;
+    categoryMap.set(row._id.category, current);
+  }
+  const itemsByCategory = LOST_FOUND_CATEGORIES.map((category) => {
+    const counts = categoryMap.get(category) ?? { lost: 0, found: 0 };
+    return {
+      category,
+      lost: counts.lost,
+      found: counts.found,
+      total: counts.lost + counts.found,
+    };
+  }).sort((a, b) => b.total - a.total);
+
+  const statusMap = new Map(statusRows.map((row) => [row._id, row.count]));
+  const itemsByStatus = ITEM_STATUSES.map((status) => ({
+    status,
+    count: statusMap.get(status) ?? 0,
+  }));
+
+  const locations = await Location.find({
+    _id: { $in: locationRows.map((row) => row._id) },
+  })
+    .select('buildingName buildingNameAr room roomAr')
+    .lean();
+  const locationById = new Map(
+    locations.map((location) => [location._id.toString(), location]),
+  );
+  const locationsTop = locationRows.flatMap((row) => {
+    const location = locationById.get(row._id.toString());
+    if (!location) return [];
+    const nameAr = location.buildingNameAr
+      ? location.roomAr
+        ? `${location.buildingNameAr} — ${location.roomAr}`
+        : location.buildingNameAr
+      : undefined;
+    return [
+      {
+        locationId: row._id.toString(),
+        name: location.room
+          ? `${location.buildingName} — ${location.room}`
+          : location.buildingName,
+        nameAr,
+        count: row.count,
+      },
+    ];
+  });
+
+  return { itemsByCategory, itemsByStatus, locationsTop };
+}
+
 async function getAdminDashboard(
   period: DashboardPeriod,
   range: PeriodRange,
@@ -502,9 +613,10 @@ async function getAdminDashboard(
     ItemMatch.countDocuments(createdAtMatch(range)),
   ]);
 
-  const [boardExtras, valueStats] = await Promise.all([
+  const [boardExtras, valueStats, breakdowns] = await Promise.all([
     getBoardExtras(),
     getValueStats(),
+    getBreakdowns(),
   ]);
 
   const userRoleMap = new Map(userRoleRows.map((row) => [row._id, row.count]));
@@ -538,6 +650,7 @@ async function getAdminDashboard(
     rangeStart: range.from,
     rangeEnd: range.to,
     valueStats,
+    breakdowns,
     totals: {
       users,
       activeUsers,
@@ -633,9 +746,10 @@ async function getManagerDashboard(
     .sort((a, b) => b.lost + b.found - (a.lost + a.found))
     .slice(0, 6);
 
-  const [boardExtras, valueStats] = await Promise.all([
+  const [boardExtras, valueStats, breakdowns] = await Promise.all([
     getBoardExtras(),
     getValueStats(),
+    getBreakdowns(),
   ]);
 
   const claimStatusMap = new Map(claimStatusRows.map((row) => [row._id, row.count]));
@@ -650,6 +764,7 @@ async function getManagerDashboard(
     rangeStart: range.from,
     rangeEnd: range.to,
     valueStats,
+    breakdowns,
     counts: {
       totalLostItems,
       totalFoundItems,

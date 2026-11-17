@@ -77,6 +77,7 @@ describe('top-navbar links (spec 007)', () => {
   it('LOST_FOUND_MANAGER top links are its working set', () => {
     expect(getTopLinks('LOST_FOUND_MANAGER').map((link) => link.to)).toEqual([
       '/dashboard',
+      '/statistics',
       '/lost-found/matches',
       '/lost-found/claims',
       '/lost-found/items',
@@ -88,6 +89,7 @@ describe('top-navbar links (spec 007)', () => {
     const links = getTopLinks('SUPER_ADMIN');
     expect(links.map((link) => link.to)).toEqual([
       '/dashboard',
+      '/statistics',
       '/users',
       '/lost-found/items',
       '/lost-found/matches',
@@ -109,6 +111,41 @@ describe('top-navbar links (spec 007)', () => {
     expect(getTopLinks('SUPER_ADMIN').map((link) => link.to)).not.toContain(REPORT_ROUTE);
     expect(getMobileTabs('SUPER_ADMIN').map((tab) => tab.to)).not.toContain(REPORT_ROUTE);
   });
+});
+
+describe('statistics navigation (spec 009)', () => {
+  const STATISTICS_ROUTE = '/statistics';
+
+  it.each(['LOST_FOUND_MANAGER', 'SUPER_ADMIN'] as Role[])(
+    '%s gets statistics right after the dashboard in top links and drawer',
+    (role) => {
+      const topLinks = getTopLinks(role).map((link) => link.to);
+      expect(topLinks.indexOf(STATISTICS_ROUTE)).toBe(topLinks.indexOf('/dashboard') + 1);
+
+      const menu = fullMenuRoutes(role);
+      expect(menu.indexOf(STATISTICS_ROUTE)).toBe(menu.indexOf('/dashboard') + 1);
+    },
+  );
+
+  it.each(['STUDENT', 'EMPLOYEE'] as Role[])(
+    '%s has no statistics entry on any navigation surface',
+    (role) => {
+      expect(fullMenuRoutes(role)).not.toContain(STATISTICS_ROUTE);
+      expect(getTopLinks(role).map((link) => link.to)).not.toContain(STATISTICS_ROUTE);
+      expect(getMobileTabs(role).map((tab) => tab.to)).not.toContain(STATISTICS_ROUTE);
+    },
+  );
+
+  it.each(['LOST_FOUND_MANAGER', 'SUPER_ADMIN'] as Role[])(
+    '%s statistics top link lights only on /statistics',
+    (role) => {
+      const link = getTopLinks(role).find(
+        (entry) => entry.to === STATISTICS_ROUTE,
+      ) as TopLinkItem;
+      expect(isTopLinkActive(link, '/statistics')).toBe(true);
+      expect(isTopLinkActive(link, '/dashboard')).toBe(false);
+    },
+  );
 });
 
 describe('isTopLinkActive route mapping (spec 007)', () => {

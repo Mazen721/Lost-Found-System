@@ -6,6 +6,7 @@ import { useAuth } from '@/features/auth/AuthContext';
 import { LoginPage } from '@/features/auth/LoginPage';
 import { ProfilePage } from '@/features/auth/ProfilePage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
+import { StatisticsPage } from '@/features/dashboard/StatisticsPage';
 import { HomePage } from '@/features/home/HomePage';
 import { LocationsPage } from '@/features/locations/LocationsPage';
 import { AllReportsPage } from '@/features/lost-found/items/AllReportsPage';
@@ -93,6 +94,7 @@ export function AppRouter() {
               <ProtectedRoute allowedRoles={['LOST_FOUND_MANAGER', 'SUPER_ADMIN']} />
             }
           >
+            <Route path="statistics" element={<StatisticsPage />} />
             <Route path="lost-found/matches" element={<MatchSuggestionsPage />} />
             <Route path="lost-found/handovers" element={<HandoversPage />} />
             <Route path="lost-found/items" element={<AllReportsPage />} />

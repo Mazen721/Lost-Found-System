@@ -12,8 +12,9 @@ import type { ValueStats } from '@/types/dashboard';
  * month vs what was handed back, in EGP. All figures are estimates —
  * the hints carry the «تقديرية» wording, and no recovery percentage is
  * ever derived (the lost and returned populations are not the same
- * items). Rendered only on Admin/Manager dashboards; the student
- * payload never contains valueStats.
+ * items). Rendered on the staff Statistics page (spec 009; they lived
+ * on the dashboards in 008); the student payload never contains
+ * valueStats.
  */
 export function ValueStatsCards({ stats }: { stats: ValueStats }) {
   const { t } = useTranslation();

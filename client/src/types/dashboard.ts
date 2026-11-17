@@ -62,6 +62,26 @@ export interface ValueStats {
   totalReturnedValueEGP: number;
 }
 
+/**
+ * Staff-only distribution breakdowns (spec 009), rendered on the
+ * Statistics page. Present only on the Admin and Manager payloads.
+ */
+export interface DashboardBreakdowns {
+  itemsByCategory: Array<{
+    category: string;
+    lost: number;
+    found: number;
+    total: number;
+  }>;
+  itemsByStatus: Array<{ status: string; count: number }>;
+  locationsTop: Array<{
+    locationId: string;
+    name: string;
+    nameAr?: string;
+    count: number;
+  }>;
+}
+
 export interface AdminDashboard extends DashboardBase {
   role: 'SUPER_ADMIN';
   totals: {
@@ -96,6 +116,7 @@ export interface AdminDashboard extends DashboardBase {
   recentItems: DashboardItemCard[];
   urgentQueue: UrgentQueue;
   valueStats: ValueStats;
+  breakdowns: DashboardBreakdowns;
 }
 
 export interface ManagerDashboard extends DashboardBase {
@@ -119,6 +140,7 @@ export interface ManagerDashboard extends DashboardBase {
   recentItems: DashboardItemCard[];
   urgentQueue: UrgentQueue;
   valueStats: ValueStats;
+  breakdowns: DashboardBreakdowns;
 }
 
 export interface StudentDashboard extends DashboardBase {
