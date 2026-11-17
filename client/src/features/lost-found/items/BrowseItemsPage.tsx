@@ -15,6 +15,7 @@ import {
   ItemFilters,
   type ItemFilterState,
 } from '@/features/lost-found/items/ItemFilters';
+import { useAuth } from '@/features/auth/AuthContext';
 import { itemsApi } from '@/features/lost-found/items/itemsApi';
 import { getErrorMessage } from '@/lib/api';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
@@ -23,6 +24,9 @@ const PAGE_SIZE = 12;
 
 export function BrowseItemsPage() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  // Spec 003: SUPER_ADMIN does not get the report option anywhere.
+  const canReport = user?.role !== 'SUPER_ADMIN';
   const [filters, setFilters] = useState<ItemFilterState>({ ...EMPTY_ITEM_FILTERS });
   const [page, setPage] = useState(1);
   const debouncedSearch = useDebouncedValue(filters.q);
@@ -78,12 +82,14 @@ export function BrowseItemsPage() {
         title={t('lostFound.browseTitle')}
         description={t('lostFound.browseSubtitle')}
         actions={
-          <Button asChild>
-            <Link to="/lost-found/report">
-              <PackagePlus className="h-4 w-4" aria-hidden="true" />
-              {t('lostFound.reportAnItem')}
-            </Link>
-          </Button>
+          canReport ? (
+            <Button asChild>
+              <Link to="/lost-found/report">
+                <PackagePlus className="h-4 w-4" aria-hidden="true" />
+                {t('lostFound.reportAnItem')}
+              </Link>
+            </Button>
+          ) : undefined
         }
       />
 
@@ -111,11 +117,11 @@ export function BrowseItemsPage() {
               <Button type="button" variant="outline" size="sm" onClick={resetFilters}>
                 {t('common.clearFilters')}
               </Button>
-            ) : (
+            ) : canReport ? (
               <Button asChild size="sm">
                 <Link to="/lost-found/report">{t('lostFound.reportAnItem')}</Link>
               </Button>
-            )
+            ) : undefined
           }
         />
       ) : (

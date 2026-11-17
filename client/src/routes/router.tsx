@@ -39,10 +39,13 @@ export function AppRouter() {
             <Route path="activity-logs" element={<ActivityLogsPage />} />
           </Route>
 
+          {/* Spec 003: SUPER_ADMIN no longer gets the report option; a
+              direct visit to the report route lands on the dashboard. */}
           <Route
             element={
               <ProtectedRoute
-                allowedRoles={['STUDENT', 'EMPLOYEE', 'LOST_FOUND_MANAGER', 'SUPER_ADMIN']}
+                allowedRoles={['STUDENT', 'EMPLOYEE', 'LOST_FOUND_MANAGER']}
+                redirectTo="/dashboard"
               />
             }
           >

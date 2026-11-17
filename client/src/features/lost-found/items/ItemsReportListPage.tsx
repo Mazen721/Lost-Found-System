@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { useAuth } from '@/features/auth/AuthContext';
 import { itemsApi } from '@/features/lost-found/items/itemsApi';
 import { ReportsTable } from '@/features/lost-found/items/ReportsTable';
 import { getErrorMessage } from '@/lib/api';
@@ -26,8 +27,12 @@ type ViewFilter = 'all' | 'active' | 'archived';
 
 export function ItemsReportListPage({ scope }: ItemsReportListPageProps) {
   const { t } = useTranslation();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const isMine = scope === 'mine';
+  // Spec 003: reporters and the manager keep a report CTA in the registry
+  // header; SUPER_ADMIN never sees the report option.
+  const showReportCta = isMine || user?.role === 'LOST_FOUND_MANAGER';
   const paramType = searchParams.get('type');
   const initialReportType: 'ALL' | ReportType =
     scope === 'all' && (paramType === 'LOST' || paramType === 'FOUND') ? paramType : 'ALL';
@@ -124,7 +129,7 @@ export function ItemsReportListPage({ scope }: ItemsReportListPageProps) {
         title={title}
         description={description}
         actions={
-          isMine ? (
+          showReportCta ? (
             <Button asChild>
               <Link to="/lost-found/report">
                 <PackagePlus className="h-4 w-4" aria-hidden="true" />
@@ -204,7 +209,7 @@ export function ItemsReportListPage({ scope }: ItemsReportListPageProps) {
         emptyTitle={emptyTitle}
         emptyDescription={emptyDescription}
         emptyAction={
-          isMine ? (
+          showReportCta ? (
             <Button asChild size="sm">
               <Link to="/lost-found/report">{t('lostFound.reportAnItem')}</Link>
             </Button>

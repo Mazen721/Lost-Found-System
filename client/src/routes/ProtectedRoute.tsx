@@ -7,9 +7,11 @@ import type { Role } from '@/types/auth';
 
 interface ProtectedRouteProps {
   allowedRoles?: Role[];
+  /** Where a signed-in user with a disallowed role is sent. */
+  redirectTo?: string;
 }
 
-export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
+export function ProtectedRoute({ allowedRoles, redirectTo = '/forbidden' }: ProtectedRouteProps) {
   const { t } = useTranslation();
   const { user, isRestoring } = useAuth();
   const location = useLocation();
@@ -37,7 +39,7 @@ export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/forbidden" replace />;
+    return <Navigate to={redirectTo} replace />;
   }
 
   return <Outlet />;
