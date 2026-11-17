@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { BADGE_OVERLAY_CLASSNAME } from '@/components/shared/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { enumLabel } from '@/lib/labels';
 import { cn } from '@/lib/utils';
@@ -12,16 +13,18 @@ const REPORT_TYPE_STYLES: Record<ReportType, string> = {
 interface ReportTypeBadgeProps {
   reportType: ReportType;
   className?: string;
+  /** 'overlay' renders the photo-safe solid-navy treatment (ItemCard). */
+  variant?: 'default' | 'overlay';
 }
 
-export function ReportTypeBadge({ reportType, className }: ReportTypeBadgeProps) {
+export function ReportTypeBadge({ reportType, className, variant = 'default' }: ReportTypeBadgeProps) {
   useTranslation();
   return (
     <Badge
       variant="outline"
       className={cn(
         'font-semibold ltr:uppercase ltr:tracking-wide',
-        REPORT_TYPE_STYLES[reportType],
+        variant === 'overlay' ? BADGE_OVERLAY_CLASSNAME : REPORT_TYPE_STYLES[reportType],
         className,
       )}
     >

@@ -50,10 +50,10 @@ export function ItemCard({ item }: ItemCardProps) {
           </div>
         )}
         <div className="absolute start-2.5 top-2.5">
-          <ReportTypeBadge reportType={item.reportType} />
+          <ReportTypeBadge reportType={item.reportType} variant="overlay" />
         </div>
         <div className="absolute end-2.5 top-2.5">
-          <StatusBadge status={item.status} />
+          <StatusBadge status={item.status} variant="overlay" />
         </div>
       </div>
 
