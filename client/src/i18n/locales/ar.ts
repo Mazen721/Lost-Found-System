@@ -3,6 +3,7 @@ export const ar = {
     title: 'CampusCare Lost & Found — المفقودات والمعثورات',
     description: 'CampusCare Lost & Found — منصة جامعة المنصورة الأهلية لإدارة المفقودات والمعثورات داخل الحرم الجامعي.',
     tagline: 'المفقودات والمعثورات',
+    university: 'جامعة المنصورة الأهلية',
   },
   common: {
     save: 'حفظ',
@@ -75,6 +76,9 @@ export const ar = {
     groupGovernanceDirectory: 'الحوكمة والدليل',
     groupWorkspace: 'مساحة العمل',
     groupAccount: 'الحساب',
+    groupMyAccount: 'حسابي',
+    home: 'الرئيسية',
+    topBrowse: 'تصفّح المفقودات',
     dashboard: 'لوحة التحكم',
     lostFound: 'المفقودات والمعثورات',
     items: 'الأغراض',
@@ -94,8 +98,6 @@ export const ar = {
     notifications: 'الإشعارات',
     profile: 'الملف الشخصي',
     lostFoundView: 'عرض المفقودات',
-    collapseSidebar: 'طي القائمة الجانبية',
-    expandSidebar: 'توسيع القائمة الجانبية',
     menu: 'القائمة',
     tabHome: 'الرئيسية',
     tabBrowse: 'تصفح',
@@ -151,6 +153,11 @@ export const ar = {
     notAssigned: 'غير مُعيَّن',
     notProvided: 'غير متوفر',
     notSet: 'غير محدد',
+  },
+  home: {
+    latestItems: 'أحدث البلاغات',
+    noItemsTitle: 'لا توجد بلاغات بعد',
+    noItemsDesc: 'ستظهر هنا أحدث بلاغات المفقودات والمعثورات فور تسجيلها.',
   },
   dashboard: {
     title: 'لوحة التحكم',

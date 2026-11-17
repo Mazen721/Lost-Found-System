@@ -7,6 +7,7 @@ import {
   FolderSearch,
   GitCompareArrows,
   Handshake,
+  Home,
   LayoutDashboard,
   MapPin,
   PackagePlus,
@@ -29,24 +30,31 @@ export interface NavigationItem {
 }
 
 export interface NavigationGroup {
-  titleKey: string;
+  /** Group heading; the first student group renders without one (spec 007 mockup). */
+  titleKey?: string;
   items: NavigationItem[];
 }
 
+/**
+ * Student/Employee drawer arrangement (spec 007, approved mockup): the
+ * everyday destinations first, then a «حسابي» group holding the personal
+ * pages and the dashboard — which is now a page of its own, not the
+ * landing. Staff menus below keep their pre-007 sidebar arrangement.
+ */
 const STUDENT_NAVIGATION: NavigationGroup[] = [
   {
-    titleKey: 'nav.groupOverview',
     items: [
-      { labelKey: 'nav.dashboard', to: '/dashboard', icon: LayoutDashboard, end: true },
+      { labelKey: 'nav.home', to: '/home', icon: Home, end: true },
+      { labelKey: 'nav.browseLostFound', to: '/lost-found', icon: Search, end: true },
+      { labelKey: 'nav.reportItem', to: '/lost-found/report', icon: PackagePlus },
     ],
   },
   {
-    titleKey: 'nav.lostFound',
+    titleKey: 'nav.groupMyAccount',
     items: [
-      { labelKey: 'nav.reportItem', to: '/lost-found/report', icon: PackagePlus },
-      { labelKey: 'nav.browseLostFound', to: '/lost-found', icon: Search, end: true },
-      { labelKey: 'nav.myClaims', to: '/lost-found/claims', icon: BadgeCheck },
       { labelKey: 'nav.myReports', to: '/lost-found/my-reports', icon: FolderSearch },
+      { labelKey: 'nav.myClaims', to: '/lost-found/claims', icon: BadgeCheck },
+      { labelKey: 'nav.dashboard', to: '/dashboard', icon: LayoutDashboard, end: true },
     ],
   },
 ];
@@ -122,15 +130,122 @@ export function isMnuPortalRole(role?: Role | null): boolean {
   return Boolean(role && role in MNU_PORTAL_NAV);
 }
 
+/**
+ * The complete per-role menu. Since spec 007 this feeds the slide-in
+ * drawer (closed by default) — it remains the source of truth for which
+ * destinations a role may see, and the parity tests bind the bottom bar
+ * and the top links to it.
+ */
 export function getNavigation(role: Role): NavigationGroup[] {
   return MNU_PORTAL_NAV[role];
 }
 
+/** Where a role lands after login: students/employees get the home page. */
+export function landingPathForRole(role: Role): string {
+  return role === 'STUDENT' || role === 'EMPLOYEE' ? '/home' : '/dashboard';
+}
+
+/** Route-matching core shared by the bottom bar and the top links. */
+interface RoutableNavItem {
+  to?: string;
+  end?: boolean;
+  activePrefixes?: string[];
+}
+
+function routeMatches(item: RoutableNavItem, pathname: string): boolean {
+  const matchesPrefix = (prefix: string) =>
+    pathname === prefix || pathname.startsWith(`${prefix}/`);
+
+  if (item.to) {
+    if (item.end) {
+      if (pathname === item.to) return true;
+    } else if (matchesPrefix(item.to)) {
+      return true;
+    }
+  }
+
+  return (item.activePrefixes ?? []).some(matchesPrefix);
+}
+
+/**
+ * Desktop top-navbar links (spec 007): each role's most-used destinations
+ * from its full menu, in menu order. Everything not listed here is
+ * drawer-only. Labels use the short forms the approved mockup shows.
+ */
+export interface TopLinkItem {
+  labelKey: string;
+  to: string;
+  end?: boolean;
+  /** Extra routes that light this link (detail/secondary routes). */
+  activePrefixes?: string[];
+}
+
+const STUDENT_TOP_LINKS: TopLinkItem[] = [
+  { labelKey: 'nav.home', to: '/home', end: true },
+  {
+    labelKey: 'nav.topBrowse',
+    to: '/lost-found',
+    end: true,
+    activePrefixes: ['/lost-found/items'],
+  },
+  { labelKey: 'nav.reportItem', to: '/lost-found/report' },
+  { labelKey: 'nav.myReports', to: '/lost-found/my-reports' },
+  { labelKey: 'nav.claims', to: '/lost-found/claims' },
+  { labelKey: 'nav.dashboard', to: '/dashboard', end: true },
+];
+
+const MANAGER_TOP_LINKS: TopLinkItem[] = [
+  { labelKey: 'nav.dashboard', to: '/dashboard', end: true },
+  { labelKey: 'nav.matches', to: '/lost-found/matches' },
+  {
+    labelKey: 'nav.claims',
+    to: '/lost-found/claims',
+    // Handovers are the claims workflow's second half (same rule as the
+    // manager's bottom-bar claims tab, spec 003).
+    activePrefixes: ['/lost-found/handovers'],
+  },
+  {
+    labelKey: 'nav.allReports',
+    to: '/lost-found/items',
+    activePrefixes: ['/lost-found/archived'],
+  },
+  { labelKey: 'nav.topBrowse', to: '/lost-found', end: true },
+];
+
+const ADMIN_TOP_LINKS: TopLinkItem[] = [
+  { labelKey: 'nav.dashboard', to: '/dashboard', end: true },
+  { labelKey: 'nav.users', to: '/users' },
+  {
+    labelKey: 'nav.allReports',
+    to: '/lost-found/items',
+    activePrefixes: ['/lost-found/archived'],
+  },
+  { labelKey: 'nav.matches', to: '/lost-found/matches' },
+  { labelKey: 'nav.claims', to: '/lost-found/claims' },
+  { labelKey: 'nav.topBrowse', to: '/lost-found', end: true },
+];
+
+const TOP_LINKS: Record<Role, TopLinkItem[]> = {
+  STUDENT: STUDENT_TOP_LINKS,
+  EMPLOYEE: STUDENT_TOP_LINKS,
+  LOST_FOUND_MANAGER: MANAGER_TOP_LINKS,
+  SUPER_ADMIN: ADMIN_TOP_LINKS,
+};
+
+export function getTopLinks(role: Role): TopLinkItem[] {
+  return TOP_LINKS[role];
+}
+
+/** Whether a top-navbar link represents the current route. */
+export function isTopLinkActive(link: TopLinkItem, pathname: string): boolean {
+  return routeMatches(link, pathname);
+}
+
 /**
  * Mobile bottom-bar model (spec 003). Routes, icons, and `end` flags mirror
- * the sidebar definitions above — the sidebar stays the source of truth for
- * permissions, and a parity test asserts every link tab's route exists in
- * the same role's sidebar navigation. `action` tabs are shell actions
+ * the full-menu definitions above — the full menu stays the source of truth
+ * for permissions, and a parity test asserts every link tab's route exists
+ * in the same role's full navigation. `action` tabs are shell actions
  * (notifications sheet, full nav drawer), not routes.
  */
 export interface MobileTabItem {
@@ -148,7 +263,10 @@ export interface MobileTabItem {
 }
 
 const STUDENT_MOBILE_TABS: MobileTabItem[] = [
-  { labelKey: 'nav.tabHome', to: '/dashboard', icon: LayoutDashboard, end: true },
+  // Spec 007: «الرئيسية» is the new home page; the dashboard moved to the
+  // drawer/top links as «لوحة التحكم». Staff tabs below still land on
+  // their dashboards, which remain their home.
+  { labelKey: 'nav.tabHome', to: '/home', icon: Home, end: true },
   {
     labelKey: 'nav.tabBrowse',
     to: '/lost-found',
@@ -212,16 +330,5 @@ export function getMobileTabs(role: Role): MobileTabItem[] {
 
 /** Whether a bottom-bar tab represents the current route. */
 export function isMobileTabActive(tab: MobileTabItem, pathname: string): boolean {
-  const matchesPrefix = (prefix: string) =>
-    pathname === prefix || pathname.startsWith(`${prefix}/`);
-
-  if (tab.to) {
-    if (tab.end) {
-      if (pathname === tab.to) return true;
-    } else if (matchesPrefix(tab.to)) {
-      return true;
-    }
-  }
-
-  return (tab.activePrefixes ?? []).some(matchesPrefix);
+  return routeMatches(tab, pathname);
 }
