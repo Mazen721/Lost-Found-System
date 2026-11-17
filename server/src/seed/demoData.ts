@@ -5,6 +5,7 @@ import { User } from '../modules/auth/user.model';
 import { Location } from '../modules/locations/location.model';
 import { LostFoundItem } from '../modules/lost-found/items/lostFoundItem.model';
 import { estimateItemValue } from '../modules/lost-found/items/item-value';
+import { canonicalColorGroup } from '../modules/lost-found/matches/matching-text';
 import { ItemMatch } from '../modules/lost-found/matches/itemMatch.model';
 import { ClaimRequest } from '../modules/lost-found/claims/claimRequest.model';
 import {
@@ -910,6 +911,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     category: spec.category,
     color: spec.color,
     colorAr: spec.colorAr,
+    colorGroup: canonicalColorGroup(spec.color),
     brand: spec.brand,
     brandAr: spec.brandAr,
     estimatedValueEGP: seedEstimateEGP({
@@ -1269,6 +1271,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
         category: pair.category,
         color: pair.color,
         colorAr: pair.colorAr,
+        colorGroup: canonicalColorGroup(pair.color),
         brand: pair.brand,
         brandAr: pair.brandAr,
         estimatedValueEGP: seedEstimateEGP({
@@ -1310,6 +1313,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
         category: pair.category,
         color: pair.color,
         colorAr: pair.colorAr,
+        colorGroup: canonicalColorGroup(pair.color),
         brand: pair.brand,
         brandAr: pair.brandAr,
         estimatedValueEGP: seedEstimateEGP({
@@ -1393,6 +1397,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       category: single.category,
       color: undefined,
       colorAr: undefined,
+      colorGroup: null,
       brand: undefined,
       brandAr: undefined,
       estimatedValueEGP: seedEstimateEGP({

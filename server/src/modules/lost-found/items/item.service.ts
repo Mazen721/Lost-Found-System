@@ -7,6 +7,7 @@ import { nextNumber } from '../../../shared/services/counter.service';
 import { ApiError } from '../../../shared/utils/ApiError';
 import { paginate, parsePagination } from '../../../shared/utils/paginate';
 import { Location } from '../../locations/location.model';
+import { canonicalColorGroup } from '../matches/matching-text';
 import { runMatchingFor } from '../matches/matching.runner';
 import {
   LostFoundItem,
@@ -201,6 +202,7 @@ export async function createItem(
     privateIdentificationDetails: input.privateIdentificationDetails,
     category: input.category,
     color: input.color,
+    colorGroup: canonicalColorGroup(input.color),
     brand: input.brand,
     locationId: input.locationId,
     locationDetails: input.locationDetails,
@@ -289,7 +291,15 @@ export async function listItems(
   }
 
   if (query.color) {
-    filter.color = new RegExp(escapeRegExp(query.color), 'i');
+    // Spec 010: match the canonical color group, so «فضي», «سيلفر» and
+    // "Silver" all hit the same items. A query with no usable tokens
+    // canonicalizes to null — keep the legacy substring match there.
+    const colorGroup = canonicalColorGroup(query.color);
+    if (colorGroup) {
+      filter.colorGroup = colorGroup;
+    } else {
+      filter.color = new RegExp(escapeRegExp(query.color), 'i');
+    }
   }
 
   if (query.brand) {
@@ -450,6 +460,7 @@ export async function updateItem(
   if ('color' in input) {
     item.color = input.color;
     item.colorAr = undefined;
+    item.colorGroup = canonicalColorGroup(input.color ?? undefined);
   }
   if ('brand' in input) {
     item.brand = input.brand;

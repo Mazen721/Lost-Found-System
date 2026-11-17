@@ -25,6 +25,8 @@ export interface ILostFoundItem {
   category: LostFoundCategory;
   color?: string;
   colorAr?: string;
+  /** Canonical color group derived from `color` (spec 010); internal filter key, never serialized. */
+  colorGroup?: string | null;
   brand?: string;
   brandAr?: string;
   locationId: Types.ObjectId;
@@ -61,6 +63,7 @@ const lostFoundItemSchema = new Schema<ILostFoundItem>(
     category: { type: String, required: true, enum: LOST_FOUND_CATEGORIES },
     color: { type: String, trim: true, maxlength: 60 },
     colorAr: { type: String, trim: true, maxlength: 60 },
+    colorGroup: { type: String, trim: true, default: null },
     brand: { type: String, trim: true, maxlength: 80 },
     brandAr: { type: String, trim: true, maxlength: 80 },
     locationId: { type: Schema.Types.ObjectId, ref: 'Location', required: true },
@@ -96,6 +99,7 @@ const lostFoundItemSchema = new Schema<ILostFoundItem>(
 
 lostFoundItemSchema.index({ reportNumber: 1 }, { unique: true });
 lostFoundItemSchema.index({ reportType: 1, status: 1, category: 1 });
+lostFoundItemSchema.index({ colorGroup: 1 });
 lostFoundItemSchema.index({ itemTitle: 'text', description: 'text' });
 lostFoundItemSchema.index({ occurrenceDate: 1 });
 
