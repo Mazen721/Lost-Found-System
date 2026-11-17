@@ -7,4 +7,4 @@
 - [x] T5 seed rewrite: messy pair texts; recompute matchSpecs from the engine
 - [x] T6 tests: matching-hard-cases.test.ts battery; update matching.test.ts
 - [x] T7 verify: typecheck, full suite, seeded DB match scores, matches page screenshot
-- [ ] T8 commit + regenerate delivery bundle
+- [x] T8 commit + regenerate delivery bundle
