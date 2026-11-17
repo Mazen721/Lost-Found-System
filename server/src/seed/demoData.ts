@@ -275,16 +275,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-backpack',
       photos: ['https://cdn.iz.ru/sites/default/files/styles/900x506/public/news-2025-02/ANS04225_0.jpg?itok=vkc5hX33', 'https://bagdup.com/cdn/shop/files/c7f8cadad2941c8320bc73c02a5715b9ff1f7ad1725837b8c5c4905b27390ec1.jpg?v=1743096763&width=980'],
-      itemTitleAr: 'حقيبة ظهر North Face سوداء',
+      itemTitleAr: 'شنطة ضهر سودا',
       descriptionAr:
-        'فُقدت بالقرب من معمل الهندسة بعد محاضرة بعد الظهر. الحقيبة بها ميدالية مفاتيح زرقاء داخل الجيب الأمامي.',
+        'ضاعت مني الشنطة السودا بعد محاضرة بعد الضهر جنب معمل الهندسة، فيها كتب وميدالية مفاتيح زرقا في الجيب الأمامي.',
       colorAr: 'أسود',
       brandAr: 'North Face',
       locationDetailsAr: 'مقعد خارج معمل 204',
       reportType: 'LOST',
-      itemTitle: 'Black North Face backpack',
+      itemTitle: 'My black backpack is gone',
       description:
-        'Lost near the engineering lab after the afternoon lecture. The backpack has a blue keychain inside the front pocket.',
+        'I lost my black backpack after the afternoon lecture near the engineering lab. It has books and a blue keychain in the front pocket.',
       privateIdentificationDetails:
         'Initials Y.E. written under the flap and a blue keychain in the front pocket.',
       category: 'Bags',
@@ -300,16 +300,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-backpack',
       photos: ['https://newscast.jp/attachments/OBQOuQUmHWPPP7JhEc9e.jpg?w=700&h=700'],
-      itemTitleAr: 'حقيبة ظهر North Face سوداء',
+      itemTitleAr: 'حقيبة ظهر لقيتها جنب معمل الهندسة',
       descriptionAr:
-        'عُثر عليها بالقرب من معمل الهندسة وبداخل الجيب الأمامي ميدالية مفاتيح زرقاء ومذكرات ميكاترونكس.',
+        'لقيت شنطة ضهر سودا عند باب معمل الهندسة، في جيبها الأمامي ميدالية مفاتيح زرقا ومذكرات ميكاترونكس، سلمتها لمكتب الاستقبال.',
       colorAr: 'أسود',
       brandAr: 'North Face',
       locationDetailsAr: 'مكتب استقبال معمل 204',
       reportType: 'FOUND',
-      itemTitle: 'Black North Face backpack',
+      itemTitle: 'Backpack found by the engineering lab',
       description:
-        'Found near the engineering lab with a blue keychain inside the front pocket and lecture notes for Mechatronics.',
+        'Found a black backpack by the engineering lab door. There is a blue keychain and mechatronics notes in the front pocket. Handed it to the reception desk.',
       privateIdentificationDetails:
         'Initials Y.E. written under the flap and a blue keychain in the front pocket.',
       category: 'Bags',
@@ -325,16 +325,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-bottle',
       photos: ['https://images.pexels.com/photos/7869542/pexels-photo-7869542.jpeg?auto=compress&cs=tinysrgb&w=1200'],
-      itemTitleAr: 'زجاجة ماء زرقاء من الفولاذ المقاوم للصدأ',
+      itemTitleAr: 'قارورة ميه',
       descriptionAr:
-        'فقدت زجاجة ماء زرقاء من الفولاذ مع غطاء به صدمة في مكان ما بين الكافتيريا والمكتبة.',
+        'قارورة الميه الزرقا بتاعتي ضاعت ما بين الكافتيريا والمكتبة، غطاها فيه خبطة باينة وملزوق عليها ستيكر كلية الهندسة.',
       colorAr: 'أزرق',
       brandAr: 'Thermos',
       locationDetailsAr: 'منطقة جلوس الكافتيريا',
       reportType: 'LOST',
-      itemTitle: 'Blue stainless water bottle',
+      itemTitle: 'My water bottle',
       description:
-        'Lost a blue stainless steel water bottle with a dented lid somewhere between the cafeteria and the library.',
+        'My blue water bottle went missing between the cafeteria and the library. The lid has a visible dent and an engineering faculty sticker on it.',
       privateIdentificationDetails: 'Dented lid and a faded engineering faculty sticker.',
       category: 'Other',
       color: 'Blue',
@@ -349,20 +349,18 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-bottle',
       photos: ['https://portal-images.azureedge.net/auctions-2024/sphere10036/images/ab09b42c-7544-4781-993f-b13a00d425c6.jpg?w=1920&h=1920&mode=max'],
-      itemTitleAr: 'زجاجة ماء زرقاء من الفولاذ المقاوم للصدأ',
+      itemTitleAr: 'زجاجة ماء ستانلس زرقا',
       descriptionAr:
-        'عُثر على زجاجة ماء زرقاء من الفولاذ مع غطاء به صدمة على طاولة دراسة بالمكتبة.',
+        'لقيت زجاجة ماء ستانلس لونها أزرق على ترابيزة مذاكرة في المكتبة، غطاها مخبوط وعليها ستيكر كلية الهندسة.',
       colorAr: 'أزرق',
-      brandAr: 'Thermos',
       locationDetailsAr: 'طاولة دراسة بالطابق الثاني بالمكتبة',
       reportType: 'FOUND',
-      itemTitle: 'Blue stainless water bottle',
+      itemTitle: 'Blue steel bottle found in library',
       description:
-        'Found a blue stainless steel bottle with a dented lid on a library study table.',
+        'Found a blue stainless water bottle on a study table in the library. Its lid is dented and it has an engineering faculty sticker.',
       privateIdentificationDetails: 'Dented lid and a faded engineering faculty sticker.',
       category: 'Other',
       color: 'Blue',
-      brand: 'Thermos',
       reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Administration',
       locationIndex: 9,
@@ -373,16 +371,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-phone',
       photos: ['https://comunidad.movistar.es/t5/s/movistar/images/bS0zMjgxNzQ4LTEyODQ2M2lGMkJGNDNGMUYyQTU5MDQy?image-dimensions=992x558&revision=3'],
-      itemTitleAr: 'آيفون 13 فضي',
+      itemTitleAr: 'موبايل ضاع مني',
       descriptionAr:
-        'فقدت هاتف iPhone 13 فضياً في جراب شفاف بالقرب من مدخل المجمع الطبي. شاشة القفل تعرض صورة قطة.',
+        'ضاع مني الموبايل عند مدخل المجمع الطبي، لونه فضي وحاطه في جراب شفاف، وشاشة القفل عليها صورة قطة.',
       colorAr: 'فضي',
       brandAr: 'Apple',
       locationDetailsAr: 'درج المدخل الرئيسي',
       reportType: 'LOST',
-      itemTitle: 'Silver iPhone 13',
+      itemTitle: 'Lost my phone',
       description:
-        'Lost a silver iPhone 13 in a clear case near the medical complex entrance. The lock screen shows a photo of a cat.',
+        'Lost my phone at the medical complex entrance. It is silver in a clear case and the lock screen has a cat photo.',
       privateIdentificationDetails:
         'IMEI ending 4812, clear case with a cat wallpaper and a small crack on the corner.',
       category: 'Phones',
@@ -398,16 +396,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-phone',
       photos: ['https://cdn.mos.cms.futurecdn.net/t5Wa5J3C4imLbytYaHQPkh.jpg'],
-      itemTitleAr: 'آيفون 13 فضي',
+      itemTitleAr: 'آيفون 13 لونه فضي',
       descriptionAr:
-        'عُثر على هاتف iPhone 13 فضي في جراب شفاف عند مدخل المجمع الطبي. الهاتف مغلق.',
+        'لقيت آيفون 13 فضي في جراب شفاف عند مدخل المجمع الطبي، التليفون مقفول ومسلمته لمكتب الأمن.',
       colorAr: 'فضي',
       brandAr: 'Apple',
       locationDetailsAr: 'مكتب الأمن عند المدخل الرئيسي',
       reportType: 'FOUND',
-      itemTitle: 'Silver iPhone 13',
+      itemTitle: 'iPhone 13 found',
       description:
-        'Found a silver iPhone 13 in a clear case at the medical complex entrance. The phone is switched off.',
+        'Found a silver iPhone 13 in a clear case at the medical complex entrance. The phone is off; handed it to the security desk.',
       privateIdentificationDetails:
         'IMEI ending 4812, clear case with a cat wallpaper and a small crack on the corner.',
       category: 'Phones',
@@ -423,15 +421,15 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-keys',
       photos: ['https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Key_ring.jpg/330px-Key_ring.jpg'],
-      itemTitleAr: 'مجموعة مفاتيح بميدالية حمراء',
+      itemTitleAr: 'مفاتيحي ضاعت',
       descriptionAr:
-        'فقدت مجموعة من ثلاثة مفاتيح بميدالية بلاستيكية حمراء بالقرب من مبنى العلوم الإنسانية.',
+        'ضاعت مني سلسلة مفاتيح فيها تلات مفاتيح وميدالية بلاستيك حمرا جنب بوابة مبنى العلوم الإنسانية.',
       colorAr: 'فضي',
       locationDetailsAr: 'البوابة الرئيسية لمبنى العلوم الإنسانية',
       reportType: 'LOST',
-      itemTitle: 'Bunch of keys with a red tag',
+      itemTitle: 'Lost my keys',
       description:
-        'Lost a bunch of three keys with a red plastic tag near the humanities building.',
+        'I lost a key ring with three keys and a red plastic tag near the humanities building gate.',
       privateIdentificationDetails:
         'Red tag marked M.A. and a small brass key for a bicycle lock.',
       category: 'Keys',
@@ -446,15 +444,15 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-keys',
       photos: ['https://static2sensa.mondo.rs/api/v3/images/1280/2560/104349?ts=2026-08-24T15:39:10'],
-      itemTitleAr: 'مجموعة مفاتيح بميدالية حمراء',
+      itemTitleAr: 'سلسلة مفاتيح بميدالية حمرا',
       descriptionAr:
-        'عُثر على مجموعة من ثلاثة مفاتيح بميدالية بلاستيكية حمراء عند بوابة مبنى العلوم الإنسانية.',
+        'لقيت سلسلة مفاتيح تلاتة بميدالية حمرا عند بوابة مبنى العلوم الإنسانية وسلمتها لمكتب الأمن.',
       colorAr: 'فضي',
       locationDetailsAr: 'مكتب الأمن',
       reportType: 'FOUND',
-      itemTitle: 'Bunch of keys with a red tag',
+      itemTitle: 'Keys with red tag found',
       description:
-        'Found a bunch of three keys with a red plastic tag at the humanities building gate.',
+        'Found a ring of three keys with a red tag at the humanities building gate. Handed it to the security office.',
       privateIdentificationDetails:
         'Red tag marked M.A. and a small brass key for a bicycle lock.',
       category: 'Keys',
@@ -469,15 +467,15 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-umbrella',
       photos: ['https://p1-a50ece1c.imageflux.jp/c/f=webp:jpeg,w=1024,h=1024,a=0/store/reviewattachmentfile/53/16402/file/4b49c7b6d9db3e92ba4bfaad80ecaa63.jpeg'],
-      itemTitleAr: 'مظلة كحلية',
+      itemTitleAr: 'مظلة',
       descriptionAr:
-        'فقدت مظلة كحلية بمقبض خشبي في بهو المكتبة.',
+        'فقدت مظلة سادة بمقبض خشب في بهو المكتبة يوم المطر، حزامها أسود وفيها خدش أبيض صغير.',
       colorAr: 'كحلي',
       locationDetailsAr: 'بهو المكتبة',
       reportType: 'LOST',
-      itemTitle: 'Navy blue umbrella',
+      itemTitle: 'Umbrella',
       description:
-        'Lost a navy blue umbrella with a wooden handle in the library lobby.',
+        'Lost a plain umbrella with a wooden handle in the library lobby on the rainy day. It has a black strap and a small white scratch.',
       privateIdentificationDetails: 'Wooden handle with a small white scratch and a black strap.',
       category: 'Other',
       color: 'Navy blue',
@@ -491,16 +489,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-umbrella',
       photos: ['https://cdn.shopify.com/s/files/1/0560/0008/6216/files/200856_1.jpg?v=1689917727'],
-      itemTitleAr: 'مظلة كحلية',
+      itemTitleAr: 'شمسية كحلي منقطة',
       descriptionAr:
-        'عُثر على مظلة كحلية بمقبض خشبي بالقرب من مدخل المكتبة.',
+        'لقيت شمسية كحلي منقطة بنقط بيضا بمقبض بلاستيك عند مدخل المكتبة وسبتها عند الأمن.',
       colorAr: 'كحلي',
       locationDetailsAr: 'مدخل المكتبة',
       reportType: 'FOUND',
-      itemTitle: 'Navy blue umbrella',
+      itemTitle: 'Polka dot umbrella found',
       description:
-        'Found a navy blue umbrella with a wooden handle near the library entrance.',
-      privateIdentificationDetails: 'Wooden handle with a small white scratch and a black strap.',
+        'Found a navy polka dot umbrella with white dots and a plastic handle by the library entrance. Left it with security.',
+      privateIdentificationDetails: 'White polka dots, a black plastic handle and a torn hanging loop.',
       category: 'Other',
       color: 'Navy blue',
       reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
@@ -513,14 +511,14 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-id',
       photos: ['https://localwiki.org/media/cache/4c/2d/4c2dc1585136f7e4da4355f7833041d0.jpg'],
-      itemTitleAr: 'بطاقة هوية جامعية',
+      itemTitleAr: 'بطاقتي الجامعية',
       descriptionAr:
-        'فقدت بطاقة هوية طالب في حافظة شفافة في مكان ما بمبنى العلوم الإنسانية.',
+        'بطاقتي الجامعية ضاعت في ممر قاعات المحاضرات بمبنى العلوم الإنسانية، محطوطة في جراب شفاف.',
       locationDetailsAr: 'ممر قاعات المحاضرات',
       reportType: 'LOST',
-      itemTitle: 'Student ID card',
+      itemTitle: 'My student ID',
       description:
-        'Lost a student ID card in a transparent holder somewhere in the humanities building.',
+        'My student ID card went missing in the lecture hall corridor of the humanities building. It is in a transparent holder.',
       privateIdentificationDetails:
         'Student ID 2023-1187 issued to Sara Mahmoud and a small passport photo inside the holder.',
       category: 'Documents',
@@ -534,14 +532,14 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-id',
       photos: ['https://img1.kakaocdn.net/thumb/R1280x0.fwebp/?fname=https://t1.kakaocdn.net/brunch/service/user/iI3H/image/3zH_htMcYIg7__La9TPVHN8gAMQ'],
-      itemTitleAr: 'بطاقة هوية جامعية',
+      itemTitleAr: 'كارنيه جامعة في جراب شفاف',
       descriptionAr:
-        'عُثر على بطاقة هوية طالب في حافظة شفافة على أرضية ممر العلوم الإنسانية.',
+        'لقيت كارنيه جامعة في جراب شفاف على أرض ممر العلوم الإنسانية وسلمته لاستقبال الكلية.',
       locationDetailsAr: 'استقبال كلية العلوم الإنسانية',
       reportType: 'FOUND',
-      itemTitle: 'Student ID card',
+      itemTitle: 'University ID in clear holder',
       description:
-        'Found a student ID card in a transparent holder on the floor of the humanities corridor.',
+        'Found a university ID card in a clear holder on the floor of the humanities corridor. Handed it to the faculty reception.',
       privateIdentificationDetails:
         'Student ID 2023-1187 issued to Sara Mahmoud and a small passport photo inside the holder.',
       category: 'Documents',
@@ -555,15 +553,15 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-hoodie',
       photos: ['https://img.tori.net/dynamic/1280w/item/36653863/aaf0dcfd-8163-426d-917e-2de11557fedf'],
-      itemTitleAr: 'سترة جامعية رمادية (Hoodie)',
+      itemTitleAr: 'هودي رمادي',
       descriptionAr:
-        'تركت سترة جامعية رمادية في قاعة استذكار الهندسة. بها بقعة حبر صغيرة على الكم.',
+        'نسيت الهودي الرمادي بتاعي في قاعة استذكار الهندسة، على كمه بقعة حبر صغيرة ورباطه ناقص من ناحية الشمال.',
       colorAr: 'رمادي',
       locationDetailsAr: 'قاعة استذكار 2',
       reportType: 'LOST',
-      itemTitle: 'Grey university hoodie',
+      itemTitle: 'Grey hoodie',
       description:
-        'Left a grey university hoodie in the engineering study room. It has a small ink stain on the sleeve.',
+        'Left my grey hoodie in the engineering study room. It has a small ink stain on the sleeve and the drawstring is missing on the left side.',
       privateIdentificationDetails: 'Drawstring missing on the left side and an ink stain on the cuff.',
       category: 'Clothing',
       color: 'Grey',
@@ -577,15 +575,15 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-hoodie',
       photos: ['https://talc-paris.fr/cdn/shop/files/NEW_Menu_images-7.jpg?v=1741888609&width=540'],
-      itemTitleAr: 'سترة جامعية رمادية (Hoodie)',
+      itemTitleAr: 'سويت شيرت رصاصي',
       descriptionAr:
-        'عُثر على سترة جامعية رمادية على كرسي في قاعة استذكار الهندسة.',
-      colorAr: 'رمادي',
+        'لقيت سويت شيرت رصاصي على كرسي في قاعة استذكار الهندسة، على الكم بقعة حبر ورباطه ناقص.',
+      colorAr: 'رصاصي',
       locationDetailsAr: 'قاعة استذكار 2',
       reportType: 'FOUND',
-      itemTitle: 'Grey university hoodie',
+      itemTitle: 'Grey sweatshirt left behind',
       description:
-        'Found a grey university hoodie on a chair in the engineering study room.',
+        'Found a grey sweatshirt on a chair in the engineering study room. There is an ink stain on the sleeve and a missing drawstring.',
       privateIdentificationDetails: 'Drawstring missing on the left side and an ink stain on the cuff.',
       category: 'Clothing',
       color: 'Grey',
@@ -599,14 +597,14 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-textbook',
       photos: ['https://www.lsmason.com/images/wp-59-600.jpg'],
-      itemTitleAr: 'كتاب هياكل البيانات',
+      itemTitleAr: 'كتاب الداتا ستراكشر',
       descriptionAr:
-        'فقدت كتاب هياكل البيانات في المكتبة. اسم عمر خالد مكتوب داخل الغلاف.',
+        'فقدت كتاب الداتا ستراكشر في قاعة القراءة بالمكتبة، مكتوب اسم عمر خالد جوه الغلاف وملون على الفصل الرابع.',
       locationDetailsAr: 'قاعة القراءة بالمكتبة',
       reportType: 'LOST',
-      itemTitle: 'Data structures textbook',
+      itemTitle: 'Data structures book',
       description:
-        'Lost a data structures textbook in the library. The name Omar Khaled is written inside the cover.',
+        'Lost my data structures textbook in the library reading room. The name Omar Khaled is written inside the cover and chapter four is highlighted.',
       privateIdentificationDetails: 'Name Omar Khaled inside the cover and highlighted chapter 4.',
       category: 'Books',
       reporterEmail: EXTRA_STUDENT_EMAILS[1]!,
@@ -619,14 +617,14 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-textbook',
       photos: ['https://images.pexels.com/photos/4219042/pexels-photo-4219042.jpeg?auto=compress&cs=tinysrgb&w=1200'],
-      itemTitleAr: 'كتاب هياكل البيانات',
+      itemTitleAr: 'كتاب هياكل البيانات Data Structures',
       descriptionAr:
-        'عُثر على كتاب هياكل البيانات متروكاً على مكتب في المكتبة بعد وقت الإغلاق.',
+        'لقيت كتاب هياكل البيانات متساب على مكتب في قاعة القراءة بالمكتبة بعد ميعاد القفل، مكتوب فيه اسم عمر خالد.',
       locationDetailsAr: 'قاعة القراءة بالمكتبة',
       reportType: 'FOUND',
-      itemTitle: 'Data structures textbook',
+      itemTitle: 'Data Structures textbook found',
       description:
-        'Found a data structures textbook left on a library desk after closing time.',
+        'Found a data structures textbook left on a desk in the library reading room after closing. The name Omar Khaled is written inside.',
       privateIdentificationDetails: 'Name Omar Khaled inside the cover and highlighted chapter 4.',
       category: 'Books',
       reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
@@ -639,15 +637,15 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-usb',
       photos: ['https://www.getusb.info/wp-content/uploads/2022/06/060622a.jpg'],
-      itemTitleAr: 'ذاكرة فلاش 32 جيجابايت USB',
+      itemTitleAr: 'فلاشة ٣٢ جيجا',
       descriptionAr:
-        'فقدت ذاكرة فلاش USB سوداء بغطاء أحمر بالقرب من طابعات معمل الحاسب.',
+        'فقدت فلاشة سودا بغطا أحمر جنب طابعات معمل الحاسب، عليها ملفات مشروع التخرج.',
       colorAr: 'أسود',
       locationDetailsAr: 'منطقة طابعات معمل الحاسب',
       reportType: 'LOST',
-      itemTitle: '32 GB USB drive',
+      itemTitle: 'USB stick 32 GB',
       description:
-        'Lost a black USB drive with a red cap near the computer lab printers.',
+        'Lost a black USB stick with a red cap near the computer lab printers. It has my graduation project files on it.',
       privateIdentificationDetails: 'Serial ending 7461 and a red plastic cap.',
       category: 'Electronics',
       color: 'Black',
@@ -661,18 +659,19 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-usb',
       photos: ['https://crossplay.pl/wp-content/uploads/2026/07/w8_2.jpg'],
-      itemTitleAr: 'ذاكرة فلاش 32 جيجابايت USB',
+      itemTitleAr: 'USB Kingston 32GB أسود',
       descriptionAr:
-        'عُثر على ذاكرة فلاش USB سوداء بغطاء أحمر بجوار طابعات معمل الحاسب.',
+        'لقيت فلاشة USB كينجستون 32 جيجا لونها أسود وغطاها أحمر عند طابعات معمل الحاسب.',
       colorAr: 'أسود',
       locationDetailsAr: 'منطقة طابعات معمل الحاسب',
       reportType: 'FOUND',
-      itemTitle: '32 GB USB drive',
+      itemTitle: 'Kingston USB 32GB',
       description:
-        'Found a black USB drive with a red cap beside the computer lab printers.',
+        'Found a black Kingston 32GB USB stick with a red cap by the computer lab printers.',
       privateIdentificationDetails: 'Serial ending 7461 and a red plastic cap.',
       category: 'Electronics',
       color: 'Black',
+      brand: 'Kingston',
       reporterEmail: DEMO_ACCOUNTS.LOST_FOUND_MANAGER.email,
       building: 'Engineering',
       locationIndex: 7,
@@ -683,16 +682,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-headphones',
       photos: ['https://images.pexels.com/photos/610945/pexels-photo-610945.jpeg?auto=compress&cs=tinysrgb&w=1200'],
-      itemTitleAr: 'سماعات لاسلكية Sony WH-CH720N سوداء',
+      itemTitleAr: 'سماعات سوني',
       descriptionAr:
-        'فقدت سماعات رأس لاسلكية سوداء من نوع Sony في حافظة رمادية بساحة الورش الهندسية.',
+        'فقدت سماعات سوني سودا في جراب رمادي عند استراحة الورش الهندسية، جوه الجراب سلك شحن وستيكر أزرق صغير.',
       colorAr: 'أسود',
       brandAr: 'Sony',
       locationDetailsAr: 'منطقة استراحة الورش الهندسية',
       reportType: 'LOST',
-      itemTitle: 'Black Sony WH-CH720N wireless headphones',
+      itemTitle: 'Sony headphones',
       description:
-        'Lost black Sony wireless over-ear headphones in a grey zip case near the engineering workshops seating bench.',
+        'Lost my black Sony headphones in a grey case at the engineering workshops break area. Inside the case there is a charging cable and a small blue sticker.',
       privateIdentificationDetails:
         'Small blue sticker inside the case lid and a spare USB-C cable tucked in the mesh pocket.',
       category: 'Headphones',
@@ -708,16 +707,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-headphones',
       photos: ['https://images.pexels.com/photos/11340544/pexels-photo-11340544.jpeg?auto=compress&cs=tinysrgb&w=1200'],
-      itemTitleAr: 'سماعات لاسلكية Sony WH-CH720N سوداء',
+      itemTitleAr: 'هيدفون Sony WH-CH720N أسود',
       descriptionAr:
-        'تم تسليم سماعات رأس Sony سوداء داخل حافظة رمادية من الورش الهندسية.',
+        'لقيت هيدفون سوني أسود موديل WH-CH720N في جراب رمادي عند نقطة أمن الورش الهندسية، معاه سلك شحن وستيكر أزرق.',
       colorAr: 'أسود',
       brandAr: 'Sony',
       locationDetailsAr: 'نقطة أمن الورش الهندسية',
       reportType: 'FOUND',
-      itemTitle: 'Black Sony WH-CH720N wireless headphones',
+      itemTitle: 'Sony WH-CH720N headphones',
       description:
-        'Black Sony wireless headphones inside a grey zip case turned in from the engineering workshops.',
+        'Found black Sony WH-CH720N headphones in a grey case at the engineering workshops security point, with a charging cable and a blue sticker.',
       privateIdentificationDetails:
         'Small blue sticker inside the case lid and a spare USB-C cable tucked in the mesh pocket.',
       category: 'Headphones',
@@ -733,15 +732,15 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-wallet',
       photos: ['https://images.pexels.com/photos/33277784/pexels-photo-33277784.jpeg?auto=compress&cs=tinysrgb&w=1200'],
-      itemTitleAr: 'محفظة جلدية بنية',
+      itemTitleAr: 'محفظتي الجلد',
       descriptionAr:
-        'فقدت محفظة جلدية بنية تحتوي على بطاقة مكتبة وكروت مواصلات في الصالة الرياضية المغطاة.',
+        'ضاعت محفظتي الجلد البني في مدرجات الصالة الرياضية المغطاة، فيها بطاقة المكتبة وكروت مواصلات وتذكرة قطر مطوية.',
       colorAr: 'بني',
       locationDetailsAr: 'مدرجات الصالة الرياضية',
       reportType: 'LOST',
-      itemTitle: 'Brown leather wallet',
+      itemTitle: 'My leather wallet',
       description:
-        'Lost a brown leather bi-fold wallet containing a library pass and transit cards at the indoor sports hall.',
+        'My brown leather wallet went missing in the indoor sports hall stands. It holds a library card, transit cards and a folded train ticket.',
       privateIdentificationDetails:
         'Library barcode ending 319 and a folded train ticket in the side slot.',
       category: 'Wallets',
@@ -756,15 +755,15 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-wallet',
       photos: ['https://i.etsystatic.com/61921830/r/il/e4c9fd/7950078557/il_600x600.7950078557_2ag0.jpg'],
-      itemTitleAr: 'محفظة جلدية بنية',
+      itemTitleAr: 'بوك بني جلد طبيعي',
       descriptionAr:
-        'عُثر على محفظة جلدية بنية عند مدخل مدرجات الصالة الرياضية المغطاة.',
+        'لقيت بوك بني جلد طبيعي عند مدخل مدرجات الصالة الرياضية، جواه بطاقة مكتبة وكروت مواصلات.',
       colorAr: 'بني',
       locationDetailsAr: 'مكتب مشرف الصالة الرياضية',
       reportType: 'FOUND',
-      itemTitle: 'Brown leather wallet',
+      itemTitle: 'Brown leather wallet found',
       description:
-        'Found a brown leather bi-fold wallet by the indoor sports hall spectator entrance.',
+        'Found a brown natural leather wallet by the sports hall stands entrance, with a library card and transit cards inside.',
       privateIdentificationDetails:
         'Library barcode ending 319 and a folded train ticket in the side slot.',
       category: 'Wallets',
@@ -779,16 +778,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'lost-calculator',
       photos: ['https://everylittlethingblog.weebly.com/uploads/4/3/7/8/43783451/img-5415_orig.jpg'],
-      itemTitleAr: 'آلة حاسبة علمية Casio fx-991ARX',
+      itemTitleAr: 'آلة حاسبة كاسيو',
       descriptionAr:
-        'فقدت آلة حاسبة علمية Casio fx-991ARX بغطاء منزلق في مدرج الهندسة 3.',
+        'فقدت آلة حاسبة كاسيو علمية بغطا منزلق في مدرج الهندسة ٣، محفور على ضهرها حروف T.N.',
       colorAr: 'أسود',
       brandAr: 'Casio',
       locationDetailsAr: 'مدرج 3 - كلية الهندسة',
       reportType: 'LOST',
-      itemTitle: 'Casio fx-991ARX scientific calculator',
+      itemTitle: 'Casio calculator',
       description:
-        'Lost a Casio fx-991ARX scientific calculator with slide cover in Engineering Lecture Hall 3.',
+        'Lost a Casio scientific calculator with a sliding cover in Engineering Lecture Hall 3. The initials T.N. are etched on its back.',
       privateIdentificationDetails:
         'Initials T.N. etched on the back sliding cover and yellow tape mark on the side.',
       category: 'Electronics',
@@ -804,16 +803,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-calculator',
       photos: ['https://email-editor-production.s3.amazonaws.com/images/596438/admin-ajax_32.jpeg'],
-      itemTitleAr: 'آلة حاسبة علمية Casio fx-991ARX',
+      itemTitleAr: 'Casio fx-991ARX',
       descriptionAr:
-        'عُثر على آلة حاسبة علمية Casio fx-991ARX على المنصة الأمامية بمدرج الهندسة 3.',
+        'لقيت آلة حاسبة كاسيو fx-991ARX على منصة مدرج الهندسة ٣، على ضهرها حروف T.N. وغطاها منزلق.',
       colorAr: 'أسود',
       brandAr: 'Casio',
       locationDetailsAr: 'منصة مدرج الهندسة 3',
       reportType: 'FOUND',
-      itemTitle: 'Casio fx-991ARX scientific calculator',
+      itemTitle: 'Casio fx-991ARX calculator',
       description:
-        'Found a Casio fx-991ARX scientific calculator left on the podium of Engineering Lecture Hall 3.',
+        'Found a Casio fx-991ARX calculator on the podium of Engineering Lecture Hall 3, with T.N. etched on the back and a sliding cover.',
       privateIdentificationDetails:
         'Initials T.N. etched on the back sliding cover and yellow tape mark on the side.',
       category: 'Electronics',
@@ -829,16 +828,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-charger',
       photos: ['https://upload.wikimedia.org/wikipedia/commons/b/b0/Lenovo_mini_laptop_Charger.jpg'],
-      itemTitleAr: 'شاحن لابتوب USB-C بقدرة 65 واط Lenovo',
+      itemTitleAr: 'شاحن لاب توب لينوفو',
       descriptionAr:
-        'عُثر على شاحن لابتوب USB-C بقدرة 65 واط في مقابس قاعة القراءة بالمبنى الإداري.',
+        'لقيت شاحن لاب توب لينوفو 65 واط متوصل في فيشة في منطقة القراءة الهادية بالمبنى الإداري.',
       colorAr: 'أسود',
       brandAr: 'Lenovo',
       locationDetailsAr: 'منطقة القراءة الهادئة بالمبنى الإداري',
       reportType: 'FOUND',
-      itemTitle: 'Lenovo 65W USB-C laptop charger',
+      itemTitle: 'Lenovo laptop charger',
       description:
-        'Found a Lenovo 65W USB-C power adapter plugged into a floor socket in the Administration quiet study zone.',
+        'Found a Lenovo 65W laptop charger plugged into a socket in the Administration quiet study zone.',
       privateIdentificationDetails:
         'Velcro strap with silver fabric tag and serial ending 902B.',
       category: 'Laptops',
@@ -854,15 +853,15 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     {
       key: 'found-glasses',
       photos: ['https://optika-kamenets.com.ua/wp-content/uploads/2025/09/care_for_glasses-1024x683-1.jpg'],
-      itemTitleAr: 'نظارة طبية بإطار أسود في حافظة صلبة',
+      itemTitleAr: 'نضارة في علبة سودا',
       descriptionAr:
-        'تم العثور على نظارة طبية بإطار أسود داخل حافظة صلبة في صالة انتظار المجمع الطبي وتم تسليمها للأمن.',
+        'لقيت نضارة طبية إطارها أسود في علبة سودا في صالة انتظار المجمع الطبي وسلمتها للأمن.',
       colorAr: 'أسود',
       locationDetailsAr: 'استقبال المجمع الطبي',
       reportType: 'FOUND',
-      itemTitle: 'Black-framed prescription glasses in hard case',
+      itemTitle: 'Glasses in a black case',
       description:
-        'Found black-framed prescription glasses inside a hard zip case in the Medical Complex waiting area and handed to security.',
+        'Found black-framed prescription glasses inside a black hard case in the Medical Complex waiting area and handed them to security.',
       privateIdentificationDetails:
         'Microfiber cloth printed with optical shop logo inside the case.',
       category: 'Accessories',
@@ -910,15 +909,19 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
 
   await LostFoundItem.insertMany(itemDocs);
 
+  // Scores, levels and breakdowns below are the matching engine v2's real
+  // output for these pairs (specs/002-hard-matching) — the seed texts are
+  // written the way two different people would write them, so the numbers
+  // are whatever the deterministic scorer honestly computes.
   const matchSpecs = [
-    { lost: 'lost-backpack', found: 'found-backpack', score: 94, level: 'STRONG', status: 'CONFIRMED', createdDaysAgo: 10, updatedDaysAgo: 2 },
-    { lost: 'lost-bottle', found: 'found-bottle', score: 66, level: 'POSSIBLE', status: 'SUGGESTED', createdDaysAgo: 10, updatedDaysAgo: 2 },
-    { lost: 'lost-phone', found: 'found-phone', score: 89, level: 'STRONG', status: 'SUGGESTED', createdDaysAgo: 10, updatedDaysAgo: 2 },
-    { lost: 'lost-keys', found: 'found-keys', score: 96, level: 'STRONG', status: 'CONFIRMED', createdDaysAgo: 10, updatedDaysAgo: 2 },
-    { lost: 'lost-umbrella', found: 'found-umbrella', score: 58, level: 'POSSIBLE', status: 'DISMISSED', createdDaysAgo: 10, updatedDaysAgo: 2 },
-    { lost: 'lost-headphones', found: 'found-headphones', score: 93, level: 'STRONG', status: 'CONFIRMED', createdDaysAgo: 4, updatedDaysAgo: 2 },
-    { lost: 'lost-wallet', found: 'found-wallet', score: 95, level: 'STRONG', status: 'CONFIRMED', createdDaysAgo: 4, updatedDaysAgo: 2 },
-    { lost: 'lost-calculator', found: 'found-calculator', score: 88, level: 'STRONG', status: 'SUGGESTED', createdDaysAgo: 2, updatedDaysAgo: 2 },
+    { lost: 'lost-backpack', found: 'found-backpack', score: 86.67, level: 'STRONG', status: 'CONFIRMED', createdDaysAgo: 10, updatedDaysAgo: 2, breakdown: { category: 1, title: 0.3333, location: 1, date: 1, color: 1, brand: 1, keywords: 1 } },
+    { lost: 'lost-bottle', found: 'found-bottle', score: 77.65, level: 'POSSIBLE', status: 'SUGGESTED', createdDaysAgo: 10, updatedDaysAgo: 2, breakdown: { category: 1, title: 0.4444, location: 0.6, date: 0.8, color: 1, brand: 0, keywords: 1 } },
+    { lost: 'lost-phone', found: 'found-phone', score: 83.57, level: 'STRONG', status: 'SUGGESTED', createdDaysAgo: 10, updatedDaysAgo: 2, breakdown: { category: 1, title: 0.2, location: 1, date: 1, color: 1, brand: 1, keywords: 0.9565 } },
+    { lost: 'lost-keys', found: 'found-keys', score: 83.33, level: 'STRONG', status: 'CONFIRMED', createdDaysAgo: 10, updatedDaysAgo: 2, breakdown: { category: 1, title: 0.25, location: 1, date: 1, color: 1, brand: 0, keywords: 1 } },
+    { lost: 'lost-umbrella', found: 'found-umbrella', score: 78.81, level: 'POSSIBLE', status: 'DISMISSED', createdDaysAgo: 10, updatedDaysAgo: 2, breakdown: { category: 1, title: 0.2857, location: 1, date: 1, color: 1, brand: 0, keywords: 0.5217 } },
+    { lost: 'lost-headphones', found: 'found-headphones', score: 90, level: 'STRONG', status: 'CONFIRMED', createdDaysAgo: 4, updatedDaysAgo: 2, breakdown: { category: 1, title: 0.5, location: 1, date: 1, color: 1, brand: 1, keywords: 1 } },
+    { lost: 'lost-wallet', found: 'found-wallet', score: 92.59, level: 'STRONG', status: 'CONFIRMED', createdDaysAgo: 4, updatedDaysAgo: 2, breakdown: { category: 1, title: 0.6667, location: 1, date: 1, color: 1, brand: 0, keywords: 1 } },
+    { lost: 'lost-calculator', found: 'found-calculator', score: 93, level: 'STRONG', status: 'SUGGESTED', createdDaysAgo: 2, updatedDaysAgo: 2, breakdown: { category: 1, title: 0.65, location: 1, date: 1, color: 1, brand: 1, keywords: 1 } },
   ] as const;
 
   const matchDocs = matchSpecs.map((spec) => ({
@@ -927,14 +930,7 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     foundItemId: itemByKey.get(spec.found)!._id,
     score: spec.score,
     level: spec.level,
-    breakdown: {
-      category: 1,
-      location: spec.level === 'STRONG' ? 0.9 : 0.5,
-      date: spec.level === 'STRONG' ? 0.9 : 0.4,
-      color: 1,
-      brand: spec.level === 'STRONG' ? 0.9 : 0.3,
-      keywords: spec.level === 'STRONG' ? 0.9 : 0.5,
-    },
+    breakdown: spec.breakdown,
     status: spec.status,
     reviewedBy: spec.status === 'SUGGESTED' ? undefined : managerId,
     reviewedAt: spec.status === 'SUGGESTED' ? undefined : daysAgo(spec.updatedDaysAgo),
