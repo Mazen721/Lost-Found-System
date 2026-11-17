@@ -8,67 +8,65 @@ web
 
 ## Users
 
-CampusCare is used by people at Mansoura National University (MNU). Five roles stay, and each person only does their own job:
+CampusCare Lost & Found is used by people at Mansoura National University (MNU). Four roles stay, and each person only does their own job:
 
-- Students and employees report maintenance problems and lost or found items, then follow their own requests, claims, and reports.
-- Maintenance managers review requests, assign technicians, and track the work.
-- Technicians carry out the work orders assigned to them.
-- Lost-and-found officers review match suggestions, check claims against private details, and record handovers.
-- The super admin creates accounts, manages locations, and reads the activity log. Managers may create technician accounts. Nobody else can sign themselves up.
+- Students report lost or found items, browse reported items, and follow their own reports and pickup claims.
+- Employees have exactly the same abilities as students: report, browse, and follow their own reports and claims.
+- The Lost & Found Manager reviews match suggestions, checks claims against private identification details, records handovers, and manages all reports.
+- The Super Admin does everything the Manager does, and also creates accounts, manages locations, and reads the activity log. The Super Admin does not report items. Nobody can sign themselves up; accounts are created by the Super Admin.
 
-The first screens to redesign are the login page, then the student and employee screens. The order for the other roles’ screens is still open.
+Most students and employees use the product on their phones, in the moment they lose or find something. On mobile the product behaves like an app: a bottom navigation bar with reporting as the central action. Managers and the admin also work from desktop, where a sidebar replaces the bottom bar.
 
 ## Product Purpose
 
-CampusCare is Mansoura National University’s tool for two jobs in one place: getting something on campus fixed, and getting a lost item back to its owner. It exists so those jobs move through a recorded path instead of informal messages. Success means a person can sign in, see only their own work, and carry a maintenance issue or a lost item through to a recorded outcome.
+CampusCare Lost & Found is Mansoura National University's tool for one job: getting a lost item back to its owner. It exists so that job moves through a recorded path instead of informal messages. Success means a person can sign in, report or find an item in under a minute, and carry it through matching, claim, and a recorded handover.
 
 The committed institution is Mansoura National University (MNU).
 
 ## Positioning
 
-It is the university’s own operations tool, not a public listings board. Maintenance and lost and found run in the same signed-in product. A maintenance request becomes a work order only through review. A lost-and-found match is a suggestion, not proof of ownership: an officer checks a claim against private details before anything is handed over. Those private details stay hidden from everyone except the reporter, an officer, and the admin.
+It is the university's own lost-and-found system, not a public listings board. A lost-and-found match is a suggestion, not proof of ownership: the Manager checks a claim against private identification details before anything is handed over. Those private details stay hidden from everyone except the reporter, the Manager, and the admin. The matching engine is deterministic scoring (category, title, location, date, keywords, colour, brand), not AI; AI appears only in the Lost & Found insights summaries.
 
 ## Operating Context
 
-People use it in a browser while signed in. Places are shared records of building, floor, and room.
+People use it in a browser while signed in, mostly on mobile. Places are shared records of building, floor, and room.
 
-Maintenance runs from a student’s or employee’s request, through a manager’s review, into a work order a technician completes, and back to the requester to confirm or reopen. Lost and found runs from a lost or found report, through a suggested match, a claim, an officer’s check, and a recorded handover.
+Lost and found runs from a lost or found report, through a suggested match, a claim, the Manager's check against private details, and a recorded handover. The matching engine is built for messy human input: different titles for the same item, synonyms, dialect, typos, and missing model names must still match, while conflicting model numbers, colours, or brands must not.
 
-Notifications stay inside the product. The admin keeps users, locations, and an activity log. Arabic is the default language; English is also available. Arabic is laid out right to left.
+Notifications stay inside the product. The admin keeps users, locations, and an activity log. The product is Arabic only, laid out right to left, set in the Cairo typeface. There is no English interface and no language toggle.
 
-The detailed rules already written in `MASTER_SPEC.md` and `specs/001-campuscare-platform/spec.md` are the current product behavior this record is summarizing.
+The current product behavior is specified in `specs/001-campuscare-platform/spec.md` as amended by `specs/002-hard-matching/` (matching engine v2) and `specs/003-mobile-app-shell/` (mobile app shell, admin report removal). `MASTER_SPEC.md` is the historical spec of the retired two-module CampusCare platform and no longer describes this product.
 
 ## Capabilities and Constraints
 
-Keep both modules, all five roles, admin-created accounts (no self-registration), and the privacy rule for lost-and-found details.
+Keep the Lost & Found module only, all four roles, admin-created accounts (no self-registration), the privacy rule for lost-and-found details, Arabic-only RTL, and the deterministic matching engine. The Super Admin never sees the report-an-item option.
 
-The current visual design is not a commitment. Replace it. Keep the jobs, the roles, both languages, and the privacy rules.
+The current visual design (Mansoura navy and gold, Cairo, modern-but-official refresh with rich dashboards and photo-first item cards) is the committed design language, recorded in `client/DESIGN.md`.
 
-The login page is the first screen to replace. Student and employee screens come next. Whether manager, technician, officer, and admin screens are redesigned after that is undecided.
-
-The committed institution is Mansoura National University (MNU). No separate accessibility standard was chosen.
+The committed institution is Mansoura National University (MNU). No separate accessibility standard was chosen beyond large touch targets and readable type on mobile.
 
 ## Brand Commitments
 
-The product name is CampusCare for Mansoura National University (MNU). The committed brand assets are `client/public/Mansoura National University Emblem.png` and `client/public/Mansoura National University Entrance.png` (`client/public/favicon.svg` remains as the browser favicon).
+The product name is CampusCare Lost & Found for Mansoura National University (MNU). The committed brand assets are `client/public/Mansoura National University Emblem.png` and `client/public/Mansoura National University Entrance.png` (`client/public/favicon.svg` remains as the browser favicon).
 
 ## Evidence on Hand
 
-- `MASTER_SPEC.md` and `specs/001-campuscare-platform/spec.md` — the written product behavior.
-- `client/src/i18n/locales/ar.ts` and `client/src/i18n/locales/en.ts` — the Arabic and English copy.
+- `specs/001-campuscare-platform/spec.md`, `specs/002-hard-matching/spec.md`, and `specs/003-mobile-app-shell/spec.md` — the written product behavior.
+- `client/src/i18n/locales/ar.ts` — the Arabic copy (the only locale).
 - `client/public/Mansoura National University Emblem.png`, `client/public/Mansoura National University Entrance.png`, and `client/public/favicon.svg` — the MNU emblem, entrance photograph, and favicon.
-- Demo accounts for the five roles can be created by the project’s seed script. They are demo data, not evidence of a live campus.
+- Demo accounts for the four roles can be created by the project's seed script. They are demo data, not evidence of a live campus.
 
 Do not invent testimonials, unverified campus photography, usage numbers, or press.
 
 ## Product Principles
 
-- Maintenance and lost and found stay one product.
-- Each person only reaches the work their role allows.
-- Private identification details are shown only to the reporter, lost-and-found officers, and the admin.
-- Arabic and English both have to work, including right-to-left Arabic.
-- Replace the current look. The jobs, roles, languages, and privacy rules stay.
+- Lost & Found is the whole product; there is no maintenance module.
+- Each person only reaches the work their role allows; the Super Admin manages but does not report items.
+- Private identification details are shown only to the reporter, the Lost & Found Manager, and the admin.
+- Arabic only, right to left, Cairo — on every screen, with no language toggle.
+- Mobile is the primary surface for students and employees: app-like bottom navigation, reporting one tap away.
+- Matching must survive messy human titles and must refuse confident matches when model, colour, or brand conflict.
 
 ## Accessibility & Inclusion
 
-The product must work in Arabic, laid out right to left, and in English. Arabic is the default. No further accessibility standard was set.
+The product must work in Arabic, laid out right to left, with touch targets of at least 44px on mobile and form text large enough to avoid focus zoom on phones. No further accessibility standard was set.
