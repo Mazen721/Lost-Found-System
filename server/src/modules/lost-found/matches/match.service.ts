@@ -8,7 +8,9 @@ import { paginate, parsePagination } from '../../../shared/utils/paginate';
 import { withTransaction } from '../../../shared/utils/withTransaction';
 import { LostFoundItem } from '../items/lostFoundItem.model';
 import {
+  itemValueFields,
   toPublicItem,
+  type ItemValueFields,
   type ProjectableItem,
   type PublicItem,
 } from '../items/item.projection';
@@ -43,22 +45,32 @@ interface PopulatedMatch {
   updatedAt: Date;
 }
 
+/**
+ * Embedded match items carry the staff-only value fields (spec 008).
+ * This is safe only because match.routes.ts gates the whole module to
+ * LOST_FOUND_MANAGER / SUPER_ADMIN — do not reuse this serializer on any
+ * student-reachable surface.
+ */
+export interface MatchItem extends PublicItem, ItemValueFields {}
+
 export interface SerializedMatch {
   id: string;
   score: number;
   level: MatchLevel;
   status: MatchStatus;
   breakdown: MatchBreakdown;
-  lostItem: PublicItem | null;
-  foundItem: PublicItem | null;
+  lostItem: MatchItem | null;
+  foundItem: MatchItem | null;
   reviewedBy: { id: string; name: string; role?: Role } | null;
   reviewedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
 
+// Staff-only module: the select also opts into the select:false value
+// fields (spec 008). This const is local to this staff-gated module.
 const PUBLIC_ITEM_SELECT =
-  'reportNumber reportType itemTitle itemTitleAr description descriptionAr category color colorAr brand brandAr locationDetails locationDetailsAr occurrenceDate images status locationId';
+  'reportNumber reportType itemTitle itemTitleAr description descriptionAr category color colorAr brand brandAr locationDetails locationDetailsAr occurrenceDate images status locationId +estimatedValueEGP +valueSource +valueAdjustedBy +valueAdjustedAt';
 
 const LOCATION_POPULATE = {
   path: 'locationId',
@@ -117,10 +129,10 @@ function serializeMatch(doc: PopulatedMatch): SerializedMatch {
     status: doc.status,
     breakdown: doc.breakdown,
     lostItem: isProjectableItem(doc.lostItemId)
-      ? toPublicItem(doc.lostItemId)
+      ? { ...toPublicItem(doc.lostItemId), ...itemValueFields(doc.lostItemId) }
       : null,
     foundItem: isProjectableItem(doc.foundItemId)
-      ? toPublicItem(doc.foundItemId)
+      ? { ...toPublicItem(doc.foundItemId), ...itemValueFields(doc.foundItemId) }
       : null,
     reviewedBy: reviewer,
     reviewedAt: doc.reviewedAt,

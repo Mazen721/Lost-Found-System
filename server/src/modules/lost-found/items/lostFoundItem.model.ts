@@ -34,6 +34,11 @@ export interface ILostFoundItem {
   images: ImageAsset[];
   reporterId: Types.ObjectId;
   status: ItemStatus;
+  /** Staff-only value estimate (spec 008); never serialized for students. */
+  estimatedValueEGP?: number | null;
+  valueSource?: 'AUTO' | 'ADJUSTED' | null;
+  valueAdjustedBy?: Types.ObjectId | null;
+  valueAdjustedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,6 +74,22 @@ const lostFoundItemSchema = new Schema<ILostFoundItem>(
     },
     reporterId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     status: { type: String, required: true, enum: ITEM_STATUSES, default: 'OPEN' },
+    // Staff-only (spec 008): select:false like privateIdentificationDetails,
+    // so the fields are fetched only where a staff serializer opts in.
+    estimatedValueEGP: { type: Number, default: null, select: false },
+    valueSource: {
+      type: String,
+      enum: ['AUTO', 'ADJUSTED'],
+      default: 'AUTO',
+      select: false,
+    },
+    valueAdjustedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      select: false,
+    },
+    valueAdjustedAt: { type: Date, default: null, select: false },
   },
   { timestamps: true, versionKey: false },
 );

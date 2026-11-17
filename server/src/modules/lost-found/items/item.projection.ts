@@ -72,7 +72,38 @@ export interface ProjectableItem {
   occurrenceDate: Date;
   images?: ImageAsset[];
   status: ItemStatus;
+  estimatedValueEGP?: number | null;
+  valueSource?: 'AUTO' | 'ADJUSTED' | null;
+  valueAdjustedBy?: Types.ObjectId | string | null;
+  valueAdjustedAt?: Date | null;
 }
+
+/**
+ * Staff-only value fields (spec 008). Exactly four keys, nulls when no
+ * estimate is stored. Only staff-gated serializers may attach this to a
+ * payload; `toPublicItem` never includes it.
+ */
+export interface ItemValueFields {
+  estimatedValueEGP: number | null;
+  valueSource: 'AUTO' | 'ADJUSTED' | null;
+  valueAdjustedBy: string | null;
+  valueAdjustedAt: Date | null;
+}
+
+export function itemValueFields(item: ProjectableItem): ItemValueFields {
+  return {
+    estimatedValueEGP: item.estimatedValueEGP ?? null,
+    valueSource: item.valueSource ?? null,
+    valueAdjustedBy: item.valueAdjustedBy
+      ? item.valueAdjustedBy.toString()
+      : null,
+    valueAdjustedAt: item.valueAdjustedAt ?? null,
+  };
+}
+
+/** Mongoose select fragment opting into the select:false value fields. */
+export const VALUE_FIELDS_SELECT =
+  '+estimatedValueEGP +valueSource +valueAdjustedBy +valueAdjustedAt';
 
 function isPopulatedLocation(
   value: ProjectableItem['locationId'],

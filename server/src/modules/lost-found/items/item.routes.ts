@@ -4,6 +4,7 @@ import { authorizeRoles } from '../../../shared/middleware/authorizeRoles';
 import { uploadRequestImages } from '../../../shared/middleware/upload';
 import { validate } from '../../../shared/middleware/validate';
 import {
+  adjustItemValue,
   createItem,
   getItem,
   listItems,
@@ -11,6 +12,7 @@ import {
   updateItem,
 } from './item.controller';
 import {
+  adjustItemValueSchema,
   createItemSchema,
   itemIdSchema,
   listItemsQuerySchema,
@@ -42,6 +44,14 @@ lostFoundItemRouter.post(
   authorizeRoles('LOST_FOUND_MANAGER', 'SUPER_ADMIN'),
   validate(itemIdSchema, 'params'),
   recalculateMatches,
+);
+
+lostFoundItemRouter.patch(
+  '/:id/value',
+  authorizeRoles('LOST_FOUND_MANAGER', 'SUPER_ADMIN'),
+  validate(itemIdSchema, 'params'),
+  validate(adjustItemValueSchema),
+  adjustItemValue,
 );
 
 lostFoundItemRouter.patch(

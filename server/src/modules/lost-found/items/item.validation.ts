@@ -4,6 +4,7 @@ import {
   LOST_FOUND_CATEGORIES,
   REPORT_TYPES,
 } from '../../../config/constants';
+import { VALUE_MAX_EGP, VALUE_MIN_EGP } from './item-value.price-book';
 
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Select a valid campus location');
 
@@ -97,6 +98,16 @@ export const itemIdSchema = z.object({
   id: z.string().regex(/^[a-f\d]{24}$/i, 'Item id is not valid'),
 });
 
+export const adjustItemValueSchema = z.object({
+  valueEGP: z
+    .number()
+    .finite('Value must be a finite number')
+    .int('Value must be a whole number of EGP')
+    .min(VALUE_MIN_EGP, `Value must be at least ${VALUE_MIN_EGP} EGP`)
+    .max(VALUE_MAX_EGP, `Value must be at most ${VALUE_MAX_EGP} EGP`),
+});
+
 export type CreateItemInput = z.infer<typeof createItemSchema>;
 export type ListItemsQuery = z.infer<typeof listItemsQuerySchema>;
 export type UpdateItemInput = z.infer<typeof updateItemSchema>;
+export type AdjustItemValueInput = z.infer<typeof adjustItemValueSchema>;

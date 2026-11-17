@@ -4,6 +4,7 @@ import { DEMO_ACCOUNTS } from '../config/constants';
 import { User } from '../modules/auth/user.model';
 import { Location } from '../modules/locations/location.model';
 import { LostFoundItem } from '../modules/lost-found/items/lostFoundItem.model';
+import { estimateItemValue } from '../modules/lost-found/items/item-value';
 import { ItemMatch } from '../modules/lost-found/matches/itemMatch.model';
 import { ClaimRequest } from '../modules/lost-found/claims/claimRequest.model';
 import {
@@ -232,6 +233,28 @@ const EXTRA_STUDENT_EMAILS = EXTRA_STUDENTS.map((student) => student.email);
  * cached Arabic AI insights. Demo accounts and core locations must already
  * exist (see seed.ts).
  */
+/**
+ * Spec 008: every seeded item carries the same AUTO estimate the live
+ * report flow would compute — English and Arabic variants concatenated,
+ * exactly as the estimator would see them across the item's fields.
+ */
+function seedEstimateEGP(input: {
+  category: ItemSpec['category'];
+  brand?: string;
+  brandAr?: string;
+  title: string;
+  titleAr?: string;
+  description: string;
+  descriptionAr?: string;
+}): number {
+  return estimateItemValue({
+    category: input.category,
+    brand: [input.brand, input.brandAr].filter(Boolean).join(' ') || undefined,
+    title: [input.title, input.titleAr].filter(Boolean).join(' '),
+    description: [input.description, input.descriptionAr].filter(Boolean).join(' '),
+  }).valueEGP;
+}
+
 export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts> {
   await User.insertMany(
     EXTRA_STUDENTS.map((student) => ({
@@ -889,6 +912,16 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
     colorAr: spec.colorAr,
     brand: spec.brand,
     brandAr: spec.brandAr,
+    estimatedValueEGP: seedEstimateEGP({
+      category: spec.category,
+      brand: spec.brand,
+      brandAr: spec.brandAr,
+      title: spec.itemTitle,
+      titleAr: spec.itemTitleAr,
+      description: spec.description,
+      descriptionAr: spec.descriptionAr,
+    }),
+    valueSource: 'AUTO' as const,
     locationId: locationId(spec.building, spec.locationIndex),
     locationDetails: spec.locationDetails,
     locationDetailsAr: spec.locationDetailsAr,
@@ -1238,6 +1271,18 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
         colorAr: pair.colorAr,
         brand: pair.brand,
         brandAr: pair.brandAr,
+        estimatedValueEGP: seedEstimateEGP({
+          category: pair.category,
+          brand: pair.brand,
+          brandAr: pair.brandAr,
+          title: pair.lostTitle,
+          titleAr: pair.lostTitleAr,
+          description:
+            'Reported lost on campus; later matched with a found report and returned to its owner after verification.',
+          descriptionAr:
+            'تم الإبلاغ عن فقدانه داخل الحرم الجامعي، وتمت مطابقته لاحقاً مع بلاغ عثور وأُعيد إلى صاحبه بعد التحقق.',
+        }),
+        valueSource: 'AUTO' as const,
         locationId: locationId(pair.building, pair.locationIndex),
         locationDetails: pair.locationDetails,
         locationDetailsAr: pair.locationDetailsAr,
@@ -1267,6 +1312,18 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
         colorAr: pair.colorAr,
         brand: pair.brand,
         brandAr: pair.brandAr,
+        estimatedValueEGP: seedEstimateEGP({
+          category: pair.category,
+          brand: pair.brand,
+          brandAr: pair.brandAr,
+          title: pair.foundTitle,
+          titleAr: pair.foundTitleAr,
+          description:
+            'Found on campus and handed to the Lost & Found office; claimed and returned to its verified owner.',
+          descriptionAr:
+            'وُجد داخل الحرم الجامعي وسُلّم إلى مكتب المفقودات، ثم استلمه صاحبه بعد التحقق من الملكية.',
+        }),
+        valueSource: 'AUTO' as const,
         locationId: locationId(pair.building, pair.locationIndex),
         locationDetails: pair.locationDetails,
         locationDetailsAr: pair.locationDetailsAr,
@@ -1338,6 +1395,20 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
       colorAr: undefined,
       brand: undefined,
       brandAr: undefined,
+      estimatedValueEGP: seedEstimateEGP({
+        category: single.category,
+        title: single.itemTitle,
+        titleAr: single.itemTitleAr,
+        description:
+          single.reportType === 'LOST'
+            ? 'Reported lost on campus; the report was closed after the retention period without a matching found report.'
+            : 'Found on campus and kept at the Lost & Found office; the report was closed after the retention period.',
+        descriptionAr:
+          single.reportType === 'LOST'
+            ? 'تم الإبلاغ عن فقدانه داخل الحرم الجامعي، وأُغلق البلاغ بعد انتهاء فترة الاحتفاظ دون بلاغ عثور مطابق.'
+            : 'وُجد داخل الحرم الجامعي واحتُفظ به في مكتب المفقودات، وأُغلق البلاغ بعد انتهاء فترة الاحتفاظ.',
+      }),
+      valueSource: 'AUTO' as const,
       locationId: locationId(single.building, single.locationIndex),
       locationDetails: single.locationDetails,
       locationDetailsAr: single.locationDetailsAr,

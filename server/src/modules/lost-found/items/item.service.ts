@@ -13,11 +13,16 @@ import {
   type ILostFoundItem,
 } from './lostFoundItem.model';
 import {
+  itemValueFields,
   toPublicItem,
+  VALUE_FIELDS_SELECT,
+  type ItemValueFields,
   type ProjectableItem,
   type PublicItem,
 } from './item.projection';
+import { estimateItemValue } from './item-value';
 import type {
+  AdjustItemValueInput,
   CreateItemInput,
   ListItemsQuery,
   UpdateItemInput,
@@ -26,6 +31,11 @@ import type {
 export interface ItemActor {
   id: string;
   role: Role;
+}
+
+/** Value data (spec 008) exists for staff roles only — never students. */
+export function isStaffRole(role: Role): boolean {
+  return role === 'LOST_FOUND_MANAGER' || role === 'SUPER_ADMIN';
 }
 
 interface PopulatedReporter {
@@ -45,7 +55,7 @@ interface PopulatedItem extends ProjectableItem {
   updatedAt?: Date;
 }
 
-export interface SerializedItem extends PublicItem {
+export interface SerializedItem extends PublicItem, Partial<ItemValueFields> {
   privateIdentificationDetails?: string;
   reporter?: {
     id: string;
@@ -94,11 +104,18 @@ function objectIdOf(
   return value._id.toString();
 }
 
-function serializeItem(item: PopulatedItem, includePrivate: boolean): SerializedItem {
+function serializeItem(
+  item: PopulatedItem,
+  includePrivate: boolean,
+  includeValue = false,
+): SerializedItem {
   const publicItem = toPublicItem(item);
+  // Value fields are a separate gate from the private view: the item's
+  // own reporter (a student) gets private details but never the value.
+  const valueFields = includeValue ? itemValueFields(item) : {};
 
   if (!includePrivate) {
-    return publicItem;
+    return { ...publicItem, ...valueFields };
   }
 
   const reporter =
@@ -116,6 +133,7 @@ function serializeItem(item: PopulatedItem, includePrivate: boolean): Serialized
 
   return {
     ...publicItem,
+    ...valueFields,
     privateIdentificationDetails: item.privateIdentificationDetails,
     reporter,
     createdAt: item.createdAt,
@@ -123,13 +141,20 @@ function serializeItem(item: PopulatedItem, includePrivate: boolean): Serialized
   };
 }
 
-async function loadItem(id: string, includePrivate: boolean): Promise<PopulatedItem> {
+async function loadItem(
+  id: string,
+  includePrivate: boolean,
+  includeValue = false,
+): Promise<PopulatedItem> {
   const query = LostFoundItem.findById(id)
     .populate(LOCATION_POPULATION)
     .populate(REPORTER_POPULATION);
 
   if (includePrivate) {
     query.select('+privateIdentificationDetails');
+  }
+  if (includeValue) {
+    query.select(VALUE_FIELDS_SELECT);
   }
 
   const item = await query.lean<PopulatedItem | null>();
@@ -162,6 +187,12 @@ export async function createItem(
   await requireActiveLocation(input.locationId);
 
   const reportNumber = await nextNumber('LF');
+  const estimate = estimateItemValue({
+    category: input.category,
+    brand: input.brand,
+    title: input.itemTitle,
+    description: input.description,
+  });
   const item = await LostFoundItem.create({
     reportNumber,
     reportType: input.reportType,
@@ -177,6 +208,8 @@ export async function createItem(
     images,
     reporterId: actor.id,
     status: 'OPEN',
+    estimatedValueEGP: estimate.valueEGP,
+    valueSource: 'AUTO',
   });
 
   await logActivity({
@@ -197,14 +230,19 @@ export async function createItem(
 
   await runMatchingFor(item._id.toString());
 
-  return serializeItem(await loadItem(item._id.toString(), true), true);
+  const includeValue = isStaffRole(actor.role);
+  return serializeItem(
+    await loadItem(item._id.toString(), true, includeValue),
+    true,
+    includeValue,
+  );
 }
 
 export async function listItems(
   actor: ItemActor,
   query: ListItemsQuery,
 ): Promise<{
-  data: PublicItem[];
+  data: SerializedItem[];
   page: number;
   limit: number;
   total: number;
@@ -276,9 +314,14 @@ export async function listItems(
     filter.occurrenceDate = occurrenceDate;
   }
 
+  const includeValue = isStaffRole(actor.role);
+  const findQuery = LostFoundItem.find(filter).populate(LOCATION_POPULATION);
+  if (includeValue) {
+    findQuery.select(VALUE_FIELDS_SELECT);
+  }
+
   const [documents, total] = await Promise.all([
-    LostFoundItem.find(filter)
-      .populate(LOCATION_POPULATION)
+    findQuery
       .sort({ occurrenceDate: -1, createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
@@ -286,7 +329,14 @@ export async function listItems(
     LostFoundItem.countDocuments(filter),
   ]);
 
-  return paginate(documents.map((document) => toPublicItem(document)), page, limit, total);
+  return paginate(
+    documents.map((document) =>
+      includeValue ? serializeItem(document, false, true) : toPublicItem(document),
+    ),
+    page,
+    limit,
+    total,
+  );
 }
 
 /** A date-only upper bound includes the whole selected day. */
@@ -308,15 +358,13 @@ export async function getItem(
   actor: ItemActor,
   id: string,
 ): Promise<SerializedItem> {
-  const item = await loadItem(id, true);
+  const includeValue = isStaffRole(actor.role);
+  const item = await loadItem(id, true, includeValue);
   const reporterId = objectIdOf(item.reporterId);
   const isReporter = reporterId === actor.id;
-  const isPrivileged =
-    isReporter ||
-    actor.role === 'LOST_FOUND_MANAGER' ||
-    actor.role === 'SUPER_ADMIN';
+  const isPrivileged = isReporter || includeValue;
 
-  return serializeItem(item, isPrivileged);
+  return serializeItem(item, isPrivileged, includeValue);
 }
 
 export async function updateItem(
@@ -325,12 +373,20 @@ export async function updateItem(
   input: UpdateItemInput,
 ): Promise<SerializedItem> {
   const item = await LostFoundItem.findById(id).select(
-    '+privateIdentificationDetails',
+    '+privateIdentificationDetails +estimatedValueEGP +valueSource',
   );
 
   if (!item) {
     throw ApiError.notFound('Lost and found item not found', 'itemNotFound');
   }
+
+  // The estimator's whole input set is editable; remember whether this
+  // edit changes any of it (spec 008 re-estimation rule, applied below).
+  const valueInputChanged =
+    (input.itemTitle !== undefined && input.itemTitle !== item.itemTitle) ||
+    (input.description !== undefined && input.description !== item.description) ||
+    (input.category !== undefined && input.category !== item.category) ||
+    ('brand' in input && (input.brand ?? undefined) !== (item.brand ?? undefined));
 
   const isReporter = item.reporterId.toString() === actor.id;
   const isManager =
@@ -406,6 +462,18 @@ export async function updateItem(
   }
   if (input.occurrenceDate !== undefined) item.occurrenceDate = input.occurrenceDate;
 
+  // Recompute an AUTO estimate when its inputs were edited; a manual
+  // ADJUSTED value is never overwritten by the estimator.
+  if (valueInputChanged && item.valueSource !== 'ADJUSTED') {
+    item.estimatedValueEGP = estimateItemValue({
+      category: item.category,
+      brand: item.brand,
+      title: item.itemTitle,
+      description: item.description,
+    }).valueEGP;
+    item.valueSource = 'AUTO';
+  }
+
   await item.save();
 
   const closed = input.status === 'CLOSED';
@@ -422,6 +490,51 @@ export async function updateItem(
     metadata: {
       status: item.status,
       fields: fieldChanges.map(([key]) => key),
+    },
+  });
+
+  return getItem(actor, id);
+}
+
+/**
+ * Staff manual adjustment of an item's estimated value (spec 008). The
+ * route is staff-only; the service assumes the caller enforced the role.
+ * The activity-log description stays value-free on purpose: log
+ * descriptions feed the AI-insights pipeline, while the value itself is
+ * recorded only in params/metadata of the SUPER_ADMIN-only log surface.
+ */
+export async function adjustItemValue(
+  actor: ItemActor,
+  id: string,
+  input: AdjustItemValueInput,
+): Promise<SerializedItem> {
+  const item = await LostFoundItem.findById(id).select(VALUE_FIELDS_SELECT);
+
+  if (!item) {
+    throw ApiError.notFound('Lost and found item not found', 'itemNotFound');
+  }
+
+  const previousValueEGP = item.estimatedValueEGP ?? null;
+  const previousSource = item.valueSource ?? null;
+
+  item.estimatedValueEGP = input.valueEGP;
+  item.valueSource = 'ADJUSTED';
+  item.valueAdjustedBy = new Types.ObjectId(actor.id);
+  item.valueAdjustedAt = new Date();
+  await item.save();
+
+  await logActivity({
+    actorId: actor.id,
+    action: 'ITEM_VALUE_ADJUSTED',
+    entityType: 'LostFoundItem',
+    entityId: item._id,
+    description: `Adjusted estimated value for item ${item.reportNumber}`,
+    descriptionKey: 'itemValueAdjusted',
+    params: { code: item.reportNumber, value: input.valueEGP },
+    metadata: {
+      previousValueEGP,
+      newValueEGP: input.valueEGP,
+      previousSource,
     },
   });
 

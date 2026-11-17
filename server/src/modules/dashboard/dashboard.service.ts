@@ -77,11 +77,26 @@ export interface UrgentQueue {
   handoversWaiting: UrgentQueueClaim[];
 }
 
+/**
+ * Staff-only value aggregates (spec 008): sums of the items' CURRENT
+ * estimates. Lost = LOST items by `createdAt`; returned = completed
+ * handovers by `handover.handedOverAt` (fallback claim `updatedAt`),
+ * counting the claimed item's value once. These are live, revisable
+ * figures, not month-end snapshots.
+ */
+export interface ValueStats {
+  lostValueThisMonthEGP: number;
+  returnedValueThisMonthEGP: number;
+  totalLostValueEGP: number;
+  totalReturnedValueEGP: number;
+}
+
 export interface AdminDashboard {
   role: 'SUPER_ADMIN';
   period: DashboardPeriod;
   rangeStart: Date | null;
   rangeEnd: Date;
+  valueStats: ValueStats;
   totals: {
     users: number;
     activeUsers: number;
@@ -120,6 +135,7 @@ export interface ManagerDashboard {
   period: DashboardPeriod;
   rangeStart: Date | null;
   rangeEnd: Date;
+  valueStats: ValueStats;
   counts: {
     totalLostItems: number;
     totalFoundItems: number;
@@ -342,6 +358,88 @@ async function getBoardExtras(): Promise<{
   };
 }
 
+interface ValueSums {
+  thisMonthEGP: number;
+  totalEGP: number;
+}
+
+function sumLostItemValues(
+  lostItems: Array<{ createdAt: Date; estimatedValueEGP?: number | null }>,
+  inCurrentMonth: (date: Date) => boolean,
+): ValueSums {
+  const sums: ValueSums = { thisMonthEGP: 0, totalEGP: 0 };
+  for (const item of lostItems) {
+    const value = item.estimatedValueEGP ?? 0;
+    sums.totalEGP += value;
+    if (inCurrentMonth(item.createdAt)) sums.thisMonthEGP += value;
+  }
+  return sums;
+}
+
+interface CompletedClaimForValue {
+  itemId: unknown;
+  handover?: { handedOverAt?: Date | null } | null;
+  updatedAt: Date;
+}
+
+function sumReturnedItemValues(
+  completedClaims: CompletedClaimForValue[],
+  inCurrentMonth: (date: Date) => boolean,
+): ValueSums {
+  const sums: ValueSums = { thisMonthEGP: 0, totalEGP: 0 };
+  // A physical item is counted once even if duplicate completed claims
+  // reference it — the pair's value is the claimed item's, never both.
+  const countedItemIds = new Set<string>();
+  for (const claim of completedClaims) {
+    const item = claim.itemId as {
+      _id?: Types.ObjectId;
+      estimatedValueEGP?: number | null;
+    } | null;
+    if (!item?._id) continue;
+    const itemKey = item._id.toString();
+    if (countedItemIds.has(itemKey)) continue;
+    countedItemIds.add(itemKey);
+
+    const value = item.estimatedValueEGP ?? 0;
+    sums.totalEGP += value;
+    const handedOverAt = claim.handover?.handedOverAt ?? claim.updatedAt;
+    if (handedOverAt && inCurrentMonth(handedOverAt)) {
+      sums.thisMonthEGP += value;
+    }
+  }
+  return sums;
+}
+
+export async function getValueStats(now: Date = new Date()): Promise<ValueStats> {
+  const monthStart = startOfMonth(now);
+  const nextMonthStart = addMonths(monthStart, 1);
+  const inCurrentMonth = (date: Date): boolean =>
+    date >= monthStart && date < nextMonthStart;
+
+  const [lostItems, completedClaims] = await Promise.all([
+    LostFoundItem.find({ reportType: 'LOST' })
+      .select('createdAt +estimatedValueEGP')
+      .lean(),
+    ClaimRequest.find({ status: 'COMPLETED' })
+      .select('itemId handover updatedAt')
+      .populate('itemId', '+estimatedValueEGP')
+      .lean(),
+  ]);
+
+  const lost = sumLostItemValues(lostItems, inCurrentMonth);
+  const returned = sumReturnedItemValues(
+    completedClaims as CompletedClaimForValue[],
+    inCurrentMonth,
+  );
+
+  return {
+    lostValueThisMonthEGP: lost.thisMonthEGP,
+    returnedValueThisMonthEGP: returned.thisMonthEGP,
+    totalLostValueEGP: lost.totalEGP,
+    totalReturnedValueEGP: returned.totalEGP,
+  };
+}
+
 async function getAdminDashboard(
   period: DashboardPeriod,
   range: PeriodRange,
@@ -404,7 +502,10 @@ async function getAdminDashboard(
     ItemMatch.countDocuments(createdAtMatch(range)),
   ]);
 
-  const boardExtras = await getBoardExtras();
+  const [boardExtras, valueStats] = await Promise.all([
+    getBoardExtras(),
+    getValueStats(),
+  ]);
 
   const userRoleMap = new Map(userRoleRows.map((row) => [row._id, row.count]));
   const usersByRole = ROLES.map((role) => ({
@@ -436,6 +537,7 @@ async function getAdminDashboard(
     period,
     rangeStart: range.from,
     rangeEnd: range.to,
+    valueStats,
     totals: {
       users,
       activeUsers,
@@ -531,7 +633,10 @@ async function getManagerDashboard(
     .sort((a, b) => b.lost + b.found - (a.lost + a.found))
     .slice(0, 6);
 
-  const boardExtras = await getBoardExtras();
+  const [boardExtras, valueStats] = await Promise.all([
+    getBoardExtras(),
+    getValueStats(),
+  ]);
 
   const claimStatusMap = new Map(claimStatusRows.map((row) => [row._id, row.count]));
   const claimsByStatus = CLAIM_STATUSES.map((status) => ({
@@ -544,6 +649,7 @@ async function getManagerDashboard(
     period,
     rangeStart: range.from,
     rangeEnd: range.to,
+    valueStats,
     counts: {
       totalLostItems,
       totalFoundItems,

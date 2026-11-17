@@ -4,6 +4,7 @@ import { ApiError } from '../../../shared/utils/ApiError';
 import { asyncHandler } from '../../../shared/utils/asyncHandler';
 import { runMatchingFor } from '../matches/matching.runner';
 import {
+  adjustItemValue as adjustItemValueService,
   createItem as createItemService,
   getItem as getItemService,
   listItems as listItemsService,
@@ -11,6 +12,7 @@ import {
 } from './item.service';
 import type { ItemActor } from './item.service';
 import type {
+  AdjustItemValueInput,
   CreateItemInput,
   ListItemsQuery,
   UpdateItemInput,
@@ -67,6 +69,17 @@ export const updateItem = asyncHandler(async (req: Request, res: Response) => {
     actor,
     id,
     req.body as UpdateItemInput,
+  );
+  res.status(200).json({ item });
+});
+
+export const adjustItemValue = asyncHandler(async (req: Request, res: Response) => {
+  const actor = requireActor(req);
+  const { id } = req.params as { id: string };
+  const item = await adjustItemValueService(
+    actor,
+    id,
+    req.body as AdjustItemValueInput,
   );
   res.status(200).json({ item });
 });

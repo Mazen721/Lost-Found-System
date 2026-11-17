@@ -20,7 +20,10 @@ import {
   type ILostFoundItem,
 } from '../items/lostFoundItem.model';
 import {
+  itemValueFields,
   toPublicItem,
+  VALUE_FIELDS_SELECT,
+  type ItemValueFields,
   type ProjectableItem,
   type PublicItem,
 } from '../items/item.projection';
@@ -81,7 +84,7 @@ interface PopulatedClaim {
   updatedAt: Date;
 }
 
-export interface ClaimItem extends PublicItem {
+export interface ClaimItem extends PublicItem, Partial<ItemValueFields> {
   privateIdentificationDetails?: string;
 }
 
@@ -90,7 +93,7 @@ export interface SerializedClaim {
   claimNumber: string;
   status: ClaimStatus;
   item: ClaimItem | null;
-  linkedLostItem: PublicItem | null;
+  linkedLostItem: ClaimItem | null;
   claimant: {
     id: string;
     name: string;
@@ -133,17 +136,20 @@ const LINKABLE_LOST_STATUSES: readonly ItemStatus[] = ['OPEN', 'MATCH_CONFIRMED'
 const PUBLIC_ITEM_SELECT =
   'reportNumber reportType itemTitle itemTitleAr description descriptionAr category color colorAr brand brandAr locationDetails locationDetailsAr occurrenceDate images status locationId';
 
+// Staff-only (spec 008): the value fields are select:false on the item
+// model, so they are fetched only under the manager populate — never add
+// them to PUBLIC_ITEM_SELECT, which student claim views also use.
+const MANAGER_ITEM_SELECT = `${PUBLIC_ITEM_SELECT} +privateIdentificationDetails ${VALUE_FIELDS_SELECT}`;
+
 const LOCATION_POPULATE = {
   path: 'locationId',
   select: 'buildingName buildingNameAr floor floorAr room roomAr locationType',
 };
 
-function itemPopulate(path: string, includePrivate = false) {
+function itemPopulate(path: string, includeManagerFields = false) {
   return {
     path,
-    select: includePrivate
-      ? `${PUBLIC_ITEM_SELECT} +privateIdentificationDetails`
-      : PUBLIC_ITEM_SELECT,
+    select: includeManagerFields ? MANAGER_ITEM_SELECT : PUBLIC_ITEM_SELECT,
     populate: LOCATION_POPULATE,
   };
 }
@@ -321,15 +327,20 @@ async function releaseItemIfUnclaimed(
 function serializeClaimItem(
   item: ProjectableItem & { privateIdentificationDetails?: string },
   includePrivate: boolean,
+  includeValue = false,
 ): ClaimItem {
   const publicItem = toPublicItem(item);
+  // Value fields gate on the staff flag alone — never on the presence of
+  // private details (spec 008, Goldfish P1).
+  const valueFields = includeValue ? itemValueFields(item) : {};
 
   if (!includePrivate || !item.privateIdentificationDetails) {
-    return publicItem;
+    return { ...publicItem, ...valueFields };
   }
 
   return {
     ...publicItem,
+    ...valueFields,
     privateIdentificationDetails: item.privateIdentificationDetails,
   };
 }
@@ -381,10 +392,10 @@ function serializeClaim(
     claimNumber: doc.claimNumber,
     status: doc.status,
     item: isProjectableItem(doc.itemId)
-      ? serializeClaimItem(doc.itemId, includeManagerFields)
+      ? serializeClaimItem(doc.itemId, includeManagerFields, includeManagerFields)
       : null,
     linkedLostItem: isProjectableItem(doc.linkedLostItemId)
-      ? toPublicItem(doc.linkedLostItemId)
+      ? serializeClaimItem(doc.linkedLostItemId, false, includeManagerFields)
       : null,
     claimant,
     claimDescription: doc.claimDescription,
@@ -429,7 +440,7 @@ async function loadClaimById(
 
   const query = ClaimRequest.findById(id)
     .populate(itemPopulate('itemId', includeManagerFields))
-    .populate(itemPopulate('linkedLostItemId'))
+    .populate(itemPopulate('linkedLostItemId', includeManagerFields))
     .populate(CLAIMANT_POPULATE)
     .populate(REVIEWER_POPULATE)
     .populate(HANDOVER_POPULATE);
@@ -604,7 +615,7 @@ export async function listClaims(
   const [documents, total] = await Promise.all([
     ClaimRequest.find(filter)
       .populate(itemPopulate('itemId', includeManagerFields))
-      .populate(itemPopulate('linkedLostItemId'))
+      .populate(itemPopulate('linkedLostItemId', includeManagerFields))
       .populate(CLAIMANT_POPULATE)
       .populate(REVIEWER_POPULATE)
       .populate(HANDOVER_POPULATE)
