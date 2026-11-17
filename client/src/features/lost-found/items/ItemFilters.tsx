@@ -2,6 +2,7 @@ import { ChevronDown, RotateCcw, Search, SlidersHorizontal, X } from 'lucide-rea
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import type { ItemFilterState } from '@/features/lost-found/items/browseFilters';
 import { enumLabel } from '@/lib/labels';
 import { cn, formatNumber } from '@/lib/utils';
 import {
@@ -9,39 +10,17 @@ import {
   LOST_FOUND_CATEGORIES,
   REPORT_TYPES,
   type ItemStatus,
-  type LostFoundCategory,
-  type ReportType,
 } from '@/types/lostFound';
-
-export interface ItemFilterState {
-  q: string;
-  reportType: 'ALL' | ReportType;
-  category: 'ALL' | LostFoundCategory;
-  building: string;
-  color: string;
-  brand: string;
-  status: 'ALL' | ItemStatus;
-  from: string;
-  to: string;
-}
-
-export const EMPTY_ITEM_FILTERS: ItemFilterState = {
-  q: '',
-  reportType: 'ALL',
-  category: 'ALL',
-  building: '',
-  color: '',
-  brand: '',
-  status: 'ALL',
-  from: '',
-  to: '',
-};
 
 interface ItemFiltersProps {
   values: ItemFilterState;
   onChange: (patch: Partial<ItemFilterState>) => void;
   onReset: () => void;
   allowedStatuses?: readonly ItemStatus[];
+  /** Browse renders its search in the spec 006 hero instead of here. */
+  hideSearch?: boolean;
+  /** Browse renders its categories as hero chips instead of the select. */
+  hideCategory?: boolean;
 }
 
 interface ActiveFilterChip {
@@ -101,6 +80,8 @@ export function ItemFilters({
   onChange,
   onReset,
   allowedStatuses = ACTIVE_BROWSE_STATUSES,
+  hideSearch = false,
+  hideCategory = false,
 }: ItemFiltersProps) {
   const { t } = useTranslation();
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -161,37 +142,39 @@ export function ItemFilters({
       aria-label={t('common.filters')}
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="relative min-w-0 flex-1">
-          <label htmlFor="item-search" className="sr-only">
-            {t('common.search')}
-          </label>
-          <Search
-            className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <input
-            id="item-search"
-            type="text"
-            value={values.q}
-            onChange={(event) => onChange({ q: event.target.value })}
-            placeholder={t('lostFound.searchPlaceholder')}
-            className={cn(
-              primaryControlClass,
-              'w-full ps-10',
-              values.q ? 'pe-9' : 'pe-3.5',
-            )}
-          />
-          {values.q ? (
-            <button
-              type="button"
-              onClick={() => onChange({ q: '' })}
-              aria-label={t('lostFound.clearSearch')}
-              className="absolute end-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <X className="h-3.5 w-3.5" aria-hidden="true" />
-            </button>
-          ) : null}
-        </div>
+        {hideSearch ? null : (
+          <div className="relative min-w-0 flex-1">
+            <label htmlFor="item-search" className="sr-only">
+              {t('common.search')}
+            </label>
+            <Search
+              className="pointer-events-none absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <input
+              id="item-search"
+              type="text"
+              value={values.q}
+              onChange={(event) => onChange({ q: event.target.value })}
+              placeholder={t('lostFound.searchPlaceholder')}
+              className={cn(
+                primaryControlClass,
+                'w-full ps-10',
+                values.q ? 'pe-9' : 'pe-3.5',
+              )}
+            />
+            {values.q ? (
+              <button
+                type="button"
+                onClick={() => onChange({ q: '' })}
+                aria-label={t('lostFound.clearSearch')}
+                className="absolute end-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            ) : null}
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2.5 lg:flex-nowrap">
           <div
@@ -222,26 +205,28 @@ export function ItemFilters({
             })}
           </div>
 
-          <div className="min-w-[150px] flex-1 sm:w-44 sm:flex-none lg:w-48">
-            <label htmlFor="item-category" className="sr-only">
-              {t('common.category')}
-            </label>
-            <select
-              id="item-category"
-              value={values.category}
-              onChange={(event) =>
-                onChange({ category: event.target.value as ItemFilterState['category'] })
-              }
-              className={cn(primaryControlClass, 'w-full px-3')}
-            >
-              <option value="ALL">{t('lostFound.allCategories')}</option>
-              {LOST_FOUND_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {enumLabel('lostFoundCategory', category)}
-                </option>
-              ))}
-            </select>
-          </div>
+          {hideCategory ? null : (
+            <div className="min-w-[150px] flex-1 sm:w-44 sm:flex-none lg:w-48">
+              <label htmlFor="item-category" className="sr-only">
+                {t('common.category')}
+              </label>
+              <select
+                id="item-category"
+                value={values.category}
+                onChange={(event) =>
+                  onChange({ category: event.target.value as ItemFilterState['category'] })
+                }
+                className={cn(primaryControlClass, 'w-full px-3')}
+              >
+                <option value="ALL">{t('lostFound.allCategories')}</option>
+                {LOST_FOUND_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {enumLabel('lostFoundCategory', category)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <Button
             type="button"

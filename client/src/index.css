@@ -173,6 +173,15 @@
     box-shadow: inset 0 -2px 0 0 hsl(var(--mnu-gold));
   }
 
+  /* Search-first hero surface (spec 006, Concept 1 «دوّر الأول»): deep navy
+     easing downward into the darkest navy, with a soft radial lift from the
+     top corner instead of the gold hairline used by bg-hero-navy. */
+  .bg-hero-concept {
+    background-image:
+      radial-gradient(900px 480px at 88% -10%, hsl(var(--mnu-navy-hover) / 0.85) 0%, transparent 60%),
+      linear-gradient(180deg, hsl(var(--mnu-navy)) 0%, hsl(var(--mnu-navy-active)) 100%);
+  }
+
   .mnu-portal-surface ::selection {
     background-color: hsl(var(--mnu-gold) / 0.32);
     color: hsl(var(--mnu-navy));

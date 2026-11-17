@@ -72,6 +72,8 @@ export default {
         panel: '0 1px 2px rgba(23, 33, 28, 0.04), 0 8px 24px -16px rgba(23, 33, 28, 0.18)',
         card: '0 1px 2px rgb(4 21 62 / 0.05), 0 16px 36px -20px rgb(4 21 62 / 0.25)',
         hero: '0 24px 48px -24px rgb(4 21 62 / 0.45)',
+        item: '0 4px 18px -6px rgb(8 28 58 / 0.12)',
+        float: '0 10px 30px -12px rgb(8 28 58 / 0.18)',
       },
       keyframes: {
         'fade-in': {
