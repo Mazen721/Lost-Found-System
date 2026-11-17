@@ -1,9 +1,15 @@
+import { useState } from 'react';
+import { Download } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { ErrorState } from '@/components/shared/ErrorState';
 import { LoadingState } from '@/components/shared/LoadingState';
 import { PageHeader } from '@/components/shared/PageHeader';
+import { Button } from '@/components/ui/button';
 import { ActivityChart } from '@/features/dashboard/ActivityChart';
+import { RecoveryStatsCards } from '@/features/dashboard/RecoveryStatsCards';
+import { StaleItemsSection } from '@/features/dashboard/StaleItemsSection';
 import { ValueStatsCards } from '@/features/dashboard/ValueStatsCards';
 import { dashboardApi } from '@/features/dashboard/dashboardApi';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -74,7 +80,7 @@ function BreakdownCard({
   );
 }
 
-/** The three distribution blocks of the Statistics page (spec 009). */
+/** The category + status distribution blocks (spec 009). */
 function BreakdownsSection({ breakdowns }: { breakdowns: DashboardBreakdowns }) {
   const { t } = useTranslation();
 
@@ -94,23 +100,83 @@ function BreakdownsSection({ breakdowns }: { breakdowns: DashboardBreakdowns }) 
     value: entry.count,
   }));
 
-  const locationRows: BreakdownRow[] = breakdowns.locationsTop.map((entry) => ({
-    key: entry.locationId,
-    label: tr(entry, 'name') || entry.name,
-    value: entry.count,
-  }));
-
   return (
     <div className="grid items-start gap-7 lg:grid-cols-2">
       <BreakdownCard title={t('dashboard.itemsByCategory')} rows={categoryRows} />
-      <div className="space-y-7">
-        <BreakdownCard title={t('dashboard.statusDistribution')} rows={statusRows} />
-        <BreakdownCard
-          title={t('dashboard.breakdownsTopLocations')}
-          rows={locationRows}
-        />
-      </div>
+      <BreakdownCard title={t('dashboard.statusDistribution')} rows={statusRows} />
     </div>
+  );
+}
+
+/**
+ * Hot locations (spec 011): the spec-009 top-5 locations with a
+ * lost/found split bar per location and each location's server-side
+ * share of ALL reports (the top-5 shares need not sum to 100%).
+ */
+function TopLocationsCard({
+  locations,
+}: {
+  locations: DashboardBreakdowns['locationsTop'];
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <section
+      aria-label={t('dashboard.breakdownsTopLocations')}
+      className="rounded-xl border border-border/80 bg-card p-6 shadow-xs"
+    >
+      <h3 className="text-base font-semibold tracking-[-0.01em] text-foreground">
+        {t('dashboard.breakdownsTopLocations')}
+      </h3>
+      <ul className="mt-5 space-y-4">
+        {locations.map((entry) => (
+          <li key={entry.locationId}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
+              <span className="text-sm font-semibold text-foreground">
+                {tr(entry, 'name') || entry.name}
+              </span>
+              <span className="flex items-baseline gap-2 text-xs text-muted-foreground">
+                <span>
+                  {t('dashboard.breakdownLostFound', {
+                    lost: formatNumber(entry.lost),
+                    found: formatNumber(entry.found),
+                  })}
+                  {' · '}
+                  {t('dashboard.locationShare', {
+                    share: formatNumber(entry.sharePercent, {
+                      maximumFractionDigits: 1,
+                    }),
+                  })}
+                </span>
+                <strong className="text-sm font-bold tabular-nums text-foreground">
+                  {formatNumber(entry.count)}
+                </strong>
+              </span>
+            </div>
+            <div
+              className="mt-1.5 flex h-2 overflow-hidden rounded-full bg-secondary/60"
+              role="presentation"
+            >
+              <div
+                className="h-full bg-primary"
+                style={{
+                  width: `${entry.count > 0 ? (entry.lost / entry.count) * 100 : 0}%`,
+                }}
+              />
+              <div
+                className="h-full bg-[hsl(var(--mnu-gold))]"
+                style={{
+                  width: `${entry.count > 0 ? (entry.found / entry.count) * 100 : 0}%`,
+                }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+        {t('dashboard.locationsShareNote')}
+      </p>
+    </section>
   );
 }
 
@@ -125,6 +191,7 @@ function BreakdownsSection({ breakdowns }: { breakdowns: DashboardBreakdowns }) 
 export function StatisticsPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const [exporting, setExporting] = useState(false);
 
   const dashboardQuery = useQuery({
     queryKey: ['dashboard', user?.id, user?.role, 'statistics'],
@@ -133,6 +200,26 @@ export function StatisticsPage() {
   });
 
   if (!user) return null;
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const { blob, filename } = await dashboardApi.downloadMonthlyReport();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = filename ?? 'تقرير-المفقودات.xlsx';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast.success(t('dashboard.exportSuccess'));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const data =
     dashboardQuery.data &&
@@ -150,6 +237,12 @@ export function StatisticsPage() {
         eyebrow={t('nav.statistics')}
         title={t('dashboard.statisticsTitle')}
         description={t('dashboard.statisticsDesc')}
+        actions={
+          <Button type="button" onClick={handleExport} disabled={exporting}>
+            <Download className="h-4 w-4" aria-hidden="true" />
+            {t('dashboard.exportMonthlyReport')}
+          </Button>
+        }
       />
 
       {dashboardQuery.isLoading || (dashboardQuery.data && !data) ? (
@@ -164,7 +257,10 @@ export function StatisticsPage() {
         <>
           <ActivityChart />
           <ValueStatsCards stats={data.valueStats} />
+          <RecoveryStatsCards stats={data.recoveryStats} />
           <BreakdownsSection breakdowns={data.breakdowns} />
+          <TopLocationsCard locations={data.breakdowns.locationsTop} />
+          <StaleItemsSection items={data.staleItems} staleCount={data.staleCount} />
         </>
       ) : null}
     </div>

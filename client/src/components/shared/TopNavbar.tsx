@@ -70,7 +70,10 @@ export function TopNavbar({ onMenu, flush = false }: TopNavbarProps) {
 
         <nav
           aria-label={t('nav.groupOverview')}
-          className="hidden min-w-0 items-center gap-1 lg:flex"
+          // Spec 011: min-w-0 + overflow-hidden make the bar structurally
+          // incapable of the old overlap — an over-long link set clips
+          // inside the nav instead of sliding under the actions.
+          className="hidden min-w-0 items-center gap-1 overflow-hidden lg:flex"
         >
           {topLinks.map((link) => {
             const active = isTopLinkActive(link, location.pathname);
@@ -96,7 +99,7 @@ export function TopNavbar({ onMenu, flush = false }: TopNavbarProps) {
           <button
             type="button"
             onClick={onMenu}
-            className="flex items-center gap-2 rounded-full border-[1.5px] border-white/35 px-3.5 py-2 text-[13px] font-extrabold text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--mnu-gold))] sm:px-4 sm:text-[13.5px]"
+            className="flex flex-none items-center gap-2 whitespace-nowrap rounded-full border-[1.5px] border-white/35 px-3.5 py-2 text-[13px] font-extrabold text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--mnu-gold))] sm:px-4 sm:text-[13.5px]"
           >
             <Menu className="h-[18px] w-[18px]" strokeWidth={2.2} aria-hidden="true" />
             {t('nav.menu')}

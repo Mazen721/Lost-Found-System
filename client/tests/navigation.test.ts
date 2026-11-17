@@ -74,14 +74,13 @@ describe('top-navbar links (spec 007)', () => {
     ]);
   });
 
-  it('LOST_FOUND_MANAGER top links are its working set', () => {
+  it('LOST_FOUND_MANAGER top links are its trimmed working set (spec 011)', () => {
     expect(getTopLinks('LOST_FOUND_MANAGER').map((link) => link.to)).toEqual([
       '/dashboard',
       '/statistics',
       '/lost-found/matches',
       '/lost-found/claims',
       '/lost-found/items',
-      '/lost-found',
     ]);
   });
 
@@ -92,9 +91,7 @@ describe('top-navbar links (spec 007)', () => {
       '/statistics',
       '/users',
       '/lost-found/items',
-      '/lost-found/matches',
       '/lost-found/claims',
-      '/lost-found',
     ]);
     expect(links.map((link) => link.to)).not.toContain(REPORT_ROUTE);
   });
@@ -111,6 +108,52 @@ describe('top-navbar links (spec 007)', () => {
     expect(getTopLinks('SUPER_ADMIN').map((link) => link.to)).not.toContain(REPORT_ROUTE);
     expect(getMobileTabs('SUPER_ADMIN').map((tab) => tab.to)).not.toContain(REPORT_ROUTE);
   });
+});
+
+describe('staff top-link trim (spec 011, navbar overflow fix)', () => {
+  it.each(['LOST_FOUND_MANAGER', 'SUPER_ADMIN'] as Role[])(
+    '%s top links are capped at five so the desktop bar cannot overflow',
+    (role) => {
+      expect(getTopLinks(role).length).toBeLessThanOrEqual(5);
+    },
+  );
+
+  it('destinations trimmed from the admin top bar remain in the drawer', () => {
+    const topRoutes = getTopLinks('SUPER_ADMIN').map((link) => link.to);
+    const drawerRoutes = fullMenuRoutes('SUPER_ADMIN');
+    for (const trimmed of ['/lost-found/matches', '/lost-found']) {
+      expect(topRoutes).not.toContain(trimmed);
+      expect(drawerRoutes).toContain(trimmed);
+    }
+  });
+
+  it('browse trimmed from the manager top bar remains in the drawer', () => {
+    expect(getTopLinks('LOST_FOUND_MANAGER').map((link) => link.to)).not.toContain(
+      '/lost-found',
+    );
+    expect(fullMenuRoutes('LOST_FOUND_MANAGER')).toContain('/lost-found');
+  });
+
+  it.each(['LOST_FOUND_MANAGER', 'SUPER_ADMIN'] as Role[])(
+    '%s loses no drawer destination to the trim (full menu unchanged)',
+    (role) => {
+      const drawerRoutes = fullMenuRoutes(role);
+      // Every pre-011 drawer route is still present: the trim touched
+      // only the top-link sets, never the full menu.
+      for (const route of [
+        '/dashboard',
+        '/statistics',
+        '/lost-found/matches',
+        '/lost-found/claims',
+        '/lost-found/handovers',
+        '/lost-found/items',
+        '/lost-found/archived',
+        '/lost-found',
+      ]) {
+        expect(drawerRoutes).toContain(route);
+      }
+    },
+  );
 });
 
 describe('statistics navigation (spec 009)', () => {
@@ -164,7 +207,11 @@ describe('isTopLinkActive route mapping (spec 007)', () => {
     expect(isTopLinkActive(linkFor('LOST_FOUND_MANAGER', '/lost-found/items'), detail)).toBe(
       true,
     );
-    expect(isTopLinkActive(linkFor('LOST_FOUND_MANAGER', '/lost-found'), detail)).toBe(false);
+    // Spec 011: the manager no longer carries a browse top link at all —
+    // browse is drawer-only for staff.
+    expect(
+      getTopLinks('LOST_FOUND_MANAGER').map((link) => link.to),
+    ).not.toContain('/lost-found');
   });
 
   it('claim detail lights the claims link; archived lights the staff registry', () => {

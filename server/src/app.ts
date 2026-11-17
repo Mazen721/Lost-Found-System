@@ -18,6 +18,10 @@ const corsOptions: CorsOptions = {
   },
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept-Language'],
+  // Spec 011: the monthly-report download reads its Arabic filename
+  // from Content-Disposition; without this, cross-origin fetch hides
+  // the header and the client falls back to a generic name.
+  exposedHeaders: ['Content-Disposition'],
   credentials: false,
   maxAge: 86_400,
 };

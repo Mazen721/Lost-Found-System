@@ -3,6 +3,7 @@ import { AdminCharts } from '@/features/dashboard/AdminCharts';
 import { AdminGovernanceLedgers } from '@/features/dashboard/AdminGovernanceLedgers';
 import { AdminSummaryGrid } from '@/features/dashboard/AdminSummaryGrid';
 import { RecentItemsStrip } from '@/features/dashboard/RecentItemsStrip';
+import { StaleItemsAlert } from '@/features/dashboard/StaleItemsAlert';
 import { UrgentQueuePanel } from '@/features/dashboard/UrgentQueuePanel';
 import type { AdminDashboard as AdminDashboardData } from '@/types/dashboard';
 
@@ -17,6 +18,8 @@ export function AdminDashboard({ data }: { data: AdminDashboardData }) {
   return (
     <div className="space-y-7">
       <AdminSummaryGrid totals={totals} />
+      {/* Spec 011: stale-items alert, only when staleCount > 0. */}
+      <StaleItemsAlert staleCount={data.staleCount} />
       {/* Spec 009: the value cards moved to the Statistics page. */}
       <UrgentQueuePanel queue={data.urgentQueue} />
       <RecentItemsStrip items={data.recentItems} />

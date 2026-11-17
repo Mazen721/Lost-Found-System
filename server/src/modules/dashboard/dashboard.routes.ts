@@ -2,7 +2,11 @@ import { Router } from 'express';
 import { authenticate } from '../../shared/middleware/authenticate';
 import { authorizeRoles } from '../../shared/middleware/authorizeRoles';
 import { validate } from '../../shared/middleware/validate';
-import { getActivitySeries, getDashboard } from './dashboard.controller';
+import {
+  downloadMonthlyReport,
+  getActivitySeries,
+  getDashboard,
+} from './dashboard.controller';
 import {
   activitySeriesQuerySchema,
   dashboardQuerySchema,
@@ -19,4 +23,10 @@ dashboardRouter.get(
   authorizeRoles('SUPER_ADMIN', 'LOST_FOUND_MANAGER'),
   validate(activitySeriesQuerySchema, 'query'),
   getActivitySeries,
+);
+
+dashboardRouter.get(
+  '/report.xlsx',
+  authorizeRoles('SUPER_ADMIN', 'LOST_FOUND_MANAGER'),
+  downloadMonthlyReport,
 );

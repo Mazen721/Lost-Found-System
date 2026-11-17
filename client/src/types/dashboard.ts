@@ -79,7 +79,52 @@ export interface DashboardBreakdowns {
     name: string;
     nameAr?: string;
     count: number;
+    /** Spec 011: lost/found split + share of ALL reports (server-side). */
+    lost: number;
+    found: number;
+    sharePercent: number;
   }>;
+}
+
+/**
+ * Staff-only recovery indicators (spec 011). Present only on the Admin
+ * and Manager dashboard payloads. The return rate counts only returns
+ * linked to a lost report (a physical recovery counts once), so it can
+ * never exceed 100%; it is null when there are no lost reports at all.
+ * Day averages are measured over linked recoveries only.
+ */
+export interface RecoveryStats {
+  returnedCount: number;
+  linkedReturnedCount: number;
+  totalLostReports: number;
+  returnRate: number | null;
+  averageDaysToReturn: number;
+  medianDaysToReturn: number;
+  recoverySampleSize: number;
+  averageDaysClaimToHandover: number;
+  claimSampleSize: number;
+  excludedNegativeDurations: number;
+}
+
+/**
+ * Staff-only stale item (spec 011): an active report with no movement —
+ * no edit, no claim activity — for 14+ days. Present only on the Admin
+ * and Manager payloads (capped list + full count).
+ */
+export interface StaleItem {
+  id: string;
+  reportNumber: string;
+  reportType: string;
+  itemTitle: string;
+  itemTitleAr?: string;
+  category: string;
+  status: string;
+  imageUrl: string | null;
+  building: string;
+  buildingAr?: string;
+  ageDays: number;
+  lastMovementAt: string;
+  reporterRole: Role;
 }
 
 export interface AdminDashboard extends DashboardBase {
@@ -117,6 +162,9 @@ export interface AdminDashboard extends DashboardBase {
   urgentQueue: UrgentQueue;
   valueStats: ValueStats;
   breakdowns: DashboardBreakdowns;
+  recoveryStats: RecoveryStats;
+  staleItems: StaleItem[];
+  staleCount: number;
 }
 
 export interface ManagerDashboard extends DashboardBase {
@@ -141,6 +189,9 @@ export interface ManagerDashboard extends DashboardBase {
   urgentQueue: UrgentQueue;
   valueStats: ValueStats;
   breakdowns: DashboardBreakdowns;
+  recoveryStats: RecoveryStats;
+  staleItems: StaleItem[];
+  staleCount: number;
 }
 
 export interface StudentDashboard extends DashboardBase {

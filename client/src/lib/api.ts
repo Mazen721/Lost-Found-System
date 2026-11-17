@@ -154,6 +154,63 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return payload as T;
 }
 
+/**
+ * Authenticated binary download (spec 011 monthly report): same token
+ * and error semantics as `request`, but returns the blob plus the
+ * server-provided RFC 5987 filename instead of parsing JSON.
+ */
+export async function apiDownload(
+  path: string,
+): Promise<{ blob: Blob; filename: string | null }> {
+  const requestHeaders = new Headers();
+  requestHeaders.set('Accept-Language', getLang());
+  const token = getStoredToken();
+  if (token) {
+    requestHeaders.set('Authorization', `Bearer ${token}`);
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, { headers: requestHeaders });
+  } catch {
+    throw new ApiError(i18n.t('errors.network'), 0, 'NETWORK_ERROR');
+  }
+
+  if (!response.ok) {
+    let errorBody: ApiErrorBody | null = null;
+    try {
+      errorBody = (await response.json()) as ApiErrorBody;
+    } catch {
+      errorBody = null;
+    }
+    if (response.status === 401) {
+      clearStoredToken();
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    }
+    throw new ApiError(
+      errorBody?.error?.message ??
+        i18n.t('errors.requestFailed', { status: response.status }),
+      response.status,
+      errorBody?.error?.code ?? 'REQUEST_FAILED',
+      errorBody?.error?.details,
+      errorBody?.error?.messageKey,
+      errorBody?.error?.params,
+    );
+  }
+
+  const disposition = response.headers.get('Content-Disposition');
+  const encoded = disposition?.match(/filename\*=UTF-8''([^;]+)/)?.[1];
+  let filename: string | null = null;
+  if (encoded) {
+    try {
+      filename = decodeURIComponent(encoded);
+    } catch {
+      filename = null;
+    }
+  }
+  return { blob: await response.blob(), filename };
+}
+
 export const api = {
   get<T>(path: string, options?: Omit<RequestOptions, 'method' | 'body'>): Promise<T> {
     return request<T>(path, { ...options, method: 'GET' });

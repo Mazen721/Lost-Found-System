@@ -111,7 +111,54 @@ export interface DashboardBreakdowns {
     name: string;
     nameAr?: string;
     count: number;
+    lost: number;
+    found: number;
+    /** Share of all reported items, 1-decimal percent (spec 011). */
+    sharePercent: number;
   }>;
+}
+
+/**
+ * Staff-only recovery statistics (spec 011): what came back, how fast.
+ * Computed over the canonical return set (see `selectCanonicalReturns`).
+ * `returnRate` is the LINKED recovery rate — distinct lost reports
+ * recovered via a linked completed claim over all lost reports — so it
+ * is bounded in [0, 1]; it is `null` when there are no lost reports at
+ * all. The day averages publish their sample sizes alongside: the
+ * recovery average covers linked claims only, the processing average
+ * covers every canonical claim from its filing to the handover.
+ */
+export interface RecoveryStats {
+  returnedCount: number;
+  linkedReturnedCount: number;
+  totalLostReports: number;
+  returnRate: number | null;
+  averageDaysToReturn: number;
+  medianDaysToReturn: number;
+  recoverySampleSize: number;
+  averageDaysClaimToHandover: number;
+  claimSampleSize: number;
+  excludedNegativeDurations: number;
+}
+
+/**
+ * One stale item (spec 011): an active report with no recorded movement
+ * — on the item itself or on any claim filed on it — for 14+ days.
+ */
+export interface StaleItem {
+  id: string;
+  reportNumber: string;
+  reportType: string;
+  itemTitle: string;
+  itemTitleAr?: string;
+  category: string;
+  status: string;
+  imageUrl: string | null;
+  building: string;
+  buildingAr?: string;
+  ageDays: number;
+  lastMovementAt: Date;
+  reporterRole: Role;
 }
 
 export interface AdminDashboard {
@@ -121,6 +168,9 @@ export interface AdminDashboard {
   rangeEnd: Date;
   valueStats: ValueStats;
   breakdowns: DashboardBreakdowns;
+  recoveryStats: RecoveryStats;
+  staleItems: StaleItem[];
+  staleCount: number;
   totals: {
     users: number;
     activeUsers: number;
@@ -161,6 +211,9 @@ export interface ManagerDashboard {
   rangeEnd: Date;
   valueStats: ValueStats;
   breakdowns: DashboardBreakdowns;
+  recoveryStats: RecoveryStats;
+  staleItems: StaleItem[];
+  staleCount: number;
   counts: {
     totalLostItems: number;
     totalFoundItems: number;
@@ -264,6 +317,25 @@ function createdAtMatch(range: PeriodRange): { createdAt?: { $gte: Date; $lte: D
 /** Arabic-only UI: prefer the Arabic variant of a bilingual field. */
 function localize(en: string | undefined, ar: string | undefined): string {
   return ar?.trim() ? ar : (en ?? '');
+}
+
+/** «Building — Room» display names for a location, in both languages. */
+export function locationDisplayName(location: {
+  buildingName: string;
+  buildingNameAr?: string | null;
+  room?: string | null;
+  roomAr?: string | null;
+}): { name: string; nameAr?: string } {
+  return {
+    name: location.room
+      ? `${location.buildingName} — ${location.room}`
+      : location.buildingName,
+    nameAr: location.buildingNameAr
+      ? location.roomAr
+        ? `${location.buildingNameAr} — ${location.roomAr}`
+        : location.buildingNameAr
+      : undefined,
+  };
 }
 
 function ageInDays(from: Date, to: Date): number {
@@ -407,6 +479,289 @@ interface CompletedClaimForValue {
   updatedAt: Date;
 }
 
+/**
+ * The minimal claim shape the canonical return machinery (spec 011)
+ * works on. `itemId` may be a raw ObjectId or a populated item
+ * document depending on the caller; `idKey` unwraps both.
+ */
+export interface CanonicalClaim {
+  _id: unknown;
+  itemId: unknown;
+  linkedLostItemId?: unknown;
+  handover?: { handedOverAt?: Date | null } | null;
+  updatedAt: Date;
+  createdAt: Date;
+}
+
+function idKey(value: unknown): string {
+  if (value && typeof value === 'object' && '_id' in value) {
+    return String((value as { _id: unknown })._id);
+  }
+  return String(value);
+}
+
+/**
+ * The moment a completed claim physically returned its item:
+ * the recorded handover time, falling back to the claim's `updatedAt`
+ * for legacy completed claims (the spec-005/008 instant).
+ */
+export function handoverInstant(claim: CanonicalClaim): Date {
+  return claim.handover?.handedOverAt ?? claim.updatedAt;
+}
+
+function compareCanonicalClaims(a: CanonicalClaim, b: CanonicalClaim): number {
+  const byInstant = handoverInstant(a).getTime() - handoverInstant(b).getTime();
+  if (byInstant !== 0) return byInstant;
+  // Prefer the claim that carries a lost-report link: it holds the
+  // recovery's true start date.
+  const aLinked = a.linkedLostItemId ? 0 : 1;
+  const bLinked = b.linkedLostItemId ? 0 : 1;
+  if (aLinked !== bLinked) return aLinked - bLinked;
+  const aId = idKey(a._id);
+  const bId = idKey(b._id);
+  return aId < bId ? -1 : aId > bId ? 1 : 0;
+}
+
+/**
+ * The canonical return set (spec 011): one claim per physical return.
+ * Claims are ordered by `compareCanonicalClaims`, then selected in two
+ * passes — first one claim per claimed item, then one claim per
+ * linked lost item — so an object logged twice as found and claimed
+ * twice against one lost report still counts as a single return.
+ * Spec 008's returned values and spec 011's recovery stats and export
+ * all select their winners through this one rule.
+ */
+export function selectCanonicalReturns<T extends CanonicalClaim>(
+  claims: readonly T[],
+): T[] {
+  const sorted = [...claims].sort(compareCanonicalClaims);
+  const byItem = new Map<string, T>();
+  for (const claim of sorted) {
+    const key = idKey(claim.itemId);
+    if (!byItem.has(key)) byItem.set(key, claim);
+  }
+  const seenLinks = new Set<string>();
+  const selected: T[] = [];
+  for (const claim of byItem.values()) {
+    if (claim.linkedLostItemId) {
+      const linkKey = idKey(claim.linkedLostItemId);
+      if (seenLinks.has(linkKey)) continue;
+      seenLinks.add(linkKey);
+    }
+    selected.push(claim);
+  }
+  return selected;
+}
+
+const DAY_MS = 86_400_000;
+
+function roundTo(value: number, decimals: number): number {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+}
+
+function mean(values: number[]): number {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1
+    ? sorted[middle]!
+    : (sorted[middle - 1]! + sorted[middle]!) / 2;
+}
+
+/**
+ * Pure summarisation of the canonical return set into `RecoveryStats`.
+ * `lostCreatedAtById` must contain ONLY lost items, so a link counts
+ * as resolvable exactly when the map holds its id.
+ */
+export function summarizeRecovery(
+  canonical: readonly CanonicalClaim[],
+  lostCreatedAtById: ReadonlyMap<string, Date>,
+  totalLostReports: number,
+): RecoveryStats {
+  const linkedIds = new Set<string>();
+  const recoveryDurations: number[] = [];
+  const processingDurations: number[] = [];
+  let excludedNegativeDurations = 0;
+
+  for (const claim of canonical) {
+    const instant = handoverInstant(claim);
+    const processingDays = (instant.getTime() - claim.createdAt.getTime()) / DAY_MS;
+    if (processingDays >= 0) processingDurations.push(processingDays);
+
+    if (!claim.linkedLostItemId) continue;
+    const linkKey = idKey(claim.linkedLostItemId);
+    const lostCreatedAt = lostCreatedAtById.get(linkKey);
+    if (!lostCreatedAt) continue;
+    linkedIds.add(linkKey);
+    const days = (instant.getTime() - lostCreatedAt.getTime()) / DAY_MS;
+    if (days < 0) {
+      // Retroactively linked report filed after the handover: the
+      // return is real, but it has no honest duration — exclude it
+      // from the averages instead of clamping it to a fake 0.
+      excludedNegativeDurations += 1;
+    } else {
+      recoveryDurations.push(days);
+    }
+  }
+
+  const linkedReturnedCount = linkedIds.size;
+  return {
+    returnedCount: canonical.length,
+    linkedReturnedCount,
+    totalLostReports,
+    returnRate:
+      totalLostReports === 0
+        ? null
+        : roundTo(linkedReturnedCount / totalLostReports, 4),
+    averageDaysToReturn: roundTo(mean(recoveryDurations), 1),
+    medianDaysToReturn: roundTo(median(recoveryDurations), 1),
+    recoverySampleSize: recoveryDurations.length,
+    averageDaysClaimToHandover: roundTo(mean(processingDurations), 1),
+    claimSampleSize: processingDurations.length,
+    excludedNegativeDurations,
+  };
+}
+
+/** Loads the completed claims the canonical machinery runs on. */
+export async function loadCompletedClaims(): Promise<CanonicalClaim[]> {
+  const claims = await ClaimRequest.find({ status: 'COMPLETED' })
+    .select('itemId linkedLostItemId handover updatedAt createdAt')
+    .lean();
+  return claims as unknown as CanonicalClaim[];
+}
+
+export async function getRecoveryStats(): Promise<RecoveryStats> {
+  const [claims, totalLostReports] = await Promise.all([
+    loadCompletedClaims(),
+    LostFoundItem.countDocuments({ reportType: 'LOST' }),
+  ]);
+  const canonical = selectCanonicalReturns(claims);
+
+  const linkedIds = [
+    ...new Set(
+      canonical
+        .map((claim) => claim.linkedLostItemId)
+        .filter(Boolean)
+        .map((value) => idKey(value)),
+    ),
+  ];
+  const lostItems =
+    linkedIds.length > 0
+      ? await LostFoundItem.find({
+          _id: { $in: linkedIds },
+          reportType: 'LOST',
+        })
+          .select('createdAt')
+          .lean()
+      : [];
+  const lostCreatedAtById = new Map(
+    lostItems.map((item) => [item._id.toString(), item.createdAt]),
+  );
+
+  return summarizeRecovery(canonical, lostCreatedAtById, totalLostReports);
+}
+
+// ---------------------------------------------------------------------------
+// Stale items (spec 011)
+// ---------------------------------------------------------------------------
+
+/** Active, awaiting-action statuses eligible for the stale list. */
+const STALE_ITEM_STATUSES = ['OPEN', 'MATCH_CONFIRMED', 'CLAIM_UNDER_REVIEW'];
+const STALE_THRESHOLD_DAYS = 14;
+export const STALE_LIST_CAP = 20;
+
+export interface StaleComputation {
+  items: StaleItem[];
+  count: number;
+}
+
+/**
+ * Every stale item (uncapped), stalest first, from one snapshot: an
+ * item is stale when neither the item record nor any claim filed on
+ * it has moved for 14+ days. Count and list come from this single
+ * computation so they can never disagree across a boundary.
+ */
+export async function computeStaleItems(
+  now: Date = new Date(),
+): Promise<StaleComputation> {
+  const candidates = await LostFoundItem.find({
+    status: { $in: STALE_ITEM_STATUSES },
+  })
+    .select(
+      'reportNumber reportType itemTitle itemTitleAr category status images updatedAt reporterId',
+    )
+    .populate('locationId', 'buildingName buildingNameAr')
+    .populate('reporterId', 'role')
+    .lean();
+  if (candidates.length === 0) return { items: [], count: 0 };
+
+  const claimRows = await ClaimRequest.aggregate<{
+    _id: Types.ObjectId;
+    lastClaimAt: Date;
+  }>([
+    { $match: { itemId: { $in: candidates.map((item) => item._id) } } },
+    { $group: { _id: '$itemId', lastClaimAt: { $max: '$updatedAt' } } },
+  ]);
+  const lastClaimAtByItem = new Map(
+    claimRows.map((row) => [row._id.toString(), row.lastClaimAt]),
+  );
+
+  const cutoff = now.getTime() - STALE_THRESHOLD_DAYS * DAY_MS;
+  const stale = candidates
+    .map((item) => {
+      const claimAt = lastClaimAtByItem.get(item._id.toString());
+      const lastMovementAt =
+        claimAt && claimAt > item.updatedAt ? claimAt : item.updatedAt;
+      return { item, lastMovementAt };
+    })
+    .filter((entry) => entry.lastMovementAt.getTime() <= cutoff)
+    .sort(
+      (a, b) =>
+        a.lastMovementAt.getTime() - b.lastMovementAt.getTime() ||
+        (a.item._id.toString() < b.item._id.toString() ? -1 : 1),
+    );
+
+  return {
+    count: stale.length,
+    items: stale.map(({ item, lastMovementAt }) => {
+      const location = item.locationId as unknown as {
+        buildingName?: string;
+        buildingNameAr?: string;
+      } | null;
+      const reporter = item.reporterId as unknown as { role?: Role } | null;
+      return {
+        id: item._id.toString(),
+        reportNumber: item.reportNumber,
+        reportType: item.reportType,
+        itemTitle: item.itemTitle,
+        itemTitleAr: (item as unknown as { itemTitleAr?: string }).itemTitleAr,
+        category: item.category,
+        status: item.status,
+        imageUrl: firstImageUrl(item as unknown as ItemImageDoc),
+        building: location?.buildingName ?? '',
+        buildingAr: location?.buildingNameAr,
+        ageDays: ageInDays(lastMovementAt, now),
+        lastMovementAt,
+        reporterRole: reporter?.role ?? 'STUDENT',
+      };
+    }),
+  };
+}
+
+/** The dashboard-payload view of the stale computation (capped list). */
+export async function getStaleSummary(
+  now: Date = new Date(),
+): Promise<{ staleItems: StaleItem[]; staleCount: number }> {
+  const { items, count } = await computeStaleItems(now);
+  return { staleItems: items.slice(0, STALE_LIST_CAP), staleCount: count };
+}
+
 function sumReturnedItemValues(
   completedClaims: CompletedClaimForValue[],
   inCurrentMonth: (date: Date) => boolean,
@@ -446,14 +801,19 @@ export async function getValueStats(now: Date = new Date()): Promise<ValueStats>
       .select('createdAt +estimatedValueEGP')
       .lean(),
     ClaimRequest.find({ status: 'COMPLETED' })
-      .select('itemId handover updatedAt')
+      .select('itemId linkedLostItemId handover updatedAt createdAt')
       .populate('itemId', '+estimatedValueEGP')
       .lean(),
   ]);
 
   const lost = sumLostItemValues(lostItems, inCurrentMonth);
+  // Spec 011: the canonical winner decides which handover instant
+  // buckets an item's value, so the value figures and the recovery
+  // figures always describe the same returns.
   const returned = sumReturnedItemValues(
-    completedClaims as CompletedClaimForValue[],
+    selectCanonicalReturns(
+      completedClaims as unknown as CanonicalClaim[],
+    ) as unknown as CompletedClaimForValue[],
     inCurrentMonth,
   );
 
@@ -471,6 +831,48 @@ export async function getValueStats(now: Date = new Date()): Promise<ValueStats>
  * the page renders a stable shape; locations are the five busiest by
  * item count, hydrated with their building + room names.
  */
+export interface LocationTypeCounts {
+  locationId: Types.ObjectId;
+  lost: number;
+  found: number;
+  count: number;
+}
+
+/**
+ * Fold (location, reportType) aggregation rows into per-location
+ * lost/found splits, ranked by count with the location-id tiebreak —
+ * the one ranking rule shared by the Statistics-page top-5 and the
+ * monthly report's top-10 (spec 011), so the two surfaces can never
+ * drift apart.
+ */
+export function foldLocationTypeRows(
+  rows: Array<{
+    _id: { locationId: Types.ObjectId; reportType: string };
+    count: number;
+  }>,
+): LocationTypeCounts[] {
+  const totals = new Map<string, LocationTypeCounts>();
+  for (const row of rows) {
+    if (!row._id?.locationId) continue;
+    const key = row._id.locationId.toString();
+    const current = totals.get(key) ?? {
+      locationId: row._id.locationId,
+      lost: 0,
+      found: 0,
+      count: 0,
+    };
+    if (row._id.reportType === 'LOST') current.lost += row.count;
+    if (row._id.reportType === 'FOUND') current.found += row.count;
+    current.count += row.count;
+    totals.set(key, current);
+  }
+  return [...totals.values()].sort(
+    (a, b) =>
+      b.count - a.count ||
+      (a.locationId.toString() < b.locationId.toString() ? -1 : 1),
+  );
+}
+
 export async function getBreakdowns(): Promise<DashboardBreakdowns> {
   const [categoryRows, statusRows, locationRows] = await Promise.all([
     LostFoundItem.aggregate<{
@@ -487,12 +889,16 @@ export async function getBreakdowns(): Promise<DashboardBreakdowns> {
     LostFoundItem.aggregate<CountRow>([
       { $group: { _id: '$status', count: { $sum: 1 } } },
     ]),
-    LostFoundItem.aggregate<{ _id: Types.ObjectId; count: number }>([
-      { $group: { _id: '$locationId', count: { $sum: 1 } } },
-      // _id tiebreak: equal counts must rank identically on every call,
-      // otherwise the top-5 membership flickers between requests.
-      { $sort: { count: -1, _id: 1 } },
-      { $limit: 5 },
+    LostFoundItem.aggregate<{
+      _id: { locationId: Types.ObjectId; reportType: string };
+      count: number;
+    }>([
+      {
+        $group: {
+          _id: { locationId: '$locationId', reportType: '$reportType' },
+          count: { $sum: 1 },
+        },
+      },
     ]),
   ]);
 
@@ -520,30 +926,32 @@ export async function getBreakdowns(): Promise<DashboardBreakdowns> {
     count: statusMap.get(status) ?? 0,
   }));
 
+  const topLocations = foldLocationTypeRows(locationRows).slice(0, 5);
+
+  const totalItems = statusRows.reduce((sum, row) => sum + row.count, 0);
+
   const locations = await Location.find({
-    _id: { $in: locationRows.map((row) => row._id) },
+    _id: { $in: topLocations.map((row) => row.locationId) },
   })
     .select('buildingName buildingNameAr room roomAr')
     .lean();
   const locationById = new Map(
     locations.map((location) => [location._id.toString(), location]),
   );
-  const locationsTop = locationRows.flatMap((row) => {
-    const location = locationById.get(row._id.toString());
+  const locationsTop = topLocations.flatMap((row) => {
+    const location = locationById.get(row.locationId.toString());
     if (!location) return [];
-    const nameAr = location.buildingNameAr
-      ? location.roomAr
-        ? `${location.buildingNameAr} — ${location.roomAr}`
-        : location.buildingNameAr
-      : undefined;
+    const { name, nameAr } = locationDisplayName(location);
     return [
       {
-        locationId: row._id.toString(),
-        name: location.room
-          ? `${location.buildingName} — ${location.room}`
-          : location.buildingName,
+        locationId: row.locationId.toString(),
+        name,
         nameAr,
         count: row.count,
+        lost: row.lost,
+        found: row.found,
+        sharePercent:
+          totalItems > 0 ? roundTo((row.count / totalItems) * 100, 1) : 0,
       },
     ];
   });
@@ -613,11 +1021,14 @@ async function getAdminDashboard(
     ItemMatch.countDocuments(createdAtMatch(range)),
   ]);
 
-  const [boardExtras, valueStats, breakdowns] = await Promise.all([
-    getBoardExtras(),
-    getValueStats(),
-    getBreakdowns(),
-  ]);
+  const [boardExtras, valueStats, breakdowns, recoveryStats, stale] =
+    await Promise.all([
+      getBoardExtras(),
+      getValueStats(),
+      getBreakdowns(),
+      getRecoveryStats(),
+      getStaleSummary(),
+    ]);
 
   const userRoleMap = new Map(userRoleRows.map((row) => [row._id, row.count]));
   const usersByRole = ROLES.map((role) => ({
@@ -651,6 +1062,9 @@ async function getAdminDashboard(
     rangeEnd: range.to,
     valueStats,
     breakdowns,
+    recoveryStats,
+    staleItems: stale.staleItems,
+    staleCount: stale.staleCount,
     totals: {
       users,
       activeUsers,
@@ -746,11 +1160,14 @@ async function getManagerDashboard(
     .sort((a, b) => b.lost + b.found - (a.lost + a.found))
     .slice(0, 6);
 
-  const [boardExtras, valueStats, breakdowns] = await Promise.all([
-    getBoardExtras(),
-    getValueStats(),
-    getBreakdowns(),
-  ]);
+  const [boardExtras, valueStats, breakdowns, recoveryStats, stale] =
+    await Promise.all([
+      getBoardExtras(),
+      getValueStats(),
+      getBreakdowns(),
+      getRecoveryStats(),
+      getStaleSummary(),
+    ]);
 
   const claimStatusMap = new Map(claimStatusRows.map((row) => [row._id, row.count]));
   const claimsByStatus = CLAIM_STATUSES.map((status) => ({
@@ -765,6 +1182,9 @@ async function getManagerDashboard(
     rangeEnd: range.to,
     valueStats,
     breakdowns,
+    recoveryStats,
+    staleItems: stale.staleItems,
+    staleCount: stale.staleCount,
     counts: {
       totalLostItems,
       totalFoundItems,

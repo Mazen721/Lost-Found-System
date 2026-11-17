@@ -197,6 +197,11 @@ const STUDENT_TOP_LINKS: TopLinkItem[] = [
   { labelKey: 'nav.dashboard', to: '/dashboard', end: true },
 ];
 
+// Spec 011 (workstream 0): staff top links are capped at five. The
+// pre-011 sets (7 admin / 6 manager) overflowed the desktop navbar — the
+// last link slid under the «القائمة» button. Everything trimmed here
+// stays one tap away in the drawer, which carries the full menu; the
+// parity tests pin both halves of that bargain.
 const MANAGER_TOP_LINKS: TopLinkItem[] = [
   { labelKey: 'nav.dashboard', to: '/dashboard', end: true },
   { labelKey: 'nav.statistics', to: '/statistics', end: true },
@@ -213,7 +218,6 @@ const MANAGER_TOP_LINKS: TopLinkItem[] = [
     to: '/lost-found/items',
     activePrefixes: ['/lost-found/archived'],
   },
-  { labelKey: 'nav.topBrowse', to: '/lost-found', end: true },
 ];
 
 const ADMIN_TOP_LINKS: TopLinkItem[] = [
@@ -225,9 +229,7 @@ const ADMIN_TOP_LINKS: TopLinkItem[] = [
     to: '/lost-found/items',
     activePrefixes: ['/lost-found/archived'],
   },
-  { labelKey: 'nav.matches', to: '/lost-found/matches' },
   { labelKey: 'nav.claims', to: '/lost-found/claims' },
-  { labelKey: 'nav.topBrowse', to: '/lost-found', end: true },
 ];
 
 const TOP_LINKS: Record<Role, TopLinkItem[]> = {
