@@ -28,7 +28,7 @@ import {
 } from '@/types/lostFound';
 
 const selectClass =
-  'flex h-10 w-full rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60';
+  'flex h-10 w-full rounded-md border border-input bg-card px-3 text-base shadow-sm lg:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-60';
 
 interface ReportItemFormProps {
   onCancel?: () => void;

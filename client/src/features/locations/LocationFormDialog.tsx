@@ -247,7 +247,7 @@ export function LocationFormDialog({ open, onOpenChange, location }: LocationFor
           <FormField id="location-type" label={t('locations.locationType')} error={errors.locationType?.message} required>
             <select
               id="location-type"
-              className="flex h-10 w-full rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="flex h-10 w-full rounded-md border border-input bg-card px-3 text-base shadow-sm lg:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-invalid={Boolean(errors.locationType)}
               {...register('locationType')}
             >

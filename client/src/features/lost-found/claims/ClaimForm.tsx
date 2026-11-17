@@ -22,7 +22,7 @@ import { formatDate } from '@/lib/utils';
 import type { LostFoundItem } from '@/types/lostFound';
 
 const selectClass =
-  'h-10 w-full rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
+  'h-10 w-full rounded-md border border-input bg-card px-3 text-base shadow-sm lg:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2';
 
 interface ClaimFormProps {
   claimableItems: LostFoundItem[];

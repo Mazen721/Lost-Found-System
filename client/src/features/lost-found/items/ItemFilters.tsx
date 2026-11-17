@@ -51,9 +51,9 @@ interface ActiveFilterChip {
 }
 
 const primaryControlClass =
-  'h-10 rounded-md border border-input bg-card text-sm text-foreground shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+  'h-10 rounded-md border border-input bg-card text-base text-foreground lg:text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 const secondaryControlClass =
-  'h-9 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
+  'h-9 w-full rounded-md border border-input bg-card px-3 text-base text-foreground lg:text-sm shadow-xs transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 const secondaryLabelClass = 'mb-1.5 block text-xs font-medium text-muted-foreground';
 
 type TextFilterKey = 'building' | 'color' | 'brand' | 'from' | 'to';

@@ -123,7 +123,7 @@ export function DataTable<T>({
                   value={searchValue ?? ''}
                   onChange={(event) => onSearchChange(event.target.value)}
                   placeholder={effectiveSearchPlaceholder}
-                  className="h-9 w-full rounded-md border border-input bg-card ps-9 pe-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  className="h-9 w-full rounded-md border border-input bg-card ps-9 pe-3 text-base shadow-sm lg:text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 />
               </div>
             ) : null}
@@ -137,7 +137,7 @@ export function DataTable<T>({
                   id={`filter-${filter.id}`}
                   value={filter.value}
                   onChange={(event) => filter.onChange(event.target.value)}
-                  className="h-9 w-full rounded-md border border-input bg-card px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
+                  className="h-9 w-full rounded-md border border-input bg-card px-3 text-base shadow-sm lg:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:w-auto"
                 >
                   {filter.options.map((option) => (
                     <option key={option.value} value={option.value}>
