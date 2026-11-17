@@ -105,8 +105,8 @@ afterAll(async () => {
 
 describe('Day 6 — demo seed (T067)', () => {
   it('seeds the full Lost & Found demo dataset', async () => {
-    expect(await LostFoundItem.countDocuments({})).toBe(26);
-    expect(await ClaimRequest.countDocuments({})).toBe(9);
+    expect(await LostFoundItem.countDocuments({})).toBe(62);
+    expect(await ClaimRequest.countDocuments({})).toBe(21);
     expect(await Notification.countDocuments({})).toBe(6);
     expect(await ActivityLog.countDocuments({})).toBe(8);
     expect(await AiInsightCache.countDocuments({})).toBe(2);
@@ -145,15 +145,15 @@ describe('Day 6 — dashboard (T060)', () => {
 
     expect(all.body.rangeStart).toBeNull();
     expect(all.body.counts).toMatchObject({
-      totalLostItems: 12,
-      totalFoundItems: 14,
+      totalLostItems: 30,
+      totalFoundItems: 32,
       openLostItems: 6,
       openFoundItems: 5,
       pendingMatches: 3,
       pendingClaims: 2,
       underVerificationClaims: 2,
       claimsAwaitingHandover: 2,
-      completedHandovers: 2,
+      completedHandovers: 14,
     });
     expect(all.body.analytics.itemsByCategory.length).toBeGreaterThan(0);
     expect(all.body.analytics.claimsByStatus.length).toBeGreaterThan(0);
@@ -168,8 +168,8 @@ describe('Day 6 — dashboard (T060)', () => {
 
     expect(admin.body.role).toBe('SUPER_ADMIN');
     expect(admin.body.totals.users).toBe(9);
-    expect(admin.body.totals.lostItems).toBe(12);
-    expect(admin.body.totals.foundItems).toBe(14);
+    expect(admin.body.totals.lostItems).toBe(30);
+    expect(admin.body.totals.foundItems).toBe(32);
     expect(admin.body.totals).not.toHaveProperty('maintenanceRequests');
     expect(admin.body.totals).not.toHaveProperty('workOrders');
     expect(admin.body.totals).not.toHaveProperty('technicians');
@@ -217,6 +217,72 @@ describe('Day 6 — dashboard (T060)', () => {
       .expect(400);
 
     await request(app).get('/api/v1/dashboard').expect(401);
+  });
+});
+
+describe('Day 6 — dashboard activity series (spec 005)', () => {
+  it('restricts the series to managers and admins', async () => {
+    for (const role of ['STUDENT', 'EMPLOYEE'] as Role[]) {
+      await request(app)
+        .get('/api/v1/dashboard/activity-series')
+        .query({ range: 'month' })
+        .set('Authorization', bearer(role))
+        .expect(403);
+    }
+
+    await request(app).get('/api/v1/dashboard/activity-series').expect(401);
+  });
+
+  it('validates the range parameter', async () => {
+    await request(app)
+      .get('/api/v1/dashboard/activity-series')
+      .query({ range: 'daily' })
+      .set('Authorization', bearer('SUPER_ADMIN'))
+      .expect(400);
+  });
+
+  it('returns zero-filled daily buckets with exact seeded totals per range', async () => {
+    // The story seed is the only activity inside the week/month windows;
+    // the historical block (spec 005) starts 35+ days ago, so it lands
+    // entirely inside the year window.
+    const expectations = [
+      { range: 'week', buckets: 7, granularity: 'day', totals: { lost: 5, found: 7, returned: 2 } },
+      { range: 'month', buckets: 30, granularity: 'day', totals: { lost: 9, found: 12, returned: 2 } },
+      { range: 'year', buckets: 12, granularity: 'month', totals: { lost: 30, found: 32, returned: 14 } },
+    ] as const;
+
+    for (const role of ['SUPER_ADMIN', 'LOST_FOUND_MANAGER'] as Role[]) {
+      for (const expected of expectations) {
+        const response = await request(app)
+          .get('/api/v1/dashboard/activity-series')
+          .query({ range: expected.range })
+          .set('Authorization', bearer(role))
+          .expect(200);
+
+        expect(response.body.range).toBe(expected.range);
+        expect(response.body.granularity).toBe(expected.granularity);
+        expect(response.body.buckets).toHaveLength(expected.buckets);
+        expect(response.body.totals).toEqual(expected.totals);
+
+        // Buckets are ordered and their sums match the reported totals.
+        const dates = response.body.buckets.map(
+          (bucket: { date: string }) => bucket.date,
+        );
+        expect(dates).toEqual([...dates].sort());
+        const sums = response.body.buckets.reduce(
+          (
+            acc: { lost: number; found: number; returned: number },
+            bucket: { lost: number; found: number; returned: number },
+          ) => ({
+            lost: acc.lost + bucket.lost,
+            found: acc.found + bucket.found,
+            returned: acc.returned + bucket.returned,
+          }),
+          { lost: 0, found: 0, returned: 0 },
+        );
+        expect(sums).toEqual(expected.totals);
+      }
+    }
   });
 });
 
