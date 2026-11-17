@@ -1125,6 +1125,233 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
 
   await ClaimRequest.insertMany(claimDocs);
 
+  // ---------------------------------------------------------------------------
+  // Historical activity (spec 005) — clearly separated from the story above.
+  // Twelve lost/found pairs from the past year that were matched, claimed
+  // and handed back (both items RETURNED, one COMPLETED claim each), plus
+  // twelve unmatched reports that were CLOSED after the retention period.
+  // They exist so the dashboard activity chart has believable history in
+  // the month/year ranges. Reporters are the extra seed users and the demo
+  // employee — never the demo student, whose dashboard figures are exact.
+  // ---------------------------------------------------------------------------
+  const HISTORICAL_REPORTERS = [
+    EXTRA_STUDENT_EMAILS[0]!,
+    EXTRA_STUDENT_EMAILS[1]!,
+    EXTRA_STUDENT_EMAILS[2]!,
+    DEMO_EMPLOYEE_EMAIL,
+    'n.elgayar@mansnu.edu.eg',
+  ];
+
+  const userDisplayName = (email: string): { name: string; nameAr?: string } => {
+    const user = users.find((entry) => entry.email === email);
+    return { name: user?.name ?? email, nameAr: user?.nameAr };
+  };
+
+  interface HistoricalPair {
+    category: ItemSpec['category'];
+    lostTitle: string;
+    lostTitleAr: string;
+    foundTitle: string;
+    foundTitleAr: string;
+    color?: string;
+    colorAr?: string;
+    brand?: string;
+    brandAr?: string;
+    building: ItemSpec['building'];
+    locationIndex: number;
+    locationDetails: string;
+    locationDetailsAr: string;
+    daysAgo: number;
+    lostPhoto?: string;
+    foundPhoto?: string;
+  }
+
+  const HISTORICAL_PAIRS: HistoricalPair[] = [
+    { category: 'Wallets', lostTitle: 'Brown leather wallet', lostTitleAr: 'محفظة جلد بنية', foundTitle: 'Brown wallet found in the central library', foundTitleAr: 'محفظة بنية لقيتها في المكتبة المركزية', color: 'Brown', colorAr: 'بني', building: 'Administration', locationIndex: 1, locationDetails: 'Central Library reading hall', locationDetailsAr: 'قاعة المطالعة بالمكتبة المركزية', daysAgo: 40, lostPhoto: 'https://images.pexels.com/photos/33277784/pexels-photo-33277784.jpeg?auto=compress&cs=tinysrgb&w=1200', foundPhoto: 'https://i.etsystatic.com/61921830/r/il/e4c9fd/7950078557/il_600x600.7950078557_2ag0.jpg' },
+    { category: 'Bags', lostTitle: 'Navy backpack', lostTitleAr: 'شنطة ظهر كحلية', foundTitle: 'Blue backpack in the lecture hall', foundTitleAr: 'حقيبة ظهر زرقاء في قاعة المحاضرات', color: 'Navy', colorAr: 'كحلي', building: 'Engineering', locationIndex: 0, locationDetails: 'Lecture Hall A', locationDetailsAr: 'مدرج أ', daysAgo: 70, foundPhoto: 'https://newscast.jp/attachments/OBQOuQUmHWPPP7JhEc9e.jpg?w=700&h=700' },
+    { category: 'Keys', lostTitle: 'Keys with a green tag', lostTitleAr: 'مفاتيح بميدالية خضرا', foundTitle: 'Key ring dropped near the gate', foundTitleAr: 'سلسلة مفاتيح سقطت عند البوابة', building: 'Humanities', locationIndex: 1, locationDetails: 'Humanities main gate', locationDetailsAr: 'البوابة الرئيسية للعلوم الإنسانية', daysAgo: 96, lostPhoto: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Key_ring.jpg/330px-Key_ring.jpg', foundPhoto: 'https://static2sensa.mondo.rs/api/v3/images/1280/2560/104349?ts=2026-08-24T15:39:10' },
+    { category: 'Phones', lostTitle: 'Black Samsung phone', lostTitleAr: 'موبايل سامسونج اسود', foundTitle: 'Samsung Galaxy found in the cafeteria', foundTitleAr: 'هاتف Samsung Galaxy وجدته في الكافتيريا', color: 'Black', colorAr: 'أسود', brand: 'Samsung', brandAr: 'سامسونج', building: 'Sports', locationIndex: 0, locationDetails: 'Central Student Cafeteria', locationDetailsAr: 'الكافتيريا الطلابية المركزية', daysAgo: 118 },
+    { category: 'Books', lostTitle: 'General physics textbook', lostTitleAr: 'كتاب فيزيا عامة', foundTitle: 'Physics book with a student name inside', foundTitleAr: 'كتاب فيزياء عليه اسم طالب', building: 'Humanities', locationIndex: 2, locationDetails: 'Physics library corner', locationDetailsAr: 'ركن مكتبة الفيزياء', daysAgo: 148 },
+    { category: 'Clothing', lostTitle: 'Blue denim jacket', lostTitleAr: 'جاكيت جينز ازرق', foundTitle: 'Denim jacket left in the auditorium', foundTitleAr: 'جاكيت جينز متروك في المدرج', color: 'Blue', colorAr: 'أزرق', building: 'Engineering', locationIndex: 2, locationDetails: 'Main Auditorium', locationDetailsAr: 'المدرج الرئيسي', daysAgo: 174 },
+    { category: 'Accessories', lostTitle: 'Silver wristwatch', lostTitleAr: 'ساعة يد فضية', foundTitle: 'Silver watch found in the sports hall', foundTitleAr: 'ساعة فضية وجدت في الصالة الرياضية', color: 'Silver', colorAr: 'فضي', building: 'Sports', locationIndex: 1, locationDetails: 'Multi-Purpose Sports Court', locationDetailsAr: 'الملعب الرياضي متعدد الأغراض', daysAgo: 196 },
+    { category: 'Headphones', lostTitle: 'White Bluetooth earbuds', lostTitleAr: 'سماعات بلوتوث بيضا', foundTitle: 'White wireless earbuds in their case', foundTitleAr: 'سماعات لاسلكية بيضاء في علبتها', color: 'White', colorAr: 'أبيض', building: 'Medical', locationIndex: 0, locationDetails: 'Medical Complex waiting area', locationDetailsAr: 'منطقة انتظار المجمع الطبي', daysAgo: 226, foundPhoto: 'https://images.pexels.com/photos/610945/pexels-photo-610945.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+    { category: 'Documents', lostTitle: 'Registration papers folder', lostTitleAr: 'ملف اوراق التسجيل', foundTitle: 'Plastic folder with student papers', foundTitleAr: 'ملف بلاستيك فيه اوراق طالب', building: 'Administration', locationIndex: 0, locationDetails: 'Student Affairs desk', locationDetailsAr: 'مكتب شؤون الطلاب', daysAgo: 252 },
+    { category: 'Electronics', lostTitle: 'Black power bank', lostTitleAr: 'باور بانك اسود', foundTitle: 'Power bank found in the computer lab', foundTitleAr: 'باور بانك وجدته في معمل الحاسب', color: 'Black', colorAr: 'أسود', building: 'Workshops', locationIndex: 1, locationDetails: 'Computer Lab G03', locationDetailsAr: 'معمل الحاسب G03', daysAgo: 274 },
+    { category: 'Accessories', lostTitle: 'Large black umbrella', lostTitleAr: 'مظلة سودا كبيرة', foundTitle: 'Black umbrella at the library entrance', foundTitleAr: 'مظلة سوداء عند مدخل المكتبة', color: 'Black', colorAr: 'أسود', building: 'Administration', locationIndex: 2, locationDetails: 'Central Library entrance', locationDetailsAr: 'مدخل المكتبة المركزية', daysAgo: 304, foundPhoto: 'https://cdn.shopify.com/s/files/1/0560/0008/6216/files/200856_1.jpg?v=1689917727' },
+    { category: 'Bags', lostTitle: 'Grey laptop bag', lostTitleAr: 'شنطة لابتوب رمادية', foundTitle: 'Grey laptop bag in the study room', foundTitleAr: 'حقيبة لابتوب رمادية في قاعة الدراسة', color: 'Grey', colorAr: 'رمادي', building: 'Medical', locationIndex: 1, locationDetails: 'Study Room 2', locationDetailsAr: 'قاعة الدراسة 2', daysAgo: 330 },
+  ];
+
+  interface HistoricalSingle {
+    reportType: 'LOST' | 'FOUND';
+    category: ItemSpec['category'];
+    itemTitle: string;
+    itemTitleAr: string;
+    building: ItemSpec['building'];
+    locationIndex: number;
+    locationDetails: string;
+    locationDetailsAr: string;
+    daysAgo: number;
+  }
+
+  const HISTORICAL_SINGLES: HistoricalSingle[] = [
+    { reportType: 'LOST', category: 'Books', itemTitle: 'Blue lecture notebook', itemTitleAr: 'دفتر محاضرات ازرق', building: 'Humanities', locationIndex: 0, locationDetails: 'Lecture Hall B', locationDetailsAr: 'مدرج ب', daysAgo: 45 },
+    { reportType: 'FOUND', category: 'Clothing', itemTitle: 'Grey wool scarf', itemTitleAr: 'وشاح صوف رمادي', building: 'Engineering', locationIndex: 1, locationDetails: 'Engineering courtyard', locationDetailsAr: 'ساحة الهندسة', daysAgo: 72 },
+    { reportType: 'LOST', category: 'Accessories', itemTitle: 'Clear phone cover', itemTitleAr: 'غطاء هاتف شفاف', building: 'Medical', locationIndex: 2, locationDetails: 'Medical Complex corridor', locationDetailsAr: 'ممر المجمع الطبي', daysAgo: 99 },
+    { reportType: 'FOUND', category: 'Other', itemTitle: 'Metal pencil case', itemTitleAr: 'علبة اقلام معدنية', building: 'Workshops', locationIndex: 0, locationDetails: 'Heavy Machinery Workshop', locationDetailsAr: 'ورشة الماكينات الثقيلة', daysAgo: 126 },
+    { reportType: 'LOST', category: 'Bags', itemTitle: 'Red gym bag', itemTitleAr: 'شنطة رياضية حمرا', building: 'Sports', locationIndex: 1, locationDetails: 'Sports Court stands', locationDetailsAr: 'مدرجات الملعب الرياضي', daysAgo: 141 },
+    { reportType: 'FOUND', category: 'Accessories', itemTitle: 'Sunglasses in a case', itemTitleAr: 'نضارة شمس في جرابها', building: 'Sports', locationIndex: 0, locationDetails: 'Central Student Cafeteria', locationDetailsAr: 'الكافتيريا الطلابية المركزية', daysAgo: 168 },
+    { reportType: 'LOST', category: 'Electronics', itemTitle: 'Old scientific calculator', itemTitleAr: 'الة حاسبة قديمة', building: 'Engineering', locationIndex: 0, locationDetails: 'Materials Testing Lab', locationDetailsAr: 'معمل اختبار المواد', daysAgo: 195 },
+    { reportType: 'FOUND', category: 'Other', itemTitle: 'Green water bottle', itemTitleAr: 'زجاجة مياه خضرا', building: 'Administration', locationIndex: 1, locationDetails: 'Central Library reading hall', locationDetailsAr: 'قاعة المطالعة بالمكتبة المركزية', daysAgo: 222 },
+    { reportType: 'LOST', category: 'Documents', itemTitle: 'Leather card holder', itemTitleAr: 'حامل بطاقات جلد', building: 'Humanities', locationIndex: 1, locationDetails: 'Humanities main gate', locationDetailsAr: 'البوابة الرئيسية للعلوم الإنسانية', daysAgo: 237 },
+    { reportType: 'FOUND', category: 'Clothing', itemTitle: 'Black winter gloves', itemTitleAr: 'قفازات شتوية سودا', building: 'Medical', locationIndex: 0, locationDetails: 'Medical Complex waiting area', locationDetailsAr: 'منطقة انتظار المجمع الطبي', daysAgo: 264 },
+    { reportType: 'LOST', category: 'Electronics', itemTitle: 'iPhone charging cable', itemTitleAr: 'كابل شحن ايفون', building: 'Workshops', locationIndex: 2, locationDetails: 'CNC & Mechatronics Lab', locationDetailsAr: 'معمل التحكم الرقمي والميكاترونكس', daysAgo: 291 },
+    { reportType: 'FOUND', category: 'Books', itemTitle: 'Organic chemistry textbook', itemTitleAr: 'كتاب كيميا عضوية', building: 'Medical', locationIndex: 1, locationDetails: 'Skills Lab', locationDetailsAr: 'معمل المهارات', daysAgo: 318 },
+  ];
+
+  const historicalItemDocs: (typeof itemDocs)[number][] = [];
+  const historicalClaimDocs: (typeof claimDocs)[number][] = [];
+
+  HISTORICAL_PAIRS.forEach((pair, index) => {
+    const claimantEmail = HISTORICAL_REPORTERS[index % HISTORICAL_REPORTERS.length]!;
+    const finderEmail = HISTORICAL_REPORTERS[(index + 2) % HISTORICAL_REPORTERS.length]!;
+    const claimant = userDisplayName(claimantEmail);
+    const lostId = new Types.ObjectId();
+    const foundId = new Types.ObjectId();
+    const baseNumber = 2027 + index * 2;
+    const handoverDaysAgo = pair.daysAgo - 5;
+
+    historicalItemDocs.push(
+      {
+        _id: lostId,
+        reportNumber: `LF-${baseNumber}`,
+        reportType: 'LOST' as const,
+        itemTitle: pair.lostTitle,
+        itemTitleAr: pair.lostTitleAr,
+        description:
+          'Reported lost on campus; later matched with a found report and returned to its owner after verification.',
+        descriptionAr:
+          'تم الإبلاغ عن فقدانه داخل الحرم الجامعي، وتمت مطابقته لاحقاً مع بلاغ عثور وأُعيد إلى صاحبه بعد التحقق.',
+        privateIdentificationDetails:
+          'Verified against the owner description at the Lost & Found office.',
+        category: pair.category,
+        color: pair.color,
+        colorAr: pair.colorAr,
+        brand: pair.brand,
+        brandAr: pair.brandAr,
+        locationId: locationId(pair.building, pair.locationIndex),
+        locationDetails: pair.locationDetails,
+        locationDetailsAr: pair.locationDetailsAr,
+        occurrenceDate: daysAgo(pair.daysAgo, 12),
+        images: pair.lostPhoto
+          ? [{ url: pair.lostPhoto, publicId: `seed/history-lost-${index + 1}` }]
+          : [],
+        reporterId: userId(claimantEmail),
+        status: 'RETURNED' as const,
+        createdAt: daysAgo(pair.daysAgo, 13),
+        updatedAt: daysAgo(handoverDaysAgo, 13),
+      },
+      {
+        _id: foundId,
+        reportNumber: `LF-${baseNumber + 1}`,
+        reportType: 'FOUND' as const,
+        itemTitle: pair.foundTitle,
+        itemTitleAr: pair.foundTitleAr,
+        description:
+          'Found on campus and handed to the Lost & Found office; claimed and returned to its verified owner.',
+        descriptionAr:
+          'وُجد داخل الحرم الجامعي وسُلّم إلى مكتب المفقودات، ثم استلمه صاحبه بعد التحقق من الملكية.',
+        privateIdentificationDetails:
+          'Verified against the owner description at the Lost & Found office.',
+        category: pair.category,
+        color: pair.color,
+        colorAr: pair.colorAr,
+        brand: pair.brand,
+        brandAr: pair.brandAr,
+        locationId: locationId(pair.building, pair.locationIndex),
+        locationDetails: pair.locationDetails,
+        locationDetailsAr: pair.locationDetailsAr,
+        occurrenceDate: daysAgo(pair.daysAgo - 2, 12),
+        images: pair.foundPhoto
+          ? [{ url: pair.foundPhoto, publicId: `seed/history-found-${index + 1}` }]
+          : [],
+        reporterId: userId(finderEmail),
+        status: 'RETURNED' as const,
+        createdAt: daysAgo(pair.daysAgo - 2, 13),
+        updatedAt: daysAgo(handoverDaysAgo, 13),
+      },
+    );
+
+    historicalClaimDocs.push({
+      _id: new Types.ObjectId(),
+      claimNumber: `CLM-${2010 + index}`,
+      itemId: foundId,
+      linkedLostItemId: lostId,
+      claimantId: userId(claimantEmail),
+      claimDescription:
+        'This item is mine; I reported it lost and can describe its identifying marks.',
+      claimDescriptionAr:
+        'هذا الغرض يخصني؛ أبلغت عن فقدانه وأستطيع وصف علاماته المميزة.',
+      identifyingDetailsProvided:
+        'Owner described the item contents and marks matching the private details on the found report.',
+      supportingEvidence: [],
+      status: 'COMPLETED' as const,
+      verificationNotes: 'Ownership verified against the private details on both reports.',
+      verificationNotesAr: 'تم التحقق من الملكية مقابل التفاصيل الخاصة في البلاغين.',
+      rejectionReason: undefined,
+      rejectionReasonAr: undefined,
+      reviewedBy: managerId,
+      reviewedAt: daysAgo(pair.daysAgo - 4),
+      handover: {
+        receivedByName: claimant.name,
+        receivedByNameAr: claimant.nameAr,
+        handedOverBy: managerId,
+        notes: 'Handed over at the Lost & Found office after ID check.',
+        notesAr: 'تم التسليم في مكتب المفقودات بعد التحقق من الهوية.',
+        handedOverAt: daysAgo(handoverDaysAgo, 14),
+      },
+      createdAt: daysAgo(pair.daysAgo - 3, 10 + (index % 8)),
+      updatedAt: daysAgo(handoverDaysAgo, 12),
+    });
+  });
+
+  HISTORICAL_SINGLES.forEach((single, index) => {
+    const reporterEmail =
+      HISTORICAL_REPORTERS[(index + 1) % HISTORICAL_REPORTERS.length]!;
+    historicalItemDocs.push({
+      _id: new Types.ObjectId(),
+      reportNumber: `LF-${2051 + index}`,
+      reportType: single.reportType,
+      itemTitle: single.itemTitle,
+      itemTitleAr: single.itemTitleAr,
+      description:
+        single.reportType === 'LOST'
+          ? 'Reported lost on campus; the report was closed after the retention period without a matching found report.'
+          : 'Found on campus and kept at the Lost & Found office; the report was closed after the retention period.',
+      descriptionAr:
+        single.reportType === 'LOST'
+          ? 'تم الإبلاغ عن فقدانه داخل الحرم الجامعي، وأُغلق البلاغ بعد انتهاء فترة الاحتفاظ دون بلاغ عثور مطابق.'
+          : 'وُجد داخل الحرم الجامعي واحتُفظ به في مكتب المفقودات، وأُغلق البلاغ بعد انتهاء فترة الاحتفاظ.',
+      privateIdentificationDetails:
+        'Verified against the owner description at the Lost & Found office.',
+      category: single.category,
+      color: undefined,
+      colorAr: undefined,
+      brand: undefined,
+      brandAr: undefined,
+      locationId: locationId(single.building, single.locationIndex),
+      locationDetails: single.locationDetails,
+      locationDetailsAr: single.locationDetailsAr,
+      occurrenceDate: daysAgo(single.daysAgo, 12),
+      images: [],
+      reporterId: userId(reporterEmail),
+      status: 'CLOSED' as const,
+      createdAt: daysAgo(single.daysAgo, 13),
+      updatedAt: daysAgo(Math.max(1, single.daysAgo - 15), 13),
+    });
+  });
+
+  await LostFoundItem.insertMany(historicalItemDocs);
+  await ClaimRequest.insertMany(historicalClaimDocs);
 
   // ---------------------------------------------------------------------------
   // Notifications and activity logs (Lost & Found only)
@@ -1425,10 +1652,14 @@ export async function seedDemoData(passwordHash: string): Promise<DemoDataCounts
   ]);
 
   return {
-    lostItems: itemDocs.filter((item) => item.reportType === 'LOST').length,
-    foundItems: itemDocs.filter((item) => item.reportType === 'FOUND').length,
+    lostItems:
+      itemDocs.filter((item) => item.reportType === 'LOST').length +
+      historicalItemDocs.filter((item) => item.reportType === 'LOST').length,
+    foundItems:
+      itemDocs.filter((item) => item.reportType === 'FOUND').length +
+      historicalItemDocs.filter((item) => item.reportType === 'FOUND').length,
     matches: matchDocs.length,
-    claims: claimDocs.length,
+    claims: claimDocs.length + historicalClaimDocs.length,
     notifications: notificationDocs.length,
     activityLogs: activityLogDocs.length,
     insights: 2,
