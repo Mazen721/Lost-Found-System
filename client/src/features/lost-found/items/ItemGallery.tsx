@@ -43,6 +43,7 @@ export function ItemGallery({ images, itemTitle }: ItemGalleryProps) {
               <img
                 src={image.url}
                 alt={t('lostFound.itemPhoto', { title: itemTitle })}
+                loading="lazy"
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
               />
             </button>

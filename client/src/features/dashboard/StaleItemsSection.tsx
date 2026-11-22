@@ -6,6 +6,7 @@ import { staleRemainder } from '@/features/dashboard/statisticsModel';
 import { tr } from '@/i18n/localize';
 import { enumLabel } from '@/lib/labels';
 import { getCategoryStyle } from '@/lib/categoryStyle';
+import { thumbnailUrl } from '@/lib/imageUrl';
 import { formatNumber } from '@/lib/utils';
 import type { StaleItem } from '@/types/dashboard';
 
@@ -66,7 +67,7 @@ export function StaleItemsSection({
                     <span className="flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-xl bg-muted text-muted-foreground">
                       {item.imageUrl ? (
                         <img
-                          src={item.imageUrl}
+                          src={thumbnailUrl(item.imageUrl)}
                           alt=""
                           loading="lazy"
                           className="h-full w-full object-cover"

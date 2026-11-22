@@ -83,6 +83,10 @@ const claimRequestSchema = new Schema<IClaimRequest>(
 claimRequestSchema.index({ claimNumber: 1 }, { unique: true });
 claimRequestSchema.index({ itemId: 1, status: 1 });
 claimRequestSchema.index({ claimantId: 1 });
+// Production-readiness pass (2026-11-22): newest-first claim lists filtered
+// by claimant/status, and status-only dashboard counts.
+claimRequestSchema.index({ claimantId: 1, status: 1, createdAt: -1 });
+claimRequestSchema.index({ status: 1, createdAt: -1 });
 
 export const ClaimRequest =
   (models.ClaimRequest as Model<IClaimRequest> | undefined) ??

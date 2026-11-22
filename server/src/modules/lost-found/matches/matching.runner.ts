@@ -134,11 +134,17 @@ export async function runMatchingFor(
   }
 
   const oppositeType: ReportType = source.reportType === 'LOST' ? 'FOUND' : 'LOST';
+  // Bounded (production-readiness pass, 2026-11-22): previously EVERY open
+  // opposite-type item was scored per run. The 500 most recent candidates
+  // are far beyond any realistic match window for a campus lost & found;
+  // the (reportType, status, occurrenceDate) index serves this directly.
   const candidates = await LostFoundItem.find({
     _id: { $ne: source._id },
     reportType: oppositeType,
     status: 'OPEN',
   })
+    .sort({ occurrenceDate: -1 })
+    .limit(500)
     .populate(LOCATION_POPULATION)
     .lean<LeanItem[]>();
 
@@ -156,6 +162,14 @@ export async function runMatchingFor(
 
   const result = emptyResult();
   const sourceItem = toMatchableItem(source);
+
+  // Production-readiness pass (2026-11-22): the loop used to await one DB
+  // write per candidate (deleteOne / save / create). All mutations are now
+  // collected and flushed in ONE bulkWrite; counts come from the bulk
+  // result so the returned tallies keep their exact previous meaning.
+  type BulkOp = Parameters<typeof ItemMatch.bulkWrite>[0][number];
+  const ops: BulkOp[] = [];
+  let plannedCreates = 0;
 
   for (const candidate of candidates) {
     result.considered += 1;
@@ -178,40 +192,76 @@ export async function runMatchingFor(
 
     if (!scored || scored.level === null) {
       if (existing) {
-        await existing.deleteOne();
+        ops.push({ deleteOne: { filter: { _id: existing._id } } });
         existingByPair.delete(key);
-        result.removed += 1;
       }
       continue;
     }
 
     if (existing) {
-      existing.score = scored.score;
-      existing.level = scored.level;
-      existing.breakdown = scored.breakdown;
-      await existing.save();
-      result.updated += 1;
+      ops.push({
+        updateOne: {
+          filter: { _id: existing._id },
+          update: {
+            $set: {
+              score: scored.score,
+              level: scored.level,
+              breakdown: scored.breakdown,
+            },
+          },
+        },
+      });
       continue;
     }
 
+    plannedCreates += 1;
+    ops.push({
+      insertOne: {
+        document: {
+          lostItemId: new Types.ObjectId(lost.id),
+          foundItemId: new Types.ObjectId(found.id),
+          score: scored.score,
+          level: scored.level,
+          breakdown: scored.breakdown,
+          status: 'SUGGESTED',
+        } as never,
+      },
+    });
+  }
+
+  if (ops.length > 0) {
     try {
-      const created = await ItemMatch.create({
-        lostItemId: new Types.ObjectId(lost.id),
-        foundItemId: new Types.ObjectId(found.id),
-        score: scored.score,
-        level: scored.level,
-        breakdown: scored.breakdown,
-        status: 'SUGGESTED',
-      });
-      existingByPair.set(key, created);
-      result.created += 1;
+      const bulk = await ItemMatch.bulkWrite(ops, { ordered: false });
+      result.created += bulk.insertedCount;
+      result.updated += bulk.modifiedCount;
+      result.removed += bulk.deletedCount;
     } catch (error) {
-      if (isDuplicateKeyError(error)) {
-        result.skipped += 1;
-        continue;
+      // With ordered:false a duplicate (lostItemId, foundItemId) pair —
+      // e.g. two runs racing — surfaces as a BulkWriteError that still
+      // carries the counts of everything that DID apply. Duplicates are
+      // "skipped", exactly as the old per-create catch treated them.
+      const bulkResult = (error as { result?: unknown }).result as
+        | { insertedCount?: number; modifiedCount?: number; deletedCount?: number }
+        | undefined;
+      if (!bulkResult || !isDuplicateKeyError(error)) {
+        // BulkWriteError wraps code 11000 per write error, not top-level.
+        const writeErrors = (error as { writeErrors?: Array<{ code?: number }> })
+          .writeErrors;
+        const onlyDuplicates =
+          Array.isArray(writeErrors) &&
+          writeErrors.length > 0 &&
+          writeErrors.every((writeError) => writeError.code === 11000);
+        if (!onlyDuplicates) {
+          throw error;
+        }
       }
-      throw error;
+      result.created += bulkResult?.insertedCount ?? 0;
+      result.updated += bulkResult?.modifiedCount ?? 0;
+      result.removed += bulkResult?.deletedCount ?? 0;
     }
+    // Any planned create that did not land was a duplicate pair.
+    result.skipped += Math.max(0, plannedCreates - result.created);
+    void plannedCreates;
   }
 
   return result;

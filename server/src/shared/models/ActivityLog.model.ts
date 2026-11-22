@@ -31,6 +31,8 @@ const activityLogSchema = new Schema<IActivityLog>(
 
 activityLogSchema.index({ createdAt: -1 });
 activityLogSchema.index({ entityType: 1, entityId: 1 });
+// Production-readiness pass (2026-11-22): admin log view filters by actor.
+activityLogSchema.index({ actorId: 1, createdAt: -1 });
 
 /**
  * Audit entries are immutable. There is intentionally no update/delete path.

@@ -230,7 +230,17 @@ export async function createItem(
     },
   });
 
-  await runMatchingFor(item._id.toString());
+  // Production-readiness pass (2026-11-22): matching used to run
+  // synchronously inside this request — an unbounded scan of every OPEN
+  // opposite-type item with one awaited write per candidate — making
+  // "report item" the slowest endpoint under load (51s avg at 100 VU in
+  // the baseline load test). Suggestions are not needed to answer the
+  // reporter, so the run now happens in the background; failures are
+  // logged, never surfaced to the user, and managers can still force a
+  // synchronous recalculation via POST /items/:id/recalculate.
+  void runMatchingFor(item._id.toString()).catch((error: unknown) => {
+    console.error('[campuscare] background matching failed', error);
+  });
 
   const includeValue = isStaffRole(actor.role);
   return serializeItem(

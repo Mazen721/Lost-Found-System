@@ -62,7 +62,16 @@ export const LOCATION_TYPES = ['BUILDING', 'FLOOR', 'ROOM', 'LAB', 'OTHER'] as c
 export type LocationType = (typeof LOCATION_TYPES)[number];
 
 export const IMAGE_MAX_COUNT = 3;
-export const IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+/**
+ * Upload guardrail only (production-readiness pass, 2026-11-22): normal
+ * mobile photos are ALWAYS accepted and automatically resized/compressed
+ * server-side (see upload.service optimizeImageBuffer) — users must never
+ * see a "photo too big" error for a real phone photo. This cap exists
+ * solely as an abuse/security ceiling for absurd payloads.
+ */
+export const IMAGE_MAX_BYTES = 25 * 1024 * 1024;
+/** Longest edge (px) kept after automatic server-side image optimization. */
+export const IMAGE_MAX_DIMENSION = 1600;
 export const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
 export interface DemoAccount {

@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { tr } from '@/i18n/localize';
 import { fmtDistanceToNow } from '@/lib/dateLocale';
 import { getCategoryStyle } from '@/lib/categoryStyle';
+import { thumbnailUrl } from '@/lib/imageUrl';
 import { cn } from '@/lib/utils';
 import type { DashboardItemCard } from '@/types/dashboard';
 
@@ -54,7 +55,7 @@ export function RecentItemsStrip({
               <div className="relative aspect-[16/9] overflow-hidden bg-muted">
                 {item.imageUrl ? (
                   <img
-                    src={item.imageUrl}
+                    src={thumbnailUrl(item.imageUrl)}
                     alt=""
                     loading="lazy"
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"

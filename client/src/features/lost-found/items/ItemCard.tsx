@@ -7,6 +7,7 @@ import { ReportTypeBadge } from '@/features/lost-found/items/ReportTypeBadge';
 import { formatLocation, tr } from '@/i18n/localize';
 import { fmtDistanceToNow } from '@/lib/dateLocale';
 import { getCategoryStyle } from '@/lib/categoryStyle';
+import { thumbnailUrl } from '@/lib/imageUrl';
 import { cn } from '@/lib/utils';
 import type { LostFoundItem } from '@/types/lostFound';
 
@@ -36,7 +37,7 @@ export function ItemCard({ item }: ItemCardProps) {
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         {image ? (
           <img
-            src={image.url}
+            src={thumbnailUrl(image.url)}
             alt={t('lostFound.itemPhoto', { title: tr(item, 'itemTitle') })}
             loading="lazy"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"

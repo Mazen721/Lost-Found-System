@@ -1,6 +1,8 @@
+import compression from 'compression';
 import cors, { type CorsOptions } from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import mongoose from 'mongoose';
 import { env } from './config/env';
 import { errorHandler, notFoundHandler } from './shared/middleware/errorHandler';
 import { languageMiddleware } from './shared/middleware/language';
@@ -32,6 +34,7 @@ app.disable('x-powered-by');
 app.set('trust proxy', 1);
 
 app.use(helmet());
+app.use(compression());
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
@@ -39,6 +42,16 @@ app.use(languageMiddleware);
 
 app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok' });
+});
+
+// Readiness (production-readiness pass, 2026-11-22): unlike the liveness
+// check above, this reports Mongo connectivity so a load balancer /
+// uptime monitor does not treat a process with a dead DB as ready.
+app.get('/health/ready', (_req, res) => {
+  const dbConnected = mongoose.connection.readyState === 1;
+  res
+    .status(dbConnected ? 200 : 503)
+    .json({ status: dbConnected ? 'ready' : 'degraded', db: dbConnected ? 'connected' : 'disconnected' });
 });
 
 // Local development fallback for image uploads when Cloudinary is not configured.
@@ -52,7 +65,11 @@ if (!env.IS_PRODUCTION && !env.CLOUDINARY_CONFIGURED) {
       res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       next();
     },
-    express.static(LOCAL_UPLOADS_DIR, { fallthrough: true }),
+    express.static(LOCAL_UPLOADS_DIR, {
+      fallthrough: true,
+      maxAge: '7d',
+      immutable: true,
+    }),
   );
 }
 

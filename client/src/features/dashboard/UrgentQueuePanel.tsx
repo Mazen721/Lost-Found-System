@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import { tr } from '@/i18n/localize';
 import { fmtDistanceToNow } from '@/lib/dateLocale';
 import { cn } from '@/lib/utils';
+import { thumbnailUrl } from '@/lib/imageUrl';
 import type { UrgentQueue, UrgentQueueClaim } from '@/types/dashboard';
 
 function ClaimRow({ claim, action }: { claim: UrgentQueueClaim; action: 'review' | 'handover' }) {
@@ -22,7 +23,7 @@ function ClaimRow({ claim, action }: { claim: UrgentQueueClaim; action: 'review'
       >
         {claim.itemImageUrl ? (
           <img
-            src={claim.itemImageUrl}
+            src={thumbnailUrl(claim.itemImageUrl)}
             alt=""
             loading="lazy"
             className="h-10 w-10 shrink-0 rounded-lg object-cover"
@@ -145,10 +146,10 @@ export function UrgentQueuePanel({ queue }: { queue: UrgentQueue }) {
               >
                 <span className="flex shrink-0 -space-x-2 rtl:space-x-reverse">
                   {match.lostImageUrl ? (
-                    <img src={match.lostImageUrl} alt="" loading="lazy" className="h-9 w-9 rounded-lg object-cover ring-2 ring-card" />
+                    <img src={thumbnailUrl(match.lostImageUrl, 96)} alt="" loading="lazy" className="h-9 w-9 rounded-lg object-cover ring-2 ring-card" />
                   ) : null}
                   {match.foundImageUrl ? (
-                    <img src={match.foundImageUrl} alt="" loading="lazy" className="h-9 w-9 rounded-lg object-cover ring-2 ring-card" />
+                    <img src={thumbnailUrl(match.foundImageUrl, 96)} alt="" loading="lazy" className="h-9 w-9 rounded-lg object-cover ring-2 ring-card" />
                   ) : null}
                   {!match.lostImageUrl && !match.foundImageUrl ? (
                     <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-muted-foreground">

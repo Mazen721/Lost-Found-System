@@ -58,6 +58,10 @@ const itemMatchSchema = new Schema<IItemMatch>(
 
 itemMatchSchema.index({ lostItemId: 1, foundItemId: 1 }, { unique: true });
 itemMatchSchema.index({ status: 1 });
+// Production-readiness pass (2026-11-22): matches are also looked up by the
+// found item alone ($or in match.service / matching.runner), which the
+// compound above cannot serve as a prefix.
+itemMatchSchema.index({ foundItemId: 1 });
 
 export const ItemMatch =
   (models.ItemMatch as Model<IItemMatch> | undefined) ??

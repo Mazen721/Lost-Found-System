@@ -102,6 +102,15 @@ lostFoundItemSchema.index({ reportType: 1, status: 1, category: 1 });
 lostFoundItemSchema.index({ colorGroup: 1 });
 lostFoundItemSchema.index({ itemTitle: 'text', description: 'text' });
 lostFoundItemSchema.index({ occurrenceDate: 1 });
+// Production-readiness pass (2026-11-22): indexes for the query shapes the
+// audit found doing collection scans — "my items" (reporterId), location
+// filtering, newest-first browse/dashboard sorts, the matching runner's
+// OPEN-opposite-type scan, and the stale-items updatedAt cutoff.
+lostFoundItemSchema.index({ reporterId: 1, createdAt: -1 });
+lostFoundItemSchema.index({ locationId: 1 });
+lostFoundItemSchema.index({ status: 1, createdAt: -1 });
+lostFoundItemSchema.index({ reportType: 1, status: 1, occurrenceDate: -1 });
+lostFoundItemSchema.index({ status: 1, updatedAt: 1 });
 
 export const LostFoundItem =
   (models.LostFoundItem as Model<ILostFoundItem> | undefined) ??

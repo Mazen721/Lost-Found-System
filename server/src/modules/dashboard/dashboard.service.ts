@@ -460,19 +460,6 @@ interface ValueSums {
   totalEGP: number;
 }
 
-function sumLostItemValues(
-  lostItems: Array<{ createdAt: Date; estimatedValueEGP?: number | null }>,
-  inCurrentMonth: (date: Date) => boolean,
-): ValueSums {
-  const sums: ValueSums = { thisMonthEGP: 0, totalEGP: 0 };
-  for (const item of lostItems) {
-    const value = item.estimatedValueEGP ?? 0;
-    sums.totalEGP += value;
-    if (inCurrentMonth(item.createdAt)) sums.thisMonthEGP += value;
-  }
-  return sums;
-}
-
 interface CompletedClaimForValue {
   itemId: unknown;
   handover?: { handedOverAt?: Date | null } | null;
@@ -690,8 +677,15 @@ export interface StaleComputation {
 export async function computeStaleItems(
   now: Date = new Date(),
 ): Promise<StaleComputation> {
+  // Production-readiness pass (2026-11-22): an item can only be stale
+  // when its own updatedAt is already past the cutoff (last movement is
+  // max(item.updatedAt, lastClaimAt)), so that necessary condition is
+  // pushed into the query — previously EVERY active item was loaded into
+  // JS on every dashboard call. Served by the (status, updatedAt) index.
+  const staleCutoff = new Date(now.getTime() - STALE_THRESHOLD_DAYS * DAY_MS);
   const candidates = await LostFoundItem.find({
     status: { $in: STALE_ITEM_STATUSES },
+    updatedAt: { $lte: staleCutoff },
   })
     .select(
       'reportNumber reportType itemTitle itemTitleAr category status images updatedAt reporterId',
@@ -796,17 +790,44 @@ export async function getValueStats(now: Date = new Date()): Promise<ValueStats>
   const inCurrentMonth = (date: Date): boolean =>
     date >= monthStart && date < nextMonthStart;
 
-  const [lostItems, completedClaims] = await Promise.all([
-    LostFoundItem.find({ reportType: 'LOST' })
-      .select('createdAt +estimatedValueEGP')
-      .lean(),
+  // Production-readiness pass (2026-11-22): the lost-side sums used to
+  // load EVERY lost item into JS. They are now two aggregation sums in
+  // the database (total + current month) with identical semantics
+  // (missing estimatedValueEGP counts as 0 via $ifNull).
+  const [lostAgg, completedClaims] = await Promise.all([
+    LostFoundItem.aggregate<{ totalEGP: number; thisMonthEGP: number }>([
+      { $match: { reportType: 'LOST' } },
+      {
+        $group: {
+          _id: null,
+          totalEGP: { $sum: { $ifNull: ['$estimatedValueEGP', 0] } },
+          thisMonthEGP: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $gte: ['$createdAt', monthStart] },
+                    { $lt: ['$createdAt', nextMonthStart] },
+                  ],
+                },
+                { $ifNull: ['$estimatedValueEGP', 0] },
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]),
     ClaimRequest.find({ status: 'COMPLETED' })
       .select('itemId linkedLostItemId handover updatedAt createdAt')
       .populate('itemId', '+estimatedValueEGP')
       .lean(),
   ]);
 
-  const lost = sumLostItemValues(lostItems, inCurrentMonth);
+  const lost: ValueSums = {
+    totalEGP: lostAgg[0]?.totalEGP ?? 0,
+    thisMonthEGP: lostAgg[0]?.thisMonthEGP ?? 0,
+  };
   // Spec 011: the canonical winner decides which handover instant
   // buckets an item's value, so the value figures and the recovery
   // figures always describe the same returns.
@@ -1481,7 +1502,17 @@ export async function getActivitySeries(
     LostFoundItem.find({ createdAt: { $gte: windowStart } })
       .select('reportType createdAt')
       .lean(),
-    ClaimRequest.find({ status: 'COMPLETED' })
+    // Production-readiness pass (2026-11-22): previously EVERY completed
+    // claim ever was loaded; only claims whose effective return date
+    // (handover.handedOverAt, falling back to updatedAt) falls inside the
+    // window can land in a bucket, so the window is pushed into the query.
+    ClaimRequest.find({
+      status: 'COMPLETED',
+      $or: [
+        { 'handover.handedOverAt': { $gte: windowStart } },
+        { 'handover.handedOverAt': null, updatedAt: { $gte: windowStart } },
+      ],
+    })
       .select('handover updatedAt')
       .lean(),
   ]);

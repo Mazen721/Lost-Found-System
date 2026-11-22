@@ -111,7 +111,7 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, next) => {
       buildErrorBody(
         isSizeError ? 'UPLOAD_TOO_LARGE' : 'UPLOAD_INVALID',
         isSizeError
-          ? 'Each image must be 5 MB or smaller'
+          ? 'Each image must be 25 MB or smaller'
           : isCountError
             ? 'A maximum of 3 images can be attached'
             : error.message,
