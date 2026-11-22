@@ -13,7 +13,7 @@ import { assertClaimTransition } from '../../../shared/state-machines/claim.sm';
 import { assertItemTransition } from '../../../shared/state-machines/item.sm';
 import { ApiError } from '../../../shared/utils/ApiError';
 import { paginate, parsePagination } from '../../../shared/utils/paginate';
-import { withTransaction } from '../../../shared/utils/withTransaction';
+import { withTransactionRetry } from '../../../shared/utils/withTransactionRetry';
 import { User } from '../../auth/user.model';
 import {
   LostFoundItem,
@@ -514,7 +514,7 @@ export async function createClaim(
   // translate that duplicate-key failure into the same 409 the pre-check
   // produces, so clients see one consistent contract.
   try {
-    return await withTransaction(async (session) => {
+    return await withTransactionRetry(async (session) => {
     const item = await loadClaimableFoundItem(input.itemId, session);
 
     const claimNumber = await nextNumber('CLM', session);
@@ -697,7 +697,7 @@ async function approveClaim(
   id: string,
   input: ReviewClaimInput,
 ): Promise<SerializedClaim> {
-  return withTransaction(async (session) => {
+  return withTransactionRetry(async (session) => {
     const claim = await loadClaimDocument(id, session);
 
     assertClaimTransition(claim.status, 'APPROVED', 'LOST_FOUND_MANAGER');
@@ -777,7 +777,7 @@ async function rejectClaim(
     throw ApiError.badRequest('A rejection reason is required', 'rejectionReasonRequired');
   }
 
-  return withTransaction(async (session) => {
+  return withTransactionRetry(async (session) => {
     const claim = await loadClaimDocument(id, session);
 
     assertClaimTransition(claim.status, 'REJECTED', 'LOST_FOUND_MANAGER');
@@ -850,7 +850,7 @@ export async function recordHandover(
   id: string,
   input: HandoverClaimInput,
 ): Promise<SerializedClaim> {
-  return withTransaction(async (session) => {
+  return withTransactionRetry(async (session) => {
     const claim = await loadClaimDocument(id, session);
 
     if (claim.status !== 'APPROVED') {
