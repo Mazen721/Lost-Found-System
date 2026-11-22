@@ -509,7 +509,12 @@ export async function createClaim(
     linkedLostItemId = linkedLost._id;
   }
 
-  return withTransaction(async (session) => {
+  // The partial unique index (itemId, claimantId) on active claims can
+  // reject the insert when two submissions race past the pre-check above;
+  // translate that duplicate-key failure into the same 409 the pre-check
+  // produces, so clients see one consistent contract.
+  try {
+    return await withTransaction(async (session) => {
     const item = await loadClaimableFoundItem(input.itemId, session);
 
     const claimNumber = await nextNumber('CLM', session);
@@ -582,7 +587,21 @@ export async function createClaim(
     );
 
     return loadClaimById(claim._id.toString(), actor, session);
-  });
+    });
+  } catch (error) {
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: unknown }).code === 11_000
+    ) {
+      throw ApiError.conflict(
+        'You already have an active claim for this item',
+        'claimAlreadyActive',
+      );
+    }
+    throw error;
+  }
 }
 
 export async function listClaims(

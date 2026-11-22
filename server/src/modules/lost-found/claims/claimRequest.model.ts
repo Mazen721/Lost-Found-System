@@ -87,6 +87,23 @@ claimRequestSchema.index({ claimantId: 1 });
 // by claimant/status, and status-only dashboard counts.
 claimRequestSchema.index({ claimantId: 1, status: 1, createdAt: -1 });
 claimRequestSchema.index({ status: 1, createdAt: -1 });
+// Race guard (found by concurrent-claim load testing, 2026-11-22): the
+// service's "already have an active claim" pre-check is check-then-act —
+// two simultaneous submissions from the same user both passed it and
+// created duplicate active claims. This partial unique index backs the
+// check in the database; it mirrors the service rule exactly (active =
+// any status except REJECTED / COMPLETED) and createClaim translates its
+// duplicate-key error into the same 409.
+claimRequestSchema.index(
+  { itemId: 1, claimantId: 1 },
+  {
+    unique: true,
+    name: 'item_claimant_active_unique',
+    partialFilterExpression: {
+      status: { $in: ['PENDING_REVIEW', 'UNDER_VERIFICATION', 'APPROVED'] },
+    },
+  },
+);
 
 export const ClaimRequest =
   (models.ClaimRequest as Model<IClaimRequest> | undefined) ??
