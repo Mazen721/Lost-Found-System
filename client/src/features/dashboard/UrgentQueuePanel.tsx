@@ -2,15 +2,16 @@ import {
   CheckCircle2,
   GitCompareArrows,
   Handshake,
+  ImageOff,
   ShieldCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { ItemImage } from '@/components/shared/ItemImage';
 import { tr } from '@/i18n/localize';
 import { fmtDistanceToNow } from '@/lib/dateLocale';
 import { cn } from '@/lib/utils';
-import { thumbnailUrl } from '@/lib/imageUrl';
 import type { UrgentQueue, UrgentQueueClaim } from '@/types/dashboard';
 
 function ClaimRow({ claim, action }: { claim: UrgentQueueClaim; action: 'review' | 'handover' }) {
@@ -22,11 +23,14 @@ function ClaimRow({ claim, action }: { claim: UrgentQueueClaim; action: 'review'
         className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-secondary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {claim.itemImageUrl ? (
-          <img
-            src={thumbnailUrl(claim.itemImageUrl)}
+          <ItemImage
+            src={claim.itemImageUrl}
+            width={480}
             alt=""
-            loading="lazy"
             className="h-10 w-10 shrink-0 rounded-lg object-cover"
+            placeholderClassName="bg-secondary text-muted-foreground"
+            icon={ShieldCheck}
+            iconClassName="h-4 w-4"
           />
         ) : (
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
@@ -146,10 +150,10 @@ export function UrgentQueuePanel({ queue }: { queue: UrgentQueue }) {
               >
                 <span className="flex shrink-0 -space-x-2 rtl:space-x-reverse">
                   {match.lostImageUrl ? (
-                    <img src={thumbnailUrl(match.lostImageUrl, 96)} alt="" loading="lazy" className="h-9 w-9 rounded-lg object-cover ring-2 ring-card" />
+                    <ItemImage src={match.lostImageUrl} width={96} alt="" className="h-9 w-9 rounded-lg object-cover ring-2 ring-card" placeholderClassName="bg-secondary text-muted-foreground ring-2 ring-card" icon={ImageOff} iconClassName="h-4 w-4" />
                   ) : null}
                   {match.foundImageUrl ? (
-                    <img src={thumbnailUrl(match.foundImageUrl, 96)} alt="" loading="lazy" className="h-9 w-9 rounded-lg object-cover ring-2 ring-card" />
+                    <ItemImage src={match.foundImageUrl} width={96} alt="" className="h-9 w-9 rounded-lg object-cover ring-2 ring-card" placeholderClassName="bg-secondary text-muted-foreground ring-2 ring-card" icon={ImageOff} iconClassName="h-4 w-4" />
                   ) : null}
                   {!match.lostImageUrl && !match.foundImageUrl ? (
                     <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-muted-foreground">

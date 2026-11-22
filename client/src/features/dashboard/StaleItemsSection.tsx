@@ -1,12 +1,12 @@
 import { AlarmClock, MoonStar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { ItemImage } from '@/components/shared/ItemImage';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { staleRemainder } from '@/features/dashboard/statisticsModel';
 import { tr } from '@/i18n/localize';
 import { enumLabel } from '@/lib/labels';
 import { getCategoryStyle } from '@/lib/categoryStyle';
-import { thumbnailUrl } from '@/lib/imageUrl';
 import { formatNumber } from '@/lib/utils';
 import type { StaleItem } from '@/types/dashboard';
 
@@ -66,11 +66,13 @@ export function StaleItemsSection({
                   >
                     <span className="flex h-14 w-14 flex-none items-center justify-center overflow-hidden rounded-xl bg-muted text-muted-foreground">
                       {item.imageUrl ? (
-                        <img
-                          src={thumbnailUrl(item.imageUrl)}
+                        <ItemImage
+                          src={item.imageUrl}
+                          width={480}
                           alt=""
-                          loading="lazy"
                           className="h-full w-full object-cover"
+                          icon={FallbackIcon}
+                          iconClassName="h-6 w-6"
                         />
                       ) : (
                         <FallbackIcon className="h-6 w-6" aria-hidden="true" />

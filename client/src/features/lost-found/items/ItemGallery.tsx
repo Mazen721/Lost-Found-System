@@ -1,6 +1,7 @@
 import { ImageOff } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ItemImage } from '@/components/shared/ItemImage';
 import { Lightbox } from '@/components/shared/Lightbox';
 import type { ImageAsset } from '@/types/lostFound';
 
@@ -40,11 +41,15 @@ export function ItemGallery({ images, itemTitle }: ItemGalleryProps) {
               className="group relative block aspect-[4/3] w-full overflow-hidden rounded-md border bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               aria-label={t('lostFound.openPhotoAria', { index: index + 1, total: images.length })}
             >
-              <img
+              <ItemImage
                 src={image.url}
                 alt={t('lostFound.itemPhoto', { title: itemTitle })}
-                loading="lazy"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                className="h-full w-full object-cover"
+                imgClassName="transition-transform duration-300 group-hover:scale-[1.03]"
+                placeholderClassName="text-muted-foreground"
+                icon={ImageOff}
+                iconClassName="h-8 w-8"
+                iconStrokeWidth={1.6}
               />
             </button>
           </li>

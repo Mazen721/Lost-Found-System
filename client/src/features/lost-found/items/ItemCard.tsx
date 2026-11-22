@@ -2,12 +2,12 @@ import { ChevronLeft, Clock, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { CategoryChip } from '@/components/shared/CategoryChip';
+import { ItemImage } from '@/components/shared/ItemImage';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { ReportTypeBadge } from '@/features/lost-found/items/ReportTypeBadge';
 import { formatLocation, tr } from '@/i18n/localize';
 import { fmtDistanceToNow } from '@/lib/dateLocale';
 import { getCategoryStyle } from '@/lib/categoryStyle';
-import { thumbnailUrl } from '@/lib/imageUrl';
 import { cn } from '@/lib/utils';
 import type { LostFoundItem } from '@/types/lostFound';
 
@@ -36,11 +36,17 @@ export function ItemCard({ item }: ItemCardProps) {
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         {image ? (
-          <img
-            src={thumbnailUrl(image.url)}
+          <ItemImage
+            src={image.url}
+            width={480}
             alt={t('lostFound.itemPhoto', { title: tr(item, 'itemTitle') })}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="h-full w-full object-cover"
+            imgClassName="transition-transform duration-300 group-hover:scale-[1.03]"
+            placeholderClassName={categoryStyle.tileClass}
+            icon={FallbackIcon}
+            iconClassName="h-12 w-12"
+            iconStrokeWidth={1.4}
+            label={t('lostFound.noPhoto')}
           />
         ) : (
           <div

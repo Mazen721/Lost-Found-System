@@ -2,11 +2,11 @@ import { ArrowLeft, MapPin } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { CategoryChip } from '@/components/shared/CategoryChip';
+import { ItemImage } from '@/components/shared/ItemImage';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { tr } from '@/i18n/localize';
 import { fmtDistanceToNow } from '@/lib/dateLocale';
 import { getCategoryStyle } from '@/lib/categoryStyle';
-import { thumbnailUrl } from '@/lib/imageUrl';
 import { cn } from '@/lib/utils';
 import type { DashboardItemCard } from '@/types/dashboard';
 
@@ -54,11 +54,16 @@ export function RecentItemsStrip({
             >
               <div className="relative aspect-[16/9] overflow-hidden bg-muted">
                 {item.imageUrl ? (
-                  <img
-                    src={thumbnailUrl(item.imageUrl)}
+                  <ItemImage
+                    src={item.imageUrl}
+                    width={480}
                     alt=""
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                    className="h-full w-full object-cover"
+                    imgClassName="transition-transform duration-300 group-hover:scale-[1.03]"
+                    placeholderClassName={style.tileClass}
+                    icon={FallbackIcon}
+                    iconClassName="h-10 w-10"
+                    iconStrokeWidth={1.5}
                   />
                 ) : (
                   <div
