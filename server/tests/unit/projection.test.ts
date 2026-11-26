@@ -21,6 +21,9 @@ const PUBLIC_FIELDS = [
   'locationDetails',
   'locationDetailsAr',
   'occurrenceDate',
+  // Spec 012: publicationStatus joined the public surface deliberately —
+  // it is 'PUBLISHED' for every item a public surface can show.
+  'publicationStatus',
   'reportNumber',
   'reportType',
   'status',
