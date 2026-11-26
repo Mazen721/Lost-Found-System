@@ -84,11 +84,11 @@ describe('top-navbar links (spec 007)', () => {
     ]);
   });
 
-  it('SUPER_ADMIN top links lead with the dashboard and users, with no report link', () => {
+  it('SUPER_ADMIN top links lead with the dashboard, then posting moderation (spec 012), with no report link', () => {
     const links = getTopLinks('SUPER_ADMIN');
     expect(links.map((link) => link.to)).toEqual([
       '/dashboard',
-      '/statistics',
+      '/posting-moderation',
       '/users',
       '/lost-found/items',
       '/lost-found/claims',
@@ -121,7 +121,9 @@ describe('staff top-link trim (spec 011, navbar overflow fix)', () => {
   it('destinations trimmed from the admin top bar remain in the drawer', () => {
     const topRoutes = getTopLinks('SUPER_ADMIN').map((link) => link.to);
     const drawerRoutes = fullMenuRoutes('SUPER_ADMIN');
-    for (const trimmed of ['/lost-found/matches', '/lost-found']) {
+    // '/statistics' joined the trimmed set with the spec-012 follow-up:
+    // posting moderation took its top-bar slot (cap of five), drawer kept.
+    for (const trimmed of ['/lost-found/matches', '/lost-found', '/statistics']) {
       expect(topRoutes).not.toContain(trimmed);
       expect(drawerRoutes).toContain(trimmed);
     }
@@ -159,16 +161,22 @@ describe('staff top-link trim (spec 011, navbar overflow fix)', () => {
 describe('statistics navigation (spec 009)', () => {
   const STATISTICS_ROUTE = '/statistics';
 
-  it.each(['LOST_FOUND_MANAGER', 'SUPER_ADMIN'] as Role[])(
-    '%s gets statistics right after the dashboard in top links and drawer',
-    (role) => {
-      const topLinks = getTopLinks(role).map((link) => link.to);
-      expect(topLinks.indexOf(STATISTICS_ROUTE)).toBe(topLinks.indexOf('/dashboard') + 1);
+  it('LOST_FOUND_MANAGER gets statistics right after the dashboard in top links and drawer', () => {
+    const topLinks = getTopLinks('LOST_FOUND_MANAGER').map((link) => link.to);
+    expect(topLinks.indexOf(STATISTICS_ROUTE)).toBe(topLinks.indexOf('/dashboard') + 1);
 
-      const menu = fullMenuRoutes(role);
-      expect(menu.indexOf(STATISTICS_ROUTE)).toBe(menu.indexOf('/dashboard') + 1);
-    },
-  );
+    const menu = fullMenuRoutes('LOST_FOUND_MANAGER');
+    expect(menu.indexOf(STATISTICS_ROUTE)).toBe(menu.indexOf('/dashboard') + 1);
+  });
+
+  it('SUPER_ADMIN keeps statistics right after the dashboard in the drawer only (spec 012 follow-up)', () => {
+    // Posting moderation took the statistics top-bar slot for the admin;
+    // statistics itself is drawer-only for SUPER_ADMIN now.
+    expect(getTopLinks('SUPER_ADMIN').map((link) => link.to)).not.toContain(STATISTICS_ROUTE);
+
+    const menu = fullMenuRoutes('SUPER_ADMIN');
+    expect(menu.indexOf(STATISTICS_ROUTE)).toBe(menu.indexOf('/dashboard') + 1);
+  });
 
   it.each(['STUDENT', 'EMPLOYEE'] as Role[])(
     '%s has no statistics entry on any navigation surface',
@@ -179,16 +187,13 @@ describe('statistics navigation (spec 009)', () => {
     },
   );
 
-  it.each(['LOST_FOUND_MANAGER', 'SUPER_ADMIN'] as Role[])(
-    '%s statistics top link lights only on /statistics',
-    (role) => {
-      const link = getTopLinks(role).find(
-        (entry) => entry.to === STATISTICS_ROUTE,
-      ) as TopLinkItem;
-      expect(isTopLinkActive(link, '/statistics')).toBe(true);
-      expect(isTopLinkActive(link, '/dashboard')).toBe(false);
-    },
-  );
+  it('LOST_FOUND_MANAGER statistics top link lights only on /statistics', () => {
+    const link = getTopLinks('LOST_FOUND_MANAGER').find(
+      (entry) => entry.to === STATISTICS_ROUTE,
+    ) as TopLinkItem;
+    expect(isTopLinkActive(link, '/statistics')).toBe(true);
+    expect(isTopLinkActive(link, '/dashboard')).toBe(false);
+  });
 });
 
 describe('isTopLinkActive route mapping (spec 007)', () => {
@@ -354,6 +359,16 @@ describe('posting moderation route (spec 012)', () => {
       expect(getMobileTabs(role).map((tab) => tab.to)).not.toContain('/posting-moderation');
     },
   );
+
+  it('SUPER_ADMIN top bar carries اعتماد النشر as the SECOND link (user, 2026-11-26)', () => {
+    const links = getTopLinks('SUPER_ADMIN');
+    expect(links).toHaveLength(5);
+    expect(links[0].to).toBe('/dashboard');
+    expect(links[1].to).toBe('/posting-moderation');
+    expect(links[1].labelKey).toBe('nav.postingModeration');
+    expect(isTopLinkActive(links[1], '/posting-moderation')).toBe(true);
+    expect(isTopLinkActive(links[1], '/dashboard')).toBe(false);
+  });
 
   it('the admin more tab lights up on the moderation page', () => {
     const more = getMobileTabs('SUPER_ADMIN').find((tab) => tab.action === 'more') as MobileTabItem;

@@ -222,9 +222,14 @@ const MANAGER_TOP_LINKS: TopLinkItem[] = [
   },
 ];
 
+// Spec 012 follow-up (user, 2026-11-26): «اعتماد النشر» is important
+// enough to sit second in the admin top bar, right after the dashboard.
+// The spec-011 cap of five still holds, so statistics leaves the ADMIN
+// top bar only — it stays in the admin drawer (and in the manager's top
+// bar) untouched.
 const ADMIN_TOP_LINKS: TopLinkItem[] = [
   { labelKey: 'nav.dashboard', to: '/dashboard', end: true },
-  { labelKey: 'nav.statistics', to: '/statistics', end: true },
+  { labelKey: 'nav.postingModeration', to: '/posting-moderation' },
   { labelKey: 'nav.users', to: '/users' },
   {
     labelKey: 'nav.allReports',
