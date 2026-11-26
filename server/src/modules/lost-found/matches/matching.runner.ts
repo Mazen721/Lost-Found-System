@@ -33,6 +33,7 @@ interface LeanItem {
   itemTitleAr?: string;
   descriptionAr?: string;
   status: ItemStatus;
+  publicationStatus?: string;
   reporterId: Types.ObjectId;
 }
 
@@ -133,6 +134,14 @@ export async function runMatchingFor(
     return emptyResult();
   }
 
+  // Spec 012: unpublished items never match, in either direction.
+  if (
+    source.publicationStatus === 'PENDING_APPROVAL' ||
+    source.publicationStatus === 'REJECTED'
+  ) {
+    return emptyResult();
+  }
+
   const oppositeType: ReportType = source.reportType === 'LOST' ? 'FOUND' : 'LOST';
   // Bounded (production-readiness pass, 2026-11-22): previously EVERY open
   // opposite-type item was scored per run. The 500 most recent candidates
@@ -142,6 +151,7 @@ export async function runMatchingFor(
     _id: { $ne: source._id },
     reportType: oppositeType,
     status: 'OPEN',
+    publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] },
   })
     .sort({ occurrenceDate: -1 })
     .limit(500)

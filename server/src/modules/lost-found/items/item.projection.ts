@@ -2,6 +2,7 @@ import type { Types } from 'mongoose';
 import type {
   ItemStatus,
   LostFoundCategory,
+  PublicationStatus,
   ReportType,
 } from '../../../config/constants';
 import type { ImageAsset } from '../../../shared/schemas/image.schema';
@@ -40,6 +41,9 @@ export interface PublicItem {
   occurrenceDate: Date;
   images: ImageAsset[];
   status: ItemStatus;
+  /** Spec 012: always PUBLISHED on public surfaces; the reporter's own
+   * views (My Reports) are where PENDING_APPROVAL / REJECTED surface. */
+  publicationStatus: PublicationStatus;
 }
 
 interface PopulatedLocation {
@@ -72,6 +76,9 @@ export interface ProjectableItem {
   occurrenceDate: Date;
   images?: ImageAsset[];
   status: ItemStatus;
+  publicationStatus?: PublicationStatus;
+  publicationReviewedBy?: Types.ObjectId | string | null;
+  publicationReviewedAt?: Date | null;
   estimatedValueEGP?: number | null;
   valueSource?: 'AUTO' | 'ADJUSTED' | null;
   valueAdjustedBy?: Types.ObjectId | string | null;
@@ -156,5 +163,8 @@ export function toPublicItem(item: ProjectableItem): PublicItem {
       publicId: image.publicId,
     })),
     status: item.status,
+    // Legacy documents predating spec 012 have no field — they are
+    // published by definition.
+    publicationStatus: item.publicationStatus ?? 'PUBLISHED',
   };
 }

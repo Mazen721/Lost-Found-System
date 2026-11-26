@@ -2,9 +2,11 @@ import { Schema, model, models, type Model, type Types } from 'mongoose';
 import {
   ITEM_STATUSES,
   LOST_FOUND_CATEGORIES,
+  PUBLICATION_STATUSES,
   REPORT_TYPES,
   type ItemStatus,
   type LostFoundCategory,
+  type PublicationStatus,
   type ReportType,
 } from '../../../config/constants';
 import {
@@ -36,6 +38,10 @@ export interface ILostFoundItem {
   images: ImageAsset[];
   reporterId: Types.ObjectId;
   status: ItemStatus;
+  /** Spec 012: moderation gate, independent of the lifecycle `status`. */
+  publicationStatus: PublicationStatus;
+  publicationReviewedBy?: Types.ObjectId | null;
+  publicationReviewedAt?: Date | null;
   /** Staff-only value estimate (spec 008); never serialized for students. */
   estimatedValueEGP?: number | null;
   valueSource?: 'AUTO' | 'ADJUSTED' | null;
@@ -77,6 +83,20 @@ const lostFoundItemSchema = new Schema<ILostFoundItem>(
     },
     reporterId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     status: { type: String, required: true, enum: ITEM_STATUSES, default: 'OPEN' },
+    // Spec 012: default PUBLISHED so existing/seed data is unaffected;
+    // documents predating the field are also treated as published.
+    publicationStatus: {
+      type: String,
+      required: true,
+      enum: PUBLICATION_STATUSES,
+      default: 'PUBLISHED',
+    },
+    publicationReviewedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    publicationReviewedAt: { type: Date, default: null },
     // Staff-only (spec 008): select:false like privateIdentificationDetails,
     // so the fields are fetched only where a staff serializer opts in.
     estimatedValueEGP: { type: Number, default: null, select: false },
@@ -111,6 +131,7 @@ lostFoundItemSchema.index({ locationId: 1 });
 lostFoundItemSchema.index({ status: 1, createdAt: -1 });
 lostFoundItemSchema.index({ reportType: 1, status: 1, occurrenceDate: -1 });
 lostFoundItemSchema.index({ status: 1, updatedAt: 1 });
+lostFoundItemSchema.index({ publicationStatus: 1, createdAt: -1 });
 
 export const LostFoundItem =
   (models.LostFoundItem as Model<ILostFoundItem> | undefined) ??

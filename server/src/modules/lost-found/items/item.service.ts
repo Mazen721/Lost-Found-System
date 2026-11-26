@@ -7,6 +7,7 @@ import { nextNumber } from '../../../shared/services/counter.service';
 import { ApiError } from '../../../shared/utils/ApiError';
 import { paginate, parsePagination } from '../../../shared/utils/paginate';
 import { Location } from '../../locations/location.model';
+import { getPostingSettings } from '../../moderation/moderation.service';
 import { canonicalColorGroup } from '../matches/matching-text';
 import { runMatchingFor } from '../matches/matching.runner';
 import {
@@ -187,6 +188,19 @@ export async function createItem(
 ): Promise<SerializedItem> {
   await requireActiveLocation(input.locationId);
 
+  // Spec 012: STUDENT/EMPLOYEE reports wait for SUPER_ADMIN approval
+  // when auto-publish is off. Staff reports (the manager's own) always
+  // publish immediately, in both modes.
+  const isStudentReporter =
+    actor.role === 'STUDENT' || actor.role === 'EMPLOYEE';
+  let publicationStatus: 'PUBLISHED' | 'PENDING_APPROVAL' = 'PUBLISHED';
+  if (isStudentReporter) {
+    const settings = await getPostingSettings();
+    if (!settings.autoPublishStudentReports) {
+      publicationStatus = 'PENDING_APPROVAL';
+    }
+  }
+
   const reportNumber = await nextNumber('LF');
   const estimate = estimateItemValue({
     category: input.category,
@@ -210,6 +224,7 @@ export async function createItem(
     images,
     reporterId: actor.id,
     status: 'OPEN',
+    publicationStatus,
     estimatedValueEGP: estimate.valueEGP,
     valueSource: 'AUTO',
   });
@@ -227,6 +242,7 @@ export async function createItem(
       category: input.category,
       locationId: input.locationId,
       images: images.length,
+      publicationStatus,
     },
   });
 
@@ -238,9 +254,13 @@ export async function createItem(
   // reporter, so the run now happens in the background; failures are
   // logged, never surfaced to the user, and managers can still force a
   // synchronous recalculation via POST /items/:id/recalculate.
-  void runMatchingFor(item._id.toString()).catch((error: unknown) => {
-    console.error('[campuscare] background matching failed', error);
-  });
+  // Spec 012: an item waiting for publication approval must never
+  // produce match suggestions — matching runs on approval instead.
+  if (publicationStatus === 'PUBLISHED') {
+    void runMatchingFor(item._id.toString()).catch((error: unknown) => {
+      console.error('[campuscare] background matching failed', error);
+    });
+  }
 
   const includeValue = isStaffRole(actor.role);
   return serializeItem(
@@ -264,6 +284,11 @@ export async function listItems(
 
   if (query.mine) {
     filter.reporterId = new Types.ObjectId(actor.id);
+  } else {
+    // Spec 012: every non-"mine" list (browse, search, staff registries)
+    // shows published items only. The $nin form also keeps legacy
+    // documents that predate the field (they are published).
+    filter.publicationStatus = { $nin: ['PENDING_APPROVAL', 'REJECTED'] };
   }
 
   if (query.scope === 'archived') {
@@ -374,12 +399,29 @@ function inclusiveDayEnd(value: Date): Date {
   return next;
 }
 
+/**
+ * Spec 012 visibility gate: an unpublished item exists only for its
+ * reporter and for the SUPER_ADMIN (moderation). Everyone else — the
+ * Lost & Found Manager included — gets a plain 404, exactly as if the
+ * item did not exist.
+ */
+function assertItemVisible(actor: ItemActor, item: PopulatedItem): void {
+  const publicationStatus = item.publicationStatus ?? 'PUBLISHED';
+  if (publicationStatus === 'PUBLISHED') return;
+
+  const reporterId = objectIdOf(item.reporterId);
+  if (reporterId === actor.id || actor.role === 'SUPER_ADMIN') return;
+
+  throw ApiError.notFound('Lost and found item not found', 'itemNotFound');
+}
+
 export async function getItem(
   actor: ItemActor,
   id: string,
 ): Promise<SerializedItem> {
   const includeValue = isStaffRole(actor.role);
   const item = await loadItem(id, true, includeValue);
+  assertItemVisible(actor, item);
   const reporterId = objectIdOf(item.reporterId);
   const isReporter = reporterId === actor.id;
   const isPrivileged = isReporter || includeValue;
@@ -397,6 +439,16 @@ export async function updateItem(
   );
 
   if (!item) {
+    throw ApiError.notFound('Lost and found item not found', 'itemNotFound');
+  }
+
+  // Spec 012: unpublished items are editable only by their reporter (and
+  // visible to the SUPER_ADMIN); everyone else gets a 404.
+  if (
+    item.publicationStatus !== 'PUBLISHED' &&
+    item.reporterId.toString() !== actor.id &&
+    actor.role !== 'SUPER_ADMIN'
+  ) {
     throw ApiError.notFound('Lost and found item not found', 'itemNotFound');
   }
 

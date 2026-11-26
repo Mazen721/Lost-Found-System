@@ -239,6 +239,15 @@ async function loadClaimableFoundItem(
     throw ApiError.notFound('Found item not found', 'itemNotFound');
   }
 
+  // Spec 012: an unpublished item cannot be claimed — it is invisible,
+  // so it answers exactly like a missing one.
+  if (
+    item.publicationStatus === 'PENDING_APPROVAL' ||
+    item.publicationStatus === 'REJECTED'
+  ) {
+    throw ApiError.notFound('Found item not found', 'itemNotFound');
+  }
+
   if (item.reportType !== 'FOUND') {
     throw ApiError.badRequest('Claims can only be submitted for found items', 'foundItemsOnlyClaimable');
   }
@@ -493,6 +502,8 @@ export async function createClaim(
     const isOwnLostReport =
       linkedLost &&
       linkedLost.reportType === 'LOST' &&
+      linkedLost.publicationStatus !== 'PENDING_APPROVAL' &&
+      linkedLost.publicationStatus !== 'REJECTED' &&
       linkedLost.reporterId.toString() === actor.id;
 
     if (!linkedLost || !isOwnLostReport) {

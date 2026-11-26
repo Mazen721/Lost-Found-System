@@ -77,7 +77,7 @@ async function monthCategoryRows(monthStart: Date, nextMonthStart: Date) {
     _id: { category: string; reportType: string };
     count: number;
   }>([
-    { $match: { createdAt: { $gte: monthStart, $lt: nextMonthStart } } },
+    { $match: { createdAt: { $gte: monthStart, $lt: nextMonthStart }, publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } } },
     {
       $group: {
         _id: { category: '$category', reportType: '$reportType' },
@@ -104,7 +104,7 @@ async function monthLocationRows(monthStart: Date, nextMonthStart: Date) {
     _id: { locationId: Types.ObjectId; reportType: string };
     count: number;
   }>([
-    { $match: { createdAt: { $gte: monthStart, $lt: nextMonthStart } } },
+    { $match: { createdAt: { $gte: monthStart, $lt: nextMonthStart }, publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } } },
     {
       $group: {
         _id: { locationId: '$locationId', reportType: '$reportType' },
@@ -147,8 +147,8 @@ export async function buildMonthlyReport(
     stale,
     completedClaims,
   ] = await Promise.all([
-    LostFoundItem.countDocuments({ reportType: 'LOST', ...createdInMonth }),
-    LostFoundItem.countDocuments({ reportType: 'FOUND', ...createdInMonth }),
+    LostFoundItem.countDocuments({ reportType: 'LOST', ...createdInMonth, publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
+    LostFoundItem.countDocuments({ reportType: 'FOUND', ...createdInMonth, publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
     monthCategoryRows(monthStart, nextMonthStart),
     monthLocationRows(monthStart, nextMonthStart),
     getValueStats(now),

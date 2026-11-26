@@ -10,6 +10,7 @@ import { lostFoundItemRouter } from './modules/lost-found/items/item.routes';
 import { matchRouter } from './modules/lost-found/matches/match.routes';
 import { claimRouter } from './modules/lost-found/claims/claim.routes';
 import { userRouter } from './modules/users/user.routes';
+import { moderationRouter } from './modules/moderation/moderation.routes';
 
 export const apiRouter = Router();
 
@@ -23,4 +24,5 @@ apiRouter.use('/lost-found/matches', matchRouter);
 apiRouter.use('/lost-found/claims', claimRouter);
 apiRouter.use('/dashboard', dashboardRouter);
 apiRouter.use('/activity-logs', activityLogRouter);
+apiRouter.use('/moderation', moderationRouter);
 apiRouter.use('/ai', aiRouter);

@@ -362,7 +362,7 @@ async function getBoardExtras(): Promise<{
 }> {
   const [recentItems, pendingClaims, suggestedMatches, handoversWaiting] =
     await Promise.all([
-      LostFoundItem.find({})
+      LostFoundItem.find({ publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } })
         .sort({ createdAt: -1 })
         .limit(6)
         .select(
@@ -626,7 +626,7 @@ export async function loadCompletedClaims(): Promise<CanonicalClaim[]> {
 export async function getRecoveryStats(): Promise<RecoveryStats> {
   const [claims, totalLostReports] = await Promise.all([
     loadCompletedClaims(),
-    LostFoundItem.countDocuments({ reportType: 'LOST' }),
+    LostFoundItem.countDocuments({ reportType: 'LOST', publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
   ]);
   const canonical = selectCanonicalReturns(claims);
 
@@ -685,6 +685,7 @@ export async function computeStaleItems(
   const staleCutoff = new Date(now.getTime() - STALE_THRESHOLD_DAYS * DAY_MS);
   const candidates = await LostFoundItem.find({
     status: { $in: STALE_ITEM_STATUSES },
+    publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] },
     updatedAt: { $lte: staleCutoff },
   })
     .select(
@@ -796,7 +797,7 @@ export async function getValueStats(now: Date = new Date()): Promise<ValueStats>
   // (missing estimatedValueEGP counts as 0 via $ifNull).
   const [lostAgg, completedClaims] = await Promise.all([
     LostFoundItem.aggregate<{ totalEGP: number; thisMonthEGP: number }>([
-      { $match: { reportType: 'LOST' } },
+      { $match: { reportType: 'LOST', publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } } },
       {
         $group: {
           _id: null,
@@ -900,6 +901,7 @@ export async function getBreakdowns(): Promise<DashboardBreakdowns> {
       _id: { category: string; reportType: string };
       count: number;
     }>([
+      { $match: { publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } } },
       {
         $group: {
           _id: { category: '$category', reportType: '$reportType' },
@@ -908,12 +910,14 @@ export async function getBreakdowns(): Promise<DashboardBreakdowns> {
       },
     ]),
     LostFoundItem.aggregate<CountRow>([
+      { $match: { publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } } },
       { $group: { _id: '$status', count: { $sum: 1 } } },
     ]),
     LostFoundItem.aggregate<{
       _id: { locationId: Types.ObjectId; reportType: string };
       count: number;
     }>([
+      { $match: { publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } } },
       {
         $group: {
           _id: { locationId: '$locationId', reportType: '$reportType' },
@@ -1006,9 +1010,9 @@ async function getAdminDashboard(
     User.countDocuments({ isActive: true }),
     Location.countDocuments({ isActive: true }),
     Location.distinct('buildingName'),
-    LostFoundItem.countDocuments({ reportType: 'LOST' }),
-    LostFoundItem.countDocuments({ reportType: 'FOUND' }),
-    LostFoundItem.countDocuments({ status: { $in: ['OPEN', 'MATCH_CONFIRMED'] } }),
+    LostFoundItem.countDocuments({ reportType: 'LOST', publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
+    LostFoundItem.countDocuments({ reportType: 'FOUND', publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
+    LostFoundItem.countDocuments({ status: { $in: ['OPEN', 'MATCH_CONFIRMED'] }, publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
     ItemMatch.countDocuments({ status: 'SUGGESTED' }),
     ClaimRequest.countDocuments({ status: { $in: ['PENDING_REVIEW', 'UNDER_VERIFICATION'] } }),
     AiInsightCache.findOne({ scope: 'ADMIN', lang: 'ar' })
@@ -1017,7 +1021,7 @@ async function getAdminDashboard(
       .then((cached) => cached ?? AiInsightCache.findOne({ scope: 'ADMIN' }).sort({ generatedAt: -1 }).lean()),
     User.aggregate<CountRow>([{ $group: { _id: '$role', count: { $sum: 1 } } }]),
     LostFoundItem.aggregate<BuildingCountRow>([
-      { $match: createdAtMatch(range) },
+      { $match: { ...createdAtMatch(range), publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } } },
       {
         $lookup: {
           from: 'locations',
@@ -1036,8 +1040,8 @@ async function getAdminDashboard(
         },
       },
     ]),
-    LostFoundItem.countDocuments({ reportType: 'LOST', ...createdAtMatch(range) }),
-    LostFoundItem.countDocuments({ reportType: 'FOUND', ...createdAtMatch(range) }),
+    LostFoundItem.countDocuments({ reportType: 'LOST', ...createdAtMatch(range), publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
+    LostFoundItem.countDocuments({ reportType: 'FOUND', ...createdAtMatch(range), publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
     ClaimRequest.countDocuments(createdAtMatch(range)),
     ItemMatch.countDocuments(createdAtMatch(range)),
   ]);
@@ -1134,25 +1138,25 @@ async function getManagerDashboard(
     categoryReportRows,
     claimStatusRows,
   ] = await Promise.all([
-    LostFoundItem.countDocuments({ reportType: 'LOST' }),
-    LostFoundItem.countDocuments({ reportType: 'FOUND' }),
-    LostFoundItem.countDocuments({ reportType: 'LOST', status: 'OPEN' }),
-    LostFoundItem.countDocuments({ reportType: 'FOUND', status: 'OPEN' }),
+    LostFoundItem.countDocuments({ reportType: 'LOST', publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
+    LostFoundItem.countDocuments({ reportType: 'FOUND', publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
+    LostFoundItem.countDocuments({ reportType: 'LOST', status: 'OPEN', publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
+    LostFoundItem.countDocuments({ reportType: 'FOUND', status: 'OPEN', publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
     ItemMatch.countDocuments({ status: 'SUGGESTED' }),
     ClaimRequest.countDocuments({ status: 'PENDING_REVIEW' }),
     ClaimRequest.countDocuments({ status: 'UNDER_VERIFICATION' }),
     ClaimRequest.countDocuments({ status: 'APPROVED' }),
     ClaimRequest.countDocuments({ status: 'COMPLETED' }),
     LostFoundItem.aggregate<CountRow>([
-      { $match: createdAtMatch(range) },
+      { $match: { ...createdAtMatch(range), publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } } },
       { $group: { _id: '$status', count: { $sum: 1 } } },
     ]),
     LostFoundItem.aggregate<{ _id: { category: string; reportType: string }; count: number }>([
-      { $match: createdAtMatch(range) },
+      { $match: { ...createdAtMatch(range), publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } } },
       { $group: { _id: { category: '$category', reportType: '$reportType' }, count: { $sum: 1 } } },
     ]),
     ClaimRequest.aggregate<CountRow>([
-      { $match: createdAtMatch(range) },
+      { $match: { ...createdAtMatch(range), publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } } },
       { $group: { _id: '$status', count: { $sum: 1 } } },
     ]),
   ]);
@@ -1499,7 +1503,7 @@ export async function getActivitySeries(
   const windowStart = buckets[0]!.start;
 
   const [items, completedClaims] = await Promise.all([
-    LostFoundItem.find({ createdAt: { $gte: windowStart } })
+    LostFoundItem.find({ createdAt: { $gte: windowStart }, publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } })
       .select('reportType createdAt')
       .lean(),
     // Production-readiness pass (2026-11-22): previously EVERY completed
@@ -1584,8 +1588,8 @@ export async function getLostFoundInsightStats(
     suggestedMatchesList,
   ] = await Promise.all([
     getManagerDashboard(period, range),
-    LostFoundItem.countDocuments({ reportType: 'LOST', status: 'OPEN' }),
-    LostFoundItem.countDocuments({ reportType: 'FOUND', status: 'OPEN' }),
+    LostFoundItem.countDocuments({ reportType: 'LOST', status: 'OPEN', publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
+    LostFoundItem.countDocuments({ reportType: 'FOUND', status: 'OPEN', publicationStatus: { $nin: ['PENDING_APPROVAL', 'REJECTED'] } }),
     ClaimRequest.countDocuments({ status: 'APPROVED' }),
     ClaimRequest.countDocuments({ status: 'COMPLETED' }),
     ClaimRequest.find({ status: { $in: ['PENDING_REVIEW', 'UNDER_VERIFICATION', 'APPROVED'] } })

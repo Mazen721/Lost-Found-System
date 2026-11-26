@@ -40,6 +40,14 @@ export const ITEM_STATUSES = [
 ] as const;
 export type ItemStatus = (typeof ITEM_STATUSES)[number];
 
+/** Spec 012: publication gate, separate from the lifecycle `status`. */
+export const PUBLICATION_STATUSES = [
+  'PUBLISHED',
+  'PENDING_APPROVAL',
+  'REJECTED',
+] as const;
+export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number];
+
 export const CLAIM_STATUSES = [
   'PENDING_REVIEW',
   'UNDER_VERIFICATION',
