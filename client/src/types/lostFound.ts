@@ -33,6 +33,14 @@ export const ITEM_STATUSES = [
 ] as const;
 export type ItemStatus = (typeof ITEM_STATUSES)[number];
 
+/** Spec 012: publication gate, separate from the lifecycle status. */
+export const PUBLICATION_STATUSES = [
+  'PUBLISHED',
+  'PENDING_APPROVAL',
+  'REJECTED',
+] as const;
+export type PublicationStatus = (typeof PUBLICATION_STATUSES)[number];
+
 export const ACTIVE_BROWSE_STATUSES = [
   'OPEN',
   'MATCH_CONFIRMED',
@@ -85,6 +93,10 @@ export interface LostFoundItem {
   occurrenceDate: string;
   images: ImageAsset[];
   status: ItemStatus;
+  /** Spec 012: present on every payload; PENDING_APPROVAL / REJECTED
+   * only ever appear in the reporter's own My Reports and the admin
+   * moderation queue. */
+  publicationStatus: PublicationStatus;
   privateIdentificationDetails?: string;
   reporter?: LostFoundReporter | null;
   createdAt?: string;

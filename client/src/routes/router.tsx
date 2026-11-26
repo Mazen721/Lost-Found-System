@@ -21,6 +21,7 @@ import { HandoversPage } from '@/features/lost-found/claims/HandoversPage';
 import { SubmitClaimPage } from '@/features/lost-found/claims/SubmitClaimPage';
 import { MatchSuggestionsPage } from '@/features/lost-found/matches/MatchSuggestionsPage';
 import { UsersPage } from '@/features/users/UsersPage';
+import { PostingModerationPage } from '@/features/moderation/PostingModerationPage';
 import { ForbiddenPage } from '@/routes/ForbiddenPage';
 import { NotFoundPage } from '@/routes/NotFoundPage';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
@@ -58,6 +59,7 @@ export function AppRouter() {
             <Route path="users" element={<UsersPage />} />
             <Route path="locations" element={<LocationsPage />} />
             <Route path="activity-logs" element={<ActivityLogsPage />} />
+            <Route path="posting-moderation" element={<PostingModerationPage />} />
           </Route>
 
           {/* Spec 003: SUPER_ADMIN no longer gets the report option; a

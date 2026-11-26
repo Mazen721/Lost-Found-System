@@ -336,3 +336,27 @@ describe('isMobileTabActive route mapping (spec 003)', () => {
     expect(isMobileTabActive(more, '/dashboard')).toBe(false);
   });
 });
+
+describe('posting moderation route (spec 012)', () => {
+  it('SUPER_ADMIN drawer carries اعتماد النشر in the governance group', () => {
+    const groups = getNavigation('SUPER_ADMIN');
+    const governance = groups.find((group) => group.titleKey === 'nav.groupGovernanceDirectory');
+    expect(governance?.items.map((item) => item.to)).toContain('/posting-moderation');
+    const entry = governance?.items.find((item) => item.to === '/posting-moderation');
+    expect(entry?.labelKey).toBe('nav.postingModeration');
+  });
+
+  it.each(['STUDENT', 'EMPLOYEE', 'LOST_FOUND_MANAGER'] as Role[])(
+    '%s has no posting-moderation route on any navigation surface',
+    (role) => {
+      expect(fullMenuRoutes(role)).not.toContain('/posting-moderation');
+      expect(getTopLinks(role).map((link) => link.to)).not.toContain('/posting-moderation');
+      expect(getMobileTabs(role).map((tab) => tab.to)).not.toContain('/posting-moderation');
+    },
+  );
+
+  it('the admin more tab lights up on the moderation page', () => {
+    const more = getMobileTabs('SUPER_ADMIN').find((tab) => tab.action === 'more') as MobileTabItem;
+    expect(isMobileTabActive(more, '/posting-moderation')).toBe(true);
+  });
+});

@@ -3,6 +3,7 @@ import {
   BadgeCheck,
   BarChart3,
   Bell,
+  ClipboardCheck,
   Ellipsis,
   Files,
   FolderSearch,
@@ -101,6 +102,7 @@ const ADMIN_NAVIGATION: NavigationGroup[] = [
       { labelKey: 'nav.users', to: '/users', icon: Users },
       { labelKey: 'nav.locations', to: '/locations', icon: MapPin },
       { labelKey: 'nav.activityLogs', to: '/activity-logs', icon: ScrollText },
+      { labelKey: 'nav.postingModeration', to: '/posting-moderation', icon: ClipboardCheck },
     ],
   },
   {
@@ -320,7 +322,7 @@ const ADMIN_MOBILE_TABS: MobileTabItem[] = [
     labelKey: 'nav.tabMore',
     icon: Ellipsis,
     action: 'more',
-    activePrefixes: ['/users', '/locations', '/activity-logs', '/lost-found/handovers', '/profile'],
+    activePrefixes: ['/users', '/locations', '/activity-logs', '/posting-moderation', '/lost-found/handovers', '/profile'],
   },
 ];
 

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { DataTable, type DataTableColumn } from '@/components/shared/DataTable';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -117,7 +118,29 @@ export function ReportsTable({
     {
       id: 'status',
       header: t('common.status'),
-      cell: (item) => <StatusBadge status={item.status} />,
+      // Spec 012: unpublished items only ever reach this table through
+      // the reporter's own My Reports — there the publication chip is
+      // the state that matters, ahead of the lifecycle badge.
+      cell: (item) =>
+        item.publicationStatus === 'PENDING_APPROVAL' ? (
+          <Badge
+            variant="outline"
+            className="border-amber-500/30 bg-amber-500/[0.12] font-medium text-amber-800"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-600" aria-hidden="true" />
+            {t('lostFound.publicationPending')}
+          </Badge>
+        ) : item.publicationStatus === 'REJECTED' ? (
+          <Badge
+            variant="outline"
+            className="border-destructive/25 bg-destructive/10 font-medium text-destructive"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-destructive" aria-hidden="true" />
+            {t('lostFound.publicationRejected')}
+          </Badge>
+        ) : (
+          <StatusBadge status={item.status} />
+        ),
     },
     ...(isStaffViewer
       ? [

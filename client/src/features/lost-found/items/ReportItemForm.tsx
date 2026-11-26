@@ -83,6 +83,15 @@ export function ReportItemForm({ onCancel }: ReportItemFormProps) {
         brand: values.brand || undefined,
         images,
       });
+      // Spec 012: when auto-publish is off the report waits for the
+      // Super Admin — say so plainly and land the reporter on My
+      // Reports, where the pending chip lives, instead of a detail
+      // page nobody else can see yet.
+      if (result.item.publicationStatus === 'PENDING_APPROVAL') {
+        toast.success(t('lostFound.reportPendingSuccess'));
+        navigate('/lost-found/my-reports');
+        return;
+      }
       toast.success(t('lostFound.reportSavedSuccess'));
       navigate(`/lost-found/items/${result.item.id}`);
     } catch (error) {
